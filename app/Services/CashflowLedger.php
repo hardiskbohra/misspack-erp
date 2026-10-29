@@ -51,12 +51,12 @@ class CashflowLedger
                 $runningBalance += (float) $entry->credit_amount - (float) $entry->debit_amount;
 
                 CashflowEntry::whereKey($entry->id)->update([
-                    'balance' => round($runningBalance, 2),
+                    'balance' => round($runningBalance, 3),
                 ]);
             });
 
         $account->update([
-            'current_balance' => round($runningBalance, 2),
+            'current_balance' => round($runningBalance, 3),
         ]);
     }
 }

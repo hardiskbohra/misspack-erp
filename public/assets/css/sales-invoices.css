@@ -819,6 +819,22 @@
     font-size: 13px;
 }
 
+/* Corrections wear the briefing words: credit reads information (money went
+   to the client), debit reads attention (money now moved the other way), and
+   a cancelled note is danger — same scoped palette the notification centre
+   defined, never new hues. */
+.si-reminder .master-status-chip.info {
+    background: #eef3ff;
+    color: #2563eb;
+    border-color: #dbe7ff;
+}
+
+.si-reminder .master-status-chip.warning {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
 .si-reminder-what {
     display: flex;
     flex-direction: column;
@@ -828,6 +844,59 @@
 
 .si-reminder-what strong {
     font-size: 13px;
+
+/* ------------------------------------------------- return dialog lines
+   The return modal lists the invoice's sells beside the quantity box taking
+   how many come back — name and figures left, the one editable number right.
+   Flex like the chase rows beside it, input sized to the number it holds. */
+.si-return-lines {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--mc-border, #dfe5ef);
+    border-radius: 10px;
+    padding: 0 12px;
+}
+
+.si-return-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mc-border, #dfe5ef);
+}
+
+.si-return-line:last-child {
+    border-bottom: 0;
+}
+
+.si-return-line > div:first-child {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.si-return-line > div:first-child strong {
+    font-size: 13px;
+}
+
+.si-return-qty {
+    flex: 0 0 118px;
+    text-align: right;
+}
+
+@media (max-width: 540px) {
+    .si-return-line {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .si-return-qty {
+        flex: 1 1 auto;
+    }
+}
+
     font-weight: 600;
 }
 
@@ -985,3 +1054,42 @@
 .si-client-create-toggle { margin: 0 0 12px; }
 .si-client-create-modal [aria-invalid="true"] { border-color: var(--master-red, #ef4770); }
 .si-client-create-modal [data-client-field-error] { color: var(--master-red, #ef4770); }
+
+/* ---------------- e-invoice (IRN/QR) card ----------------
+   The registration states on the show page: payload out, acknowledgement in,
+   QR once registered. Module-local chrome; the card itself is master-*. */
+
+.si-einvoice-qr svg {
+    width: 148px;
+    height: auto;
+    display: block;
+    border: 6px solid #fff;
+    border-radius: var(--ui-radius, 10px);
+}
+
+.si-einvoice-payload {
+    margin: 10px 0;
+    padding: 12px 14px;
+    max-height: 320px;
+    overflow: auto;
+    border: 1px solid var(--mc-border);
+    border-radius: var(--ui-radius, 10px);
+    background: var(--mc-card-soft);
+    font-family: var(--ui-font-mono, ui-monospace, monospace);
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.si-details > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+#eInvoiceCard .si-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.si-details[open] > summary {
+    margin-bottom: 10px;
+}

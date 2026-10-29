@@ -41,7 +41,9 @@ class PackagingListSource
                 'bill_to_name'=>$invoice->buyer_company_name,'bill_to_address'=>$this->address([$invoice->buyer_address,$invoice->buyer_city,$invoice->buyer_state,$invoice->buyer_pincode,$invoice->buyer_country]),
                 'ship_to_name'=>$invoice->buyer_company_name,'ship_to_address'=>$this->address([$invoice->buyer_address,$invoice->buyer_city,$invoice->buyer_state,$invoice->buyer_pincode,$invoice->buyer_country]),
             ],
-            'cartons'=>$this->lines('purchase_invoice', $invoice->items),
+            // Linked financial bills may repeat the entire PO quantity. Never
+            // prefill it as physically packed or claim it is an independent cap.
+            'cartons'=>$this->lines('purchase_invoice', $invoice->items, $invoice->isPartialConversion()),
         ];
     }
 
@@ -63,12 +65,14 @@ class PackagingListSource
         ];
     }
 
-    private function lines(string $type, $lines): array
+    private function lines(string $type, $lines, bool $financialReference = false): array
     {
         if ($lines->isEmpty()) return [];
         $items=[];
         foreach ($lines as $line) {
-            $source=(float)($line->quantity ?? 0); $previous=$this->packed($type,$line->id); $remaining=max(0,$source-$previous);
+            $source=$financialReference ? null : (float)($line->quantity ?? 0);
+            $previous=$financialReference ? null : $this->packed($type,$line->id);
+            $remaining=$financialReference ? '' : max(0,$source-$previous);
             $items[]=[
                 'product_id'=>$line->product_id ?? null,'project_product_id'=>$line->project_product_id ?? null,
                 'source_type'=>$type,'source_item_id'=>$line->id,

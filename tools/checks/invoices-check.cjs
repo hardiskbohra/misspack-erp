@@ -52,6 +52,7 @@ const view = read('resources/views/sales_invoices/index.blade.php');
 const form = read('resources/views/sales_invoices/form.blade.php');
 const record = read('resources/views/sales_invoices/show.blade.php');
 const sheet = strip(read('public/assets/css/sales-invoices.css'));
+const clientAccountSheet = strip(read('public/assets/css/client-account-summary.css'));
 const js = read('public/assets/js/sales-invoices.js');
 const model = read('app/Models/SalesInvoice.php');
 const controller = read('app/Http/Controllers/SalesInvoiceController.php');
@@ -113,7 +114,12 @@ check('a shared class may only appear here scoped under the module\'s own',
         ! /\.master-[a-z0-9-]+/.test(sel) || /\.si-[a-z0-9-]+/.test(sel))),
     'an unscoped .master-* here overrides the design system for every page that loads it');
 
+// The shared client-account component owns its own si-* classes and is
+// explicitly loaded by the form. Do not mistake those for missing invoice CSS.
+const componentLoaded = /assets\/css\/client-account-summary\.css/.test(form);
 const definedSi = new Set(sheetRules.flatMap(rule =>
+    [...rule.sel.matchAll(/\.(si-[a-z0-9-]+)/g)].map(m => m[1])));
+const componentSi = new Set(cssRules(clientAccountSheet).flatMap(rule =>
     [...rule.sel.matchAll(/\.(si-[a-z0-9-]+)/g)].map(m => m[1])));
 
 const usedSi = new Set();
@@ -121,19 +127,30 @@ Object.values(screens).forEach(text =>
     [...text.matchAll(/(?<![\w-])si-[a-z0-9-]+/g)].forEach(m => usedSi.add(m[0])));
 [...js.matchAll(/(?<![\w-])(si-[a-z0-9-]+)/g)].forEach(m => usedSi.add(m[1]));
 
-const undefinedSi = [...usedSi].filter(name => ! definedSi.has(name));
+const undefinedSi = [...usedSi].filter(name => ! definedSi.has(name) && ! (
+    componentLoaded && componentSi.has(name) && form.includes(name)
+    && ! view.includes(name) && ! record.includes(name) && ! js.includes(name)
+));
 
-check('every class the invoice screens wear is defined in the module\'s sheet',
+check('every invoice class is defined in the module or an explicitly loaded component sheet',
     undefinedSi.length === 0,
     'used and never declared: ' + undefinedSi.join(', '));
 
 /* ---- 2. one money rule, one ageing vocabulary --------------------------- */
 
+/* The controller spells the model's rule either inline (SalesInvoice::..._SQL)
+   or through a once-named local alias ($receivedSql/$payableSql) — both count;
+   re-typing the ledger join anywhere outside the model never does. */
+const spellsModelMoney =
+    (controller.match(/SalesInvoice::RECEIVED_SQL/g) || []).length >= 3
+    || /SalesInvoice::RECEIVED_SQL/.test(controller)
+        && /\$receivedSql = SalesInvoice::RECEIVED_SQL/.test(controller);
+
 check('the money rule is spelled once, and it is the model\'s',
     /public const RECEIVED_SQL = /.test(model)
     && /public function receivedAmount\(\): float/.test(model)
     && /public function balanceDue\(\): float/.test(model)
-    && (controller.match(/SalesInvoice::RECEIVED_SQL/g) || []).length >= 3
+    && spellsModelMoney
     && ! /from cashflow_entries/.test(controller)
     && ! /from cashflow_entries/.test(service)
     && ! /from cashflow_entries/.test(view),
@@ -287,9 +304,11 @@ check('a value the module does not know widens the list',
     'an unknown filter is a filter that failed — showing everything is the honest answer');
 
 check('the money filter asks the money, not a stored word',
-    /whereRaw\("\{\$received\} <= 0\.01"\)/.test(service)
-    && /whereRaw\("\{\$received\} > 0\.01"\)/.test(service)
-    && /whereRaw\("\{\$received\} >= \{\$invoiceTotal\} - 0\.01"\)/.test(service),
+    /whereRaw\("\{\$received\} < 0\.001"\)/.test(service)
+    && /whereRaw\("\{\$received\} >= 0\.001"\)/.test(service)
+    /* "Covered" is judged against the note-adjusted payable. A one-thousandth
+       outstanding amount is still real money, not a paid invoice. */
+    && /whereRaw\("\{\$received\} >= \{\$payable\} - 0\.0005"\)/.test(service),
     'an invoice marked paid a year ago, whose receipt was deleted, is not paid');
 
 /* ---- 4. the list wears the shared chrome ------------------------------- */
@@ -472,8 +491,11 @@ const owedClauses = [...controller.matchAll(/coalesce\(sum\(case when ([\s\S]{0,
 
 check('still owed is the Balance column, summed — a draft is money too',
     owedClauses.length === 2
-    && owedClauses.every(clause => /RECEIVED_SQL/.test(clause)
-        && /invoiceTotal/.test(clause)
+    && owedClauses.every(clause => /(RECEIVED_SQL|\$receivedSql)/.test(clause)
+        /* Owed is payable − received: credits and debits net into the figure,
+           one rule from the model (payableSql() falls back to the receivable
+           where corrections cannot exist yet), so list, card and CSV agree. */
+        && /(invoiceTotal|PAYABLE_TOTAL_SQL|payableSql\(\)|\$payableSql)/.test(clause)
         && /status <> 'cancelled'/.test(clause)
         && ! /'draft'/.test(clause))
     && /The Balance column, added up/.test(view),

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -26,6 +27,13 @@ return new class extends Migration
     {
         if (! Schema::hasTable('projects') || ! Schema::hasColumn('projects', 'public_token')) {
             return;
+        }
+
+        // SQLite cannot drop a column while its old unique index remains.
+        if (DB::getDriverName() === 'sqlite' && Schema::hasIndex('projects', 'projects_public_token_unique')) {
+            Schema::table('projects', function (Blueprint $table): void {
+                $table->dropUnique('projects_public_token_unique');
+            });
         }
 
         Schema::table('projects', function (Blueprint $table): void {

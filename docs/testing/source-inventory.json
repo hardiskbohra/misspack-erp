@@ -2,6 +2,48 @@
   "note": "Source inventory only. Method counts exclude data-provider expansion and are not runtime coverage or pass counts.",
   "test_files": [
     {
+      "file": "tests/Database/MySqlFullSchemaReliabilityTest.php",
+      "methods": [
+        "test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths",
+        "test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness",
+        "test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items",
+        "test_values_with_excess_precision_are_not_silently_rounded",
+        "test_database_boundary_values_and_an_empty_template_row_are_accepted",
+        "test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "test_project_exception_keeps_the_full_composed_project_and_step_title",
+        "test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded",
+        "test_long_mail_transport_error_cannot_overflow_alert_or_response",
+        "test_invoice_email_is_not_sent_when_its_initial_audit_write_fails",
+        "test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success",
+        "test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items",
+        "test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed",
+        "test_dispatch_with_omitted_lines_evaluates_the_stored_lines"
+      ]
+    },
+    {
+      "file": "tests/Database/MySqlInvoiceAutoRoundingTest.php",
+      "methods": [
+        "test_auto_manual_and_ineligible_amounts_are_stored_at_mysql_decimal_precision",
+        "test_partial_conversion_keeps_the_fractional_tax_remainder_on_mysql"
+      ]
+    },
+    {
+      "file": "tests/Database/MySqlPublicShortLinksTest.php",
+      "methods": [
+        "test_guest_links_use_current_tokens_and_the_original_handlers_on_mysql"
+      ]
+    },
+    {
+      "file": "tests/Database/MySqlPurchasePartialConversionTest.php",
+      "methods": [
+        "test_native_money_slices_and_lossy_rollback_guard",
+        "test_native_rmb_remainder_saves_full_quantity_and_scaled_rate",
+        "test_native_scaled_price_rounding_keeps_three_decimal_amounts_on_both_bills",
+        "test_cross_order_bill_number_collision_retries_without_losing_either_conversion",
+        "test_two_overlapping_conversions_serialize_and_cannot_consume_the_same_remainder"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlReportingTest.php",
       "methods": [
         "test_real_database_aggregation_honours_custom_bounds",
@@ -10,9 +52,27 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlThreeDecimalPrecisionTest.php",
+      "methods": [
+        "test_discounted_tax_payload_reconciles_saved_mysql_totals",
+        "test_fractional_cash_conversion_of_a_paise_claim_keeps_the_exact_remainder_on_mysql",
+        "test_unsafe_partial_tax_conversion_is_atomic_on_native_mysql",
+        "test_sql_columns_and_http_writers_preserve_three_place_values"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlVendorKycTest.php",
       "methods": [
         "test_native_json_schema_locking_and_stale_review_protection"
+      ]
+    },
+    {
+      "file": "tests/Database/MySqlWideningMigrationSafetyTest.php",
+      "methods": [
+        "test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
+        "test_message_widening_preserves_old_values_and_checks_every_column_before_rollback",
+        "test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped",
+        "test_precision_migration_preserves_old_decimals_and_preflights_every_table_before_rollback"
       ]
     },
     {
@@ -33,6 +93,7 @@
         "test_full_conversion_can_retain_a_chosen_pi_advance_without_losing_it",
         "test_partial_direct_receipt_becomes_two_slices_of_the_same_bank_entry",
         "test_fx_allocation_splits_both_native_and_document_amounts_without_revaluation",
+        "test_unrepresentable_fx_allocation_split_rolls_back_without_zero_value_slices",
         "test_unsupported_direct_fx_transfer_rolls_back_the_entire_conversion",
         "test_remainder_can_be_tax_invoiced_without_rebilling_cash_or_moving_cash_receipts",
         "test_cash_print_has_no_gst_identifiers_or_tax_columns_even_with_a_stale_snapshot",
@@ -151,9 +212,34 @@
       ]
     },
     {
+      "file": "tests/Feature/EInvoiceFlowTest.php",
+      "methods": [
+        "test_a_proforma_is_refused_before_any_record_exists",
+        "test_a_line_without_hsn_is_named_in_the_refusal",
+        "test_generate_builds_the_portal_schema_and_parks_it_pending",
+        "test_the_acknowledgement_accepts_only_a_real_irn_and_marks_registration",
+        "test_the_cancel_window_is_the_portals_twenty_four_hours_not_ours",
+        "test_the_http_gateway_registers_from_the_endpoints_answer"
+      ]
+    },
+    {
       "file": "tests/Feature/ExampleTest.php",
       "methods": [
         "test_the_root_redirects_to_login"
+      ]
+    },
+    {
+      "file": "tests/Feature/InvoiceAdjustmentTest.php",
+      "methods": [
+        "test_a_sent_tax_invoice_refuses_money_and_identity_changes",
+        "test_an_issued_invoice_still_edits_its_working_fields",
+        "test_an_issued_tax_invoice_cannot_be_deleted_but_a_draft_can",
+        "test_a_credit_note_lowers_what_is_owed_and_stops_when_full",
+        "test_a_debit_note_raises_what_is_owed",
+        "test_a_return_restock_posts_its_credit_and_caps_quantities",
+        "test_a_cancelled_note_stops_applying_and_keeps_its_reason",
+        "test_corrections_refuse_drafts_proformas_and_superseded_documents",
+        "test_notes_change_what_the_listing_counts_but_never_the_receipts"
       ]
     },
     {
@@ -170,7 +256,31 @@
         "test_employee_cannot_create_a_client",
         "test_empty_client_list_still_has_a_complete_snapshot_field_contract",
         "test_projection_keeps_existing_contact_and_shipping_fallback_rules",
-        "test_invoice_creation_renders_an_independent_client_form_even_before_the_first_client"
+        "test_invoice_creation_renders_an_independent_client_form_even_before_the_first_client",
+        "test_a_gstin_that_fails_its_check_digit_is_refused"
+      ]
+    },
+    {
+      "file": "tests/Feature/LoginSecurityTest.php",
+      "methods": [
+        "test_five_wrong_passwords_lock_the_email_and_network_out",
+        "test_a_successful_sign_in_forgets_earlier_failures",
+        "test_password_change_enforces_the_default_strength_rule",
+        "test_a_right_password_only_buys_a_challenge_when_two_factor_is_on",
+        "test_recovery_codes_work_exactly_once",
+        "test_challenge_gives_up_after_five_wrong_codes",
+        "test_the_account_page_enrols_and_disables_two_factor"
+      ]
+    },
+    {
+      "file": "tests/Feature/OfficeAlertCentreTest.php",
+      "methods": [
+        "test_the_centre_is_locked_to_guests_and_the_payroll",
+        "test_the_centre_lists_open_briefings_with_their_actions",
+        "test_filters_narrow_the_tray_and_keep_the_other_filters",
+        "test_ack_from_the_centre_redirects_and_files_the_resolved_trail",
+        "test_snooze_moves_the_card_out_of_open_and_back",
+        "test_a_desk_watcher_sees_only_their_desks_briefings"
       ]
     },
     {
@@ -248,6 +358,18 @@
       ]
     },
     {
+      "file": "tests/Feature/SalesInvoiceEmailTest.php",
+      "methods": [
+        "test_guests_and_employees_are_held_at_the_wall",
+        "test_the_invoice_goes_out_and_the_send_lands_in_the_log",
+        "test_a_resend_of_an_issued_invoice_leaves_the_books_alone",
+        "test_the_composer_refuses_an_address_that_is_none",
+        "test_a_cancelled_invoice_is_never_emailed",
+        "test_without_a_configured_sender_the_office_is_told_first",
+        "test_a_refused_send_is_logged_and_briefs_the_desk"
+      ]
+    },
+    {
       "file": "tests/Feature/ShipmentAttachmentUploadTest.php",
       "methods": [
         "test_detail_card_offers_direct_multi_upload_with_private_default",
@@ -257,6 +379,15 @@
         "test_read_only_users_see_attachments_but_cannot_upload",
         "test_attachment_field_errors_render_next_to_the_picker",
         "test_csrf_still_protects_uploads"
+      ]
+    },
+    {
+      "file": "tests/Feature/TaxMasterTest.php",
+      "methods": [
+        "test_the_migration_seeds_packaging_defaults_and_the_area_lists_them",
+        "test_add_edit_and_remove_a_code_through_the_settings_door",
+        "test_the_rules_a_typo_breaks_against_all_fire",
+        "test_guests_cannot_touch_the_master"
       ]
     },
     {
@@ -271,6 +402,18 @@
         "test_quick_menu_reuses_sidebar_catalog_and_does_not_invent_missing_modules",
         "test_launcher_is_icon_only_but_has_an_accessible_name",
         "test_private_notes_moves_into_quick_menu_for_both_roles_without_office_privilege"
+      ]
+    },
+    {
+      "file": "tests/Feature/UnexpectedErrorHandlingTest.php",
+      "methods": [
+        "test_production_html_error_is_safe_even_with_debug_enabled_and_matches_the_reported_reference",
+        "test_production_api_error_is_json_and_contains_no_debug_details",
+        "test_explicit_500_response_exception_does_not_bypass_the_safe_fallback",
+        "test_explicit_api_500_uses_json_even_if_the_original_response_was_html",
+        "test_failure_of_the_fallback_log_transport_does_not_expose_the_response_or_cause_another_failure",
+        "test_validation_authentication_and_other_client_errors_keep_their_status_and_contract",
+        "test_local_debug_mode_retains_the_diagnostic_exception_output"
       ]
     },
     {
@@ -350,6 +493,32 @@
       ]
     },
     {
+      "file": "tests/Integration/FreshSchemaTest.php",
+      "methods": [
+        "test_all_migrations_apply_to_a_disposable_fresh_sqlite_database",
+        "test_progress_migration_copies_matching_workflow_and_preserves_unmatched_project"
+      ]
+    },
+    {
+      "file": "tests/Integration/FullSchemaReliabilityTest.php",
+      "methods": [
+        "test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths",
+        "test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness",
+        "test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items",
+        "test_values_with_excess_precision_are_not_silently_rounded",
+        "test_database_boundary_values_and_an_empty_template_row_are_accepted",
+        "test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "test_project_exception_keeps_the_full_composed_project_and_step_title",
+        "test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded",
+        "test_long_mail_transport_error_cannot_overflow_alert_or_response",
+        "test_invoice_email_is_not_sent_when_its_initial_audit_write_fails",
+        "test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success",
+        "test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items",
+        "test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed",
+        "test_dispatch_with_omitted_lines_evaluates_the_stored_lines"
+      ]
+    },
+    {
       "file": "tests/Integration/IndianVendorKycTest.php",
       "methods": [
         "test_indian_final_submission_requires_numbers_and_both_classified_documents",
@@ -361,6 +530,34 @@
         "test_legacy_incomplete_indian_submissions_cannot_be_approved",
         "test_office_addresses_are_editable_and_invalidate_previously_approved_kyc",
         "test_missing_private_file_does_not_count_as_valid_indian_evidence"
+      ]
+    },
+    {
+      "file": "tests/Integration/InvoiceAutoRoundingMigrationTest.php",
+      "methods": [
+        "test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped"
+      ]
+    },
+    {
+      "file": "tests/Integration/InvoiceAutoRoundingTest.php",
+      "methods": [
+        "test_new_inr_proformas_and_tax_invoices_round_half_up_and_store_the_signed_difference",
+        "test_fractional_quantity_uses_the_documents_precision_before_whole_rupee_rounding",
+        "test_rounding_is_after_discounts_and_charges_and_is_visible_on_print_and_detail",
+        "test_auto_rounding_is_applied_after_gst_invoice_discount_and_charges",
+        "test_explicit_manual_override_is_preserved_and_auto_mode_does_not_trust_submitted_round_off",
+        "test_draft_edits_recompute_auto_mode_and_keep_manual_mode_when_it_is_selected",
+        "test_existing_legacy_invoice_is_not_automatically_changed_on_edit",
+        "test_foreign_currency_and_cash_invoices_are_not_auto_rounded",
+        "test_switching_an_auto_draft_to_foreign_or_cash_without_a_round_off_does_not_leak_the_old_adjustment",
+        "test_proforma_conversion_preserves_exact_fractional_remainder_and_cash_claim",
+        "test_a_rounded_proforma_keeps_the_exact_fractional_remainder_after_a_partial_cash_conversion",
+        "test_partial_conversion_preserves_fractional_receipts_and_the_outstanding_balance",
+        "test_full_conversion_keeps_fractional_total_and_transferred_opening_receipt",
+        "test_auto_rounding_is_included_in_the_e_invoice_payload",
+        "test_duplicate_is_a_new_draft_with_auto_rounding_but_does_not_change_the_source",
+        "test_issued_tax_invoice_rejects_switching_rounding_policy_or_changing_the_adjustment",
+        "test_form_exposes_auto_rounding_and_manual_override_with_an_accessible_explanation"
       ]
     },
     {
@@ -406,6 +603,66 @@
       ]
     },
     {
+      "file": "tests/Integration/PublicShortLinksTest.php",
+      "methods": [
+        "test_client_kyc_copy_field_contains_a_short_working_link_and_the_old_link_still_works",
+        "test_vendor_kyc_link_can_be_copied_opened_submitted_rotated_and_revoked",
+        "test_shipment_share_fields_sticker_qr_and_tracking_link_use_the_same_short_url",
+        "test_other_bearer_link_types_resolve_only_to_their_existing_public_routes",
+        "test_authority_like_mount_prefixes_cannot_make_an_external_redirect",
+        "test_aliases_cannot_be_minted_for_unsaved_unsupported_or_tokenless_records",
+        "test_invalid_tampered_rotated_and_deleted_links_fail_without_redirecting_or_disclosing_secrets",
+        "test_old_signing_key_works_only_while_retained_and_never_invalidates_the_legacy_url",
+        "test_canonical_handlers_still_enforce_share_expiry_revocation_permissions_and_view_counts",
+        "test_client_statement_with_an_overlapping_project_receipt_counts_it_only_once",
+        "test_redirect_keeps_the_application_mount_prefix_without_becoming_an_external_url",
+        "test_short_link_throttle_is_isolated_from_the_existing_vendor_kyc_limit",
+        "test_audit_redacts_the_alias_as_a_bearer_token",
+        "test_portal_credential_sharing_and_kyc_workspace_use_short_addresses_but_still_require_login",
+        "test_static_public_aliases_serve_existing_forms_without_weakening_portal_authentication"
+      ]
+    },
+    {
+      "file": "tests/Integration/PurchasePartialConversionsTest.php",
+      "methods": [
+        "test_scaled_prices_keep_all_original_quantities_on_cash_and_purchase_bills",
+        "test_cash_prices_include_gst_discounts_and_charges_without_separate_components",
+        "test_visible_price_rounding_preserves_exact_totals_and_never_fabricates_a_price",
+        "test_intra_state_percentage_discount_and_original_manual_round_off_are_preserved",
+        "test_purchase_bill_recalculates_mixed_gst_rates_after_invoice_discount",
+        "test_valid_legacy_float_halfway_item_gross_is_accepted",
+        "test_valid_legacy_float_halfway_percentages_are_accepted_without_accepting_arbitrary_errors",
+        "test_inconsistent_purchase_source_is_not_hidden_as_round_off",
+        "test_converted_bill_packing_requires_actual_physical_quantities",
+        "test_existing_legacy_split_is_not_rewritten_when_a_new_bill_is_created",
+        "test_packing_verification_does_not_claim_linked_financial_quantities_are_physical",
+        "test_packaging_from_a_real_shipment_is_not_misclassified_by_an_associated_financial_bill",
+        "test_manual_packing_quantities_are_saved_without_inventing_a_physical_bill_balance",
+        "test_user_example_preserves_payment_provenance_in_all_three_currencies",
+        "test_multiple_partial_bills_and_cash_reduce_the_gross_and_apportion_gst",
+        "test_rmb_remainder_bill_scales_rate_and_preserves_payments",
+        "test_rate_rounding_uses_decimal_half_up_and_preserves_amount",
+        "test_scaled_prices_recalculate_gst_and_reconcile_bill_total",
+        "test_scaled_prices_preserve_discounts_gst_and_freight",
+        "test_rounding_cannot_make_line_or_invoice_taxable_amount_negative",
+        "test_rate_rounding_allows_cancelling_lines_and_tiny_slices_with_exact_totals",
+        "test_foreign_or_excess_payment_selections_fail_atomically_and_unselected_advance_stays",
+        "test_latest_conversion_reversal_restores_claim_payments_and_bank_without_duplication",
+        "test_opening_and_fx_allocation_split_and_reverse_without_changing_the_bank_entry",
+        "test_split_payment_is_not_unallocated_and_closure_retains_its_provenance",
+        "test_price_rounding_is_visible_while_unrepresentable_fx_splits_are_atomic",
+        "test_repeated_manual_splits_and_full_transferred_payment_are_protected",
+        "test_stale_controller_models_cannot_cancel_or_delete_a_newly_split_order",
+        "test_fully_converted_order_cannot_receive_a_new_advance",
+        "test_stale_order_cannot_record_a_payment_after_full_conversion",
+        "test_reversed_bill_number_is_reserved_against_automatic_and_manual_reuse",
+        "test_reversal_refuses_downstream_packaging_and_manual_credits",
+        "test_reversal_refuses_vendor_collaboration_and_share_links",
+        "test_purchase_reader_and_guest_cannot_create_or_change_conversions",
+        "test_linked_documents_and_split_payment_cannot_be_mutated_or_deleted_out_of_band"
+      ]
+    },
+    {
       "file": "tests/Integration/RouteBoundaryInventoryTest.php",
       "methods": [
         "test_every_office_route_also_requires_authentication",
@@ -434,6 +691,35 @@
         "test_print_masthead_separates_title_filters_from_aligned_party_names_and_removes_only_header_badges",
         "test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained",
         "test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained"
+      ]
+    },
+    {
+      "file": "tests/Integration/ThreeDecimalPrecisionTest.php",
+      "methods": [
+        "test_proforma_keeps_three_decimal_unit_price_total_print_and_words",
+        "test_tax_invoice_keeps_the_rate_but_calculates_monetary_amounts_at_two_decimals",
+        "test_quantity_5000_times_0574_is_2870_and_the_tax_payload_keeps_the_rate",
+        "test_proforma_auto_rounding_keeps_the_precise_adjustment_before_rounding_to_whole_rupees",
+        "test_purchase_order_and_bill_store_three_decimal_unit_price_and_total",
+        "test_sales_and_purchase_payment_filters_count_one_thousandth_outstanding",
+        "test_prices_and_cashflow_amounts_over_three_decimal_places_are_refused",
+        "test_cashflow_entries_and_running_balances_keep_three_decimal_places",
+        "test_statement_and_report_csv_preserve_the_third_decimal",
+        "test_editing_an_account_recalculates_running_balances_without_losing_thousandths",
+        "test_purchase_order_conversion_and_vendor_posting_retain_fractional_values",
+        "test_vendor_payment_mirror_keeps_three_decimal_bank_and_ledger_amounts",
+        "test_financial_closure_detects_a_thousandth_balance_and_client_summary_preserves_it",
+        "test_three_decimal_cashflow_allocation_settles_the_exact_document_balance",
+        "test_exact_claim_conversion_recalculates_tax_components_and_keeps_fractional_receipts",
+        "test_partial_conversion_refuses_an_unrepresentable_tax_line_without_changing_the_claim",
+        "test_einvoice_allocates_an_invoice_wide_discount_without_double_counting",
+        "test_einvoice_refuses_inconsistent_saved_line_and_header_figures",
+        "test_issued_tax_invoice_rejects_a_one_thousandth_rate_change",
+        "test_over_allocating_by_one_thousandth_is_rejected_atomically",
+        "test_invoice_product_snapshot_preserves_the_three_decimal_rate",
+        "test_fractional_cash_conversion_of_a_paise_pi_preserves_the_exact_claim",
+        "test_cash_conversion_and_reversal_preserve_fractional_receipts_and_claims",
+        "test_unrepresentable_proforma_to_tax_conversion_is_blocked_without_changing_the_claim"
       ]
     },
     {
@@ -469,6 +755,13 @@
         "test_public_forms_keep_csrf_authentication_and_rate_limiting_boundaries",
         "test_malformed_phone_arrays_are_validation_errors_not_server_errors",
         "test_vendor_creator_can_review_their_own_submission_and_is_recorded_as_reviewer"
+      ]
+    },
+    {
+      "file": "tests/Integration/WideningMigrationSafetyTest.php",
+      "methods": [
+        "test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
+        "test_message_widening_preserves_old_values_and_checks_every_column_before_rollback"
       ]
     },
     {
@@ -599,6 +892,17 @@
       ]
     },
     {
+      "file": "tests/Unit/GstinTest.php",
+      "methods": [
+        "test_known_good_gstins_pass_structure_state_and_checksum",
+        "test_the_check_digit_is_the_published_mod36_algorithm",
+        "test_a_single_character_typo_anywhere_fails",
+        "test_structural_and_state_rejections",
+        "test_normalise_and_the_parts_it_unlocks",
+        "test_the_validation_rule_carries_one_message_everywhere"
+      ]
+    },
+    {
       "file": "tests/Unit/NotesRulesTest.php",
       "methods": [
         "test_a_missing_owner_matches_no_rows_at_all",
@@ -716,6 +1020,16 @@
       ]
     },
     {
+      "file": "tests/Unit/TotpTest.php",
+      "methods": [
+        "test_codes_match_the_rfc_6238_vectors",
+        "test_verify_accepts_the_code_around_the_current_step",
+        "test_verify_rejects_anything_that_is_not_six_digits",
+        "test_base32_round_trips_and_rejects_bad_input",
+        "test_provisioning_uri_carries_what_an_authenticator_needs"
+      ]
+    },
+    {
       "file": "tests/Unit/UserAvatarUrlTest.php",
       "methods": [
         "test_initials_handle_extra_whitespace_and_non_latin_names",
@@ -797,12 +1111,18 @@
     "app/Http/Controllers/PublicFeedbackController.php",
     "app/Http/Controllers/PublicLeadController.php",
     "app/Http/Controllers/PublicMediaController.php",
+    "app/Http/Controllers/PublicShortLinkController.php",
     "app/Http/Controllers/PurchaseInvoiceController.php",
     "app/Http/Controllers/SalesInvoiceController.php",
+    "app/Http/Controllers/SalesInvoiceEInvoiceController.php",
+    "app/Http/Controllers/SalesInvoiceNoteController.php",
     "app/Http/Controllers/SettingsController.php",
     "app/Http/Controllers/ShipmentController.php",
     "app/Http/Controllers/ShipmentDeliveryReceiptController.php",
     "app/Http/Controllers/TaskController.php",
+    "app/Http/Controllers/TaxSettingController.php",
+    "app/Http/Controllers/TwoFactorChallengeController.php",
+    "app/Http/Controllers/TwoFactorController.php",
     "app/Http/Controllers/UserController.php",
     "app/Http/Controllers/VendorController.php",
     "app/Http/Controllers/VendorKycController.php",
@@ -835,6 +1155,12 @@
     "app/Services/DashboardAnalytics.php",
     "app/Services/DashboardPeriod.php",
     "app/Services/DocumentUpload.php",
+    "app/Services/EInvoice/EInvoiceGateway.php",
+    "app/Services/EInvoice/EInvoicePayload.php",
+    "app/Services/EInvoice/EInvoiceRegistration.php",
+    "app/Services/EInvoice/EInvoiceResult.php",
+    "app/Services/EInvoice/HttpGateway.php",
+    "app/Services/EInvoice/ManualGateway.php",
     "app/Services/EmployeeAccess.php",
     "app/Services/EmployeeProfile.php",
     "app/Services/FeedbackFigures.php",
@@ -872,8 +1198,10 @@
     "app/Services/ProjectWorkflowMatrix.php",
     "app/Services/ProjectWorkflowNotifications.php",
     "app/Services/ProjectWorkflowReturn.php",
+    "app/Services/PublicShareLinks.php",
     "app/Services/PurchaseBillLedger.php",
     "app/Services/PurchaseInvoiceMoney.php",
+    "app/Services/PurchasePartialConversion.php",
     "app/Services/RecurrenceFigures.php",
     "app/Services/RecurrenceFilters.php",
     "app/Services/RecurrenceIntake.php",
@@ -881,6 +1209,7 @@
     "app/Services/RecurrencePosting.php",
     "app/Services/RecurrenceSchedule.php",
     "app/Services/RecurrenceVocabulary.php",
+    "app/Services/SalesInvoiceAdjustment.php",
     "app/Services/SalesInvoiceFilters.php",
     "app/Services/SavedViews.php",
     "app/Services/SettingsDirectory.php",
@@ -891,6 +1220,7 @@
     "app/Services/ShipmentPartyDirectory.php",
     "app/Services/ShipmentPrintIssuer.php",
     "app/Services/StatementPrintHeader.php",
+    "app/Services/TwoFactorAuthentication.php",
     "app/Services/UnallocatedCashflows.php",
     "app/Services/VendorKyc.php",
     "app/Services/VendorPaymentCashflowSync.php"
@@ -924,6 +1254,7 @@
     "app/Models/FixedAssetAllocation.php",
     "app/Models/FixedAssetCategory.php",
     "app/Models/FixedAssetMaintenance.php",
+    "app/Models/HsnSacCode.php",
     "app/Models/Lead.php",
     "app/Models/LeadAttachment.php",
     "app/Models/LeadComment.php",
@@ -966,10 +1297,14 @@
     "app/Models/ProjectWorkflowStep.php",
     "app/Models/PurchaseInvoice.php",
     "app/Models/PurchaseInvoiceItem.php",
+    "app/Models/PurchasePaymentSplit.php",
     "app/Models/SalesInvoice.php",
     "app/Models/SalesInvoiceAttachment.php",
+    "app/Models/SalesInvoiceEInvoice.php",
     "app/Models/SalesInvoiceItem.php",
+    "app/Models/SalesInvoiceNote.php",
     "app/Models/SalesInvoiceReminder.php",
+    "app/Models/SalesInvoiceSend.php",
     "app/Models/SavedView.php",
     "app/Models/Shipment.php",
     "app/Models/ShipmentAttachment.php",
@@ -1010,6 +1345,7 @@
     "tools/checks/docs-check.cjs",
     "tools/checks/employees-check.cjs",
     "tools/checks/feedback-check.cjs",
+    "tools/checks/invoice-rounding-browser.cjs",
     "tools/checks/invoices-check.cjs",
     "tools/checks/list-check.cjs",
     "tools/checks/mark-check.cjs",
@@ -1017,6 +1353,7 @@
     "tools/checks/module-dashboard-check.cjs",
     "tools/checks/notes-check.cjs",
     "tools/checks/packaging-label-batch-check.cjs",
+    "tools/checks/packaging-label-typography-browser.cjs",
     "tools/checks/packaging-lists-check.cjs",
     "tools/checks/packaging-print-borders-browser.cjs",
     "tools/checks/packaging-print-settings-check.cjs",
@@ -1029,8 +1366,11 @@
     "tools/checks/project-workflow-check.cjs",
     "tools/checks/project-workflow-ux-check.cjs",
     "tools/checks/projects-check.cjs",
+    "tools/checks/public-short-links-browser.cjs",
+    "tools/checks/purchase-conversions-browser.cjs",
     "tools/checks/recurring-check.cjs",
     "tools/checks/report-check.cjs",
+    "tools/checks/responsive-check.cjs",
     "tools/checks/searchable-selects-browser.cjs",
     "tools/checks/settings-check.cjs",
     "tools/checks/sidebar-navigation-check.cjs",
@@ -1039,6 +1379,7 @@
     "tools/checks/statement-list-browser.cjs",
     "tools/checks/statement-print-browser.cjs",
     "tools/checks/status-check.cjs",
+    "tools/checks/three-decimal-browser.cjs",
     "tools/checks/ui-components-check.cjs",
     "tools/checks/vendor-kyc-browser.cjs",
     "tools/checks/vendor-portal-check.cjs",

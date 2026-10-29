@@ -169,7 +169,7 @@ class PartyStatementShare extends Model
     /** The link itself. Named for what it is, so a view never spells the route. */
     public function url(): string
     {
-        return route('statements.public', $this->token);
+        return \App\Services\PublicShareLinks::url($this);
     }
 
     /** The message that goes out with the link — one wording, app and mail alike. */

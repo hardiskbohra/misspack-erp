@@ -205,12 +205,12 @@
             if (!amountInInr) return;
 
             if (currency === 'INR' && amount > 0) {
-                amountInInr.value = amount.toFixed(2);
+                amountInInr.value = amount.toFixed(3);
                 return;
             }
 
             if (amount > 0 && rate > 0) {
-                amountInInr.value = (amount * rate).toFixed(2);
+                amountInInr.value = (amount * rate).toFixed(3);
             }
         }
 

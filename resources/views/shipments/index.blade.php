@@ -426,7 +426,7 @@
                                             </a>
                                             
                                             <button type="button"
-                                                onclick="copyShipmentLink('{{ route('shipments.publicTrack', $shipment->public_token) }}')">
+                                                onclick="copyShipmentLink('{{ \App\Services\PublicShareLinks::url($shipment) }}')">
                                                 <i class="fas fa-link" aria-hidden="true"></i>
                                                 Public Link
                                             </button>

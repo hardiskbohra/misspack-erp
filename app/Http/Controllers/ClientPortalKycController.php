@@ -10,7 +10,7 @@ class ClientPortalKycController extends ClientPortalBaseController
     public function show(Request $request): View
     {
         $client = $this->client($request);
-        $kycUrl = route('clients.publicKyc', $client->public_token);
+        $kycUrl = \App\Services\PublicShareLinks::url($client);
 
         return view('client_portal.kyc.show', compact('client', 'kycUrl'));
     }

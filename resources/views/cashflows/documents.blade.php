@@ -416,7 +416,7 @@
                     </div>
                     <div class="master-field">
                         <label class="master-label" for="standaloneAmount">Amount</label>
-                        <input class="master-input" id="standaloneAmount" type="number" step="0.01" min="0"
+                        <input class="master-input" id="standaloneAmount" type="number" step="0.001" min="0"
                             name="amount">
                     </div>
                     <div class="master-field">

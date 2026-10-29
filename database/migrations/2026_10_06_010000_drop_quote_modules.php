@@ -54,6 +54,16 @@ return new class extends Migration
                     continue;
                 }
 
+                // MySQL drops the obsolete single-column index with the column.
+                // SQLite's DROP COLUMN instead fails while that index still refers
+                // to it, so remove the index installed by our create migrations.
+                $index = $table.'_'.$column.'_index';
+                if (DB::getDriverName() === 'sqlite' && Schema::hasIndex($table, $index)) {
+                    Schema::table($table, function (Blueprint $blueprint) use ($index): void {
+                        $blueprint->dropIndex($index);
+                    });
+                }
+
                 Schema::table($table, function (Blueprint $blueprint) use ($column): void {
                     $blueprint->dropColumn($column);
                 });

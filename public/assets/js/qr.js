@@ -5,9 +5,11 @@
    package registry, so stickers/tracking links must be encodable locally —
    no CDN, no external service, no server round-trip.
 
-   Scope: QR Code model 2, versions 1..10, byte mode, ECC level M (falls back
-   to L when the payload does not fit at M). That covers ~270 characters,
-   which is far more than a tracking URL needs.
+   Scope: QR Code model 2, versions 1..20, byte mode, ECC level M (falls back
+   to L when the payload does not fit at M). That covers 666 characters at
+   level M and 858 at level L — far more than a tracking URL needs, and
+   enough for an e-invoice signed QR (the GST portal's signed payload
+   typically runs 300-700 characters).
 
    Usage:
      window.ShipQR.svg('https://host/track-shipment/abc');   // -> '<svg …>'
@@ -99,23 +101,39 @@
             1: [7, 1, 19, 0, 0], 2: [10, 1, 34, 0, 0], 3: [15, 1, 55, 0, 0],
             4: [20, 1, 80, 0, 0], 5: [26, 1, 108, 0, 0], 6: [18, 2, 68, 0, 0],
             7: [20, 2, 78, 0, 0], 8: [24, 2, 97, 0, 0], 9: [30, 2, 116, 0, 0],
-            10: [18, 2, 68, 2, 69]
+            10: [18, 2, 68, 2, 69],
+            /* Versions 11-20 exist for the e-invoice signed-QR payloads, which
+               run 300-700 characters (a tracking URL never gets near them).
+               Tables cross-checked against the reference `qrcode` package's
+               code-word tables; the pinned golden fixture lives in
+               tools/testing/qr-code.test.cjs. */
+            11: [20, 4, 81, 0, 0], 12: [24, 2, 92, 2, 93], 13: [26, 4, 107, 0, 0],
+            14: [30, 3, 115, 1, 116], 15: [22, 5, 87, 1, 88], 16: [24, 5, 98, 1, 99],
+            17: [28, 1, 107, 5, 108], 18: [30, 5, 120, 1, 121], 19: [28, 3, 113, 4, 114],
+            20: [28, 3, 107, 5, 108]
         },
         M: {
             1: [10, 1, 16, 0, 0], 2: [16, 1, 28, 0, 0], 3: [26, 1, 44, 0, 0],
             4: [18, 2, 32, 0, 0], 5: [24, 2, 43, 0, 0], 6: [16, 4, 27, 0, 0],
             7: [18, 4, 31, 0, 0], 8: [22, 2, 38, 2, 39], 9: [22, 3, 36, 2, 37],
-            10: [26, 4, 43, 1, 44]
+            10: [26, 4, 43, 1, 44],
+            11: [30, 1, 50, 4, 51], 12: [22, 6, 36, 2, 37], 13: [22, 8, 37, 1, 38],
+            14: [24, 4, 40, 5, 41], 15: [24, 5, 41, 5, 42], 16: [28, 7, 45, 3, 46],
+            17: [28, 10, 46, 1, 47], 18: [26, 9, 43, 4, 44], 19: [26, 3, 44, 11, 45],
+            20: [26, 3, 41, 13, 42]
         }
     };
 
     var ALIGN = {
         1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30],
         6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46],
-        10: [6, 28, 50]
+        10: [6, 28, 50],
+        11: [6, 30, 54], 12: [6, 32, 58], 13: [6, 34, 62], 14: [6, 26, 46, 66],
+        15: [6, 26, 48, 70], 16: [6, 26, 50, 74], 17: [6, 30, 54, 78],
+        18: [6, 30, 56, 82], 19: [6, 30, 58, 86], 20: [6, 34, 62, 90]
     };
 
-    var MAX_VERSION = 10;
+    var MAX_VERSION = 20;
 
     var ECC_BITS = {
         L: 1,
@@ -551,7 +569,7 @@
         }
 
         if (!version) {
-            throw new Error('ShipQR: payload too long for the built-in versions (max ~270 bytes)');
+            throw new Error('ShipQR: payload too long for the built-in versions (max 858 bytes at level L)');
         }
 
         var codewords = addEcc(buildCodewords(bytes, version, ecl), version, ecl);

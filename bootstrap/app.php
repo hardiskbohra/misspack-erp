@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Listeners',
     ])
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->prepend(\App\Http\Middleware\SanitizeServerErrorResponse::class);
         $middleware->alias([
             'client.portal' => \App\Http\Middleware\ClientPortalAuthenticate::class,
             'vendor.portal' => \App\Http\Middleware\VendorPortalAuthenticate::class,
@@ -25,6 +26,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', [\App\Http\Middleware\AuditMutations::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Correlate Laravel's normal exception report with the safe response;
+        // no database or session is needed to create the reference.
+        $exceptions->context(fn () => app()->bound('request')
+            ? ['error_reference' => \App\Support\UnexpectedError::reference(app('request'))]
+            : []);
+        $exceptions->respond(fn ($response, $exception, $request) =>
+            \App\Support\UnexpectedError::response($response, $exception, $request));
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*')
                 // Inline client creation must receive validation/auth errors, not an HTML redirect.

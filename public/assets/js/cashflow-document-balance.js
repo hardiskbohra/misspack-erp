@@ -19,7 +19,7 @@
             var raw = option.getAttribute('data-payment-' + key);
             var amount = Number(raw);
             summary.querySelector('[data-payment-' + key + ']').textContent = raw !== null && Number.isFinite(amount)
-                ? currency + ' ' + amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                ? currency + ' ' + amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 3 })
                 : 'Not available';
         });
         summary.querySelector('[data-payment-heading]').textContent = 'Payment position · ' + option.getAttribute('data-payment-reference');

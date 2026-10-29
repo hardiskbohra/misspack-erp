@@ -94,7 +94,7 @@
         </div>
     @endif
 
-    @php($trackUrl = route('shipments.publicTrack', $shipment->public_token))
+    @php($trackUrl = \App\Services\PublicShareLinks::url($shipment))
     @php($shareText = 'MissPack shipment '.$shipment->shipment_number
         .' ('.($shipment->from_city ?: 'origin').' → '.($shipment->to_city ?: 'destination').')'
         .' is currently: '.($statusOptions[$shipment->status] ?? $shipment->status).'. Track it live: '.$trackUrl)

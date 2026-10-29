@@ -158,10 +158,12 @@ class PartyStatement
                    excludes what the project read already found — one row, one
                    credit, whichever door it arrived by. */
                 $projectReceipts = ProjectReceipts::forClient($id);
+                // Either reader may return a plain empty Support collection;
+                // pluck works for that and for Eloquent model collections.
                 $receipts = $this->clientPortalInvoiceCashflowEntries(
                     $id,
-                    $invoices->modelKeys(),
-                    $projectReceipts->modelKeys()
+                    $invoices->pluck('id')->all(),
+                    $projectReceipts->pluck('id')->all()
                 );
 
                 $found = array_merge(
@@ -303,12 +305,12 @@ class PartyStatement
             $movement = $type === 'vendor'
                 ? $line['credit'] - $line['debit']
                 : $line['debit'] - $line['credit'];
-            $closing = round($line['opening'] + $movement, 2);
+            $closing = round($line['opening'] + $movement, 3);
 
             /* A party with no movement this period but a balance carried into
                it still belongs on the list — that is exactly the statement
                somebody forgot to send. */
-            if ($line['count'] === 0 && abs($closing) < 0.005) {
+            if ($line['count'] === 0 && abs($closing) < 0.0005) {
                 continue;
             }
 
@@ -318,9 +320,9 @@ class PartyStatement
                 'party_id' => (int) $partyId,
                 'currency' => $line['currency'],
                 'name' => (string) ($parties[(int) $partyId] ?? 'Unknown'),
-                'opening' => round($line['opening'], 2),
-                'debit' => round($line['debit'], 2),
-                'credit' => round($line['credit'], 2),
+                'opening' => round($line['opening'], 3),
+                'debit' => round($line['debit'], 3),
+                'credit' => round($line['credit'], 3),
                 'closing' => $closing,
                 'count' => (int) $line['count'],
                 'last_date' => $line['last_date'],
@@ -331,15 +333,15 @@ class PartyStatement
                 $totals['credit'] += $line['credit'];
                 $totals['closing'] += $closing;
             }
-            $totals['balanced'] += abs($closing) >= 0.005 ? 1 : 0;
+            $totals['balanced'] += abs($closing) >= 0.0005 ? 1 : 0;
         }
 
         usort($rows, fn ($a, $b) => [$b['last_date'] ?? '', $a['name']] <=> [$a['last_date'] ?? '', $b['name']]);
 
         $totals['parties'] = count($rows);
-        $totals['debit'] = round($totals['debit'], 2);
-        $totals['credit'] = round($totals['credit'], 2);
-        $totals['closing'] = round($totals['closing'], 2);
+        $totals['debit'] = round($totals['debit'], 3);
+        $totals['credit'] = round($totals['credit'], 3);
+        $totals['closing'] = round($totals['closing'], 3);
 
         if ($currency === 'ALL') {
             $totals['debit'] = $totals['credit'] = $totals['closing'] = null;
@@ -562,7 +564,7 @@ class PartyStatement
             $running += $sign * ($row['debit'] - $row['credit']);
             $debit += $row['debit'];
             $credit += $row['credit'];
-            $moving[$index]['balance'] = round($running, 2);
+            $moving[$index]['balance'] = round($running, 3);
         }
 
         $statement = [
@@ -579,11 +581,11 @@ class PartyStatement
                 'key' => DateRanges::keyOf($from, $to, $this->today),
             ],
             'rows' => array_values($moving),
-            'opening' => round($opening, 2),
+            'opening' => round($opening, 3),
             'totals' => [
-                'debit' => round($debit, 2),
-                'credit' => round($credit, 2),
-                'closing' => round($running, 2),
+                'debit' => round($debit, 3),
+                'credit' => round($credit, 3),
+                'closing' => round($running, 3),
                 'count' => count($moving),
             ],
             'other_currencies' => $this->otherCurrencies($type, $party, $currency, $from, $to, $clientPortal),
@@ -626,8 +628,8 @@ class PartyStatement
             $projectReceipts = ProjectReceipts::forClient($client->id);
             $entries = $this->clientPortalInvoiceCashflowEntries(
                 $client->id,
-                $invoices->modelKeys(),
-                $projectReceipts->modelKeys()
+                $invoices->pluck('id')->all(),
+                $projectReceipts->pluck('id')->all()
             );
         } else {
             $invoices = Schema::hasTable('sales_invoices')
@@ -942,8 +944,8 @@ class PartyStatement
             $receipts = ProjectReceipts::forClient((int) $party->id);
             $entries = $this->clientPortalInvoiceCashflowEntries(
                 (int) $party->id,
-                $invoices->modelKeys(),
-                $receipts->modelKeys()
+                $invoices->pluck('id')->all(),
+                $receipts->pluck('id')->all()
             );
 
             $collect($invoices->map(fn ($invoice) => [
@@ -1046,7 +1048,7 @@ class PartyStatement
         }
 
         foreach ($buckets as $key => $bucket) {
-            $buckets[$key]['amount'] = round($bucket['amount'], 2);
+            $buckets[$key]['amount'] = round($bucket['amount'], 3);
         }
 
         return [
@@ -1055,7 +1057,7 @@ class PartyStatement
                 ? 'Aged from the bill date — vendor bills do not carry a due date here.'
                 : 'Aged from the due date; the amount is the invoice balance after payments.',
             'buckets' => $buckets,
-            'total' => round($total, 2),
+            'total' => round($total, 3),
             'rows' => $items,
         ];
     }
@@ -1094,7 +1096,7 @@ class PartyStatement
                 'due' => $due,
                 'reference' => $invoice->invoice_number,
                 'particular' => 'Sales invoice',
-                'amount' => round($balance, 2),
+                'amount' => round($balance, 3),
                 'days' => $days,
                 'bucket' => $bucket,
                 'bucket_label' => self::BUCKETS[$bucket],
@@ -1135,7 +1137,7 @@ class PartyStatement
                 'due' => null,
                 'reference' => $entry->invoice_number,
                 'particular' => $this->vendorParticular($entry),
-                'amount' => round((float) $entry->foreign_amount, 2),
+                'amount' => round((float) $entry->foreign_amount, 3),
                 'days' => max($days, 0),
                 'bucket' => $bucket,
                 'bucket_label' => self::BUCKETS[$bucket],

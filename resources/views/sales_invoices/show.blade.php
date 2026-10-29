@@ -128,7 +128,7 @@
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
-                        data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                        data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
                         data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
                         data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
@@ -163,10 +163,15 @@
                         <button type="button" data-copy-text="{{ $invoice->reminderMessage() }}">
                             <i class="fas fa-comment-dots" aria-hidden="true"></i> Copy reminder text
                         </button>
-                        <button type="button" data-copy-link="{{ route('sales-invoices.public', $invoice->public_token) }}">
+                        <button type="button" data-open-email
+                            data-invoice-id="{{ $invoice->id }}"
+                            data-invoice-number="{{ $invoice->invoice_number }}">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i> Email to client
+                        </button>
+                        <button type="button" data-copy-link="{{ \App\Services\PublicShareLinks::url($invoice) }}">
                             <i class="fas fa-link" aria-hidden="true"></i> Copy client link
                         </button>
-                        <a href="{{ route('sales-invoices.public', $invoice->public_token) }}" target="_blank" rel="noopener">
+                        <a href="{{ \App\Services\PublicShareLinks::url($invoice) }}" target="_blank" rel="noopener">
                             <i class="fas fa-up-right-from-square" aria-hidden="true"></i> Open client copy
                         </a>
                         @if ($invoice->status === 'draft')
@@ -236,8 +241,8 @@
                         @csrf
                         <div class="master-form-grid is-three">
                             <div class="master-field"><label class="master-label" for="cashConversionMode">Convert by</label><select class="master-select" id="cashConversionMode" name="conversion_mode"><option value="amount">Amount ({{ $invoice->currency }})</option><option value="percent" @selected(old('conversion_mode') === 'percent')>Percentage of remainder</option></select></div>
-                            <div class="master-field"><label class="master-label" for="cashConversionValue">Amount / percentage</label><input class="master-input" id="cashConversionValue" name="conversion_value" type="number" min="0.01" step="0.01" required value="{{ old('conversion_value', $invoice->cashConvertibleRemaining()) }}"></div>
-                            <div class="master-field"><label class="master-label" for="cashTransferReceived">Recorded receipts to transfer ({{ $invoice->currency }})</label><input class="master-input" id="cashTransferReceived" name="transfer_received" type="number" min="0" step="0.01" max="{{ min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining()) }}" required data-preserve-transfer="{{ old('transfer_received') !== null ? 'true' : 'false' }}" value="{{ old('transfer_received', min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining())) }}"></div>
+                            <div class="master-field"><label class="master-label" for="cashConversionValue">Amount / percentage</label><input class="master-input" id="cashConversionValue" name="conversion_value" type="number" min="0.001" step="0.001" required value="{{ old('conversion_value', $invoice->cashConvertibleRemaining()) }}"></div>
+                            <div class="master-field"><label class="master-label" for="cashTransferReceived">Recorded receipts to transfer ({{ $invoice->currency }})</label><input class="master-input" id="cashTransferReceived" name="transfer_received" type="number" min="0" step="0.001" max="{{ min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining()) }}" required data-preserve-transfer="{{ old('transfer_received') !== null ? 'true' : 'false' }}" value="{{ old('transfer_received', min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining())) }}"></div>
                         </div>
                         <p class="master-help">This does not record a new payment. Choose how much of the PI's existing receipts to apply, up to this Cash Invoice's value. Cash-mode / cash-account receipts are used first, then opening credit and other receipts. Untransferred receipts stay as a PI advance, even if its entire value is cash invoiced.</p>
                         <p id="cashTransferSummary" class="master-help" role="status" aria-live="polite"></p>
@@ -245,6 +250,10 @@
                     </form>
                 @endif
             </section>
+        @endif
+
+        @if ($invoice->invoice_type === 'tax')
+            @include('sales_invoices.partials.e-invoice-card', ['invoice' => $invoice, 'eInvoice' => $eInvoice, 'eInvoiceIssues' => $eInvoiceIssues])
         @endif
 
         {{-- Five figures, each one a fact the page was opened for: what was
@@ -615,7 +624,7 @@
                                 <button type="button" class="master-btn master-btn-soft" data-open-payment
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
-                                    data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                                    data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
                                     data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
                                     data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
@@ -644,7 +653,7 @@
                                 <button type="button" class="master-btn master-btn-light" data-open-payment
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
-                                    data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                                    data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
                                     data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
                                     data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
@@ -702,7 +711,7 @@
                                 {{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}
                             </strong>
                         </div>
-                        @if($advanceAmount > 0.009)
+                        @if($advanceAmount >= 0.001)
                             <div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>
                         @endif
                     </div>
@@ -769,6 +778,75 @@
                         </div>
                     @endif
                 </div>
+
+                @if ($invoice->relationLoaded('sends'))
+                    {{-- The answer to "we never received it": what the office
+                         sent, to whom, when, and whether the mailer took it. --}}
+                    <div class="master-card master-section">
+                        <div class="master-section-head">
+                            <div>
+                                <h2 class="master-section-title">Invoice email history</h2>
+                                <p class="master-sub">
+                                    @if ($invoice->sends->isNotEmpty())
+                                        Last attempt {{ $invoice->sends->first()->sent_at?->diffForHumans() }}
+                                        by {{ $invoice->sends->first()->sender?->name ?? 'the office' }}
+                                        · {{ $invoice->sends->count() }} attempt{{ $invoice->sends->count() === 1 ? '' : 's' }} logged
+                                    @else
+                                        No email attempts are recorded for this invoice yet
+                                    @endif
+                                </p>
+                            </div>
+                            <div class="master-section-meta">
+                                <button type="button" class="master-btn master-btn-soft" data-open-email
+                                    data-invoice-id="{{ $invoice->id }}"
+                                    data-invoice-number="{{ $invoice->invoice_number }}">
+                                    <i class="fas fa-paper-plane" aria-hidden="true"></i> Email it
+                                </button>
+                            </div>
+                        </div>
+
+                        @if ($invoice->sends->isEmpty())
+                            <div class="master-empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>
+                                    The Email it button sends the invoice by e-mail and keeps the copy here —
+                                    the next “we never got it” answers itself.
+                                </p>
+                            </div>
+                        @else
+                            <div class="si-reminder-list">
+                                @foreach ($invoice->sends as $send)
+                                    <div class="si-reminder">
+                                        <div class="si-reminder-when">
+                                            <strong>{{ $send->sent_at?->format('d M Y, H:i') }}</strong>
+                                            <span class="master-sub">{{ $send->sender?->name ?? 'the office' }}</span>
+                                        </div>
+                                        <div class="si-reminder-what">
+                                            <strong>
+                                                {{ $send->subject }}
+                                                <span class="master-status-chip {{ $send->isPending() ? 'warning' : ($send->isFailed() ? 'danger' : 'success') }}">
+                                                    {{ $send->isPending() ? 'Unconfirmed' : ($send->isFailed() ? 'Mailer error' : 'Sent') }}
+                                                </span>
+                                            </strong>
+                                            <span class="master-sub">
+                                                To {{ $send->recipients }}
+                                                @if (filled($send->cc)) · Cc {{ $send->cc }} @endif
+                                                @if ($send->isFailed() && filled($send->error))
+                                                    <span class="si-due">· {{ $send->error }}</span>
+                                                @endif
+                                                @if ($send->isPending() || $send->isFailed())
+                                                    <span class="si-due">· Check delivery before retrying.</span>
+                                                @endif
+                                            </span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endif
+
+                @include('sales_invoices.partials.adjustments-card')
             </div>
         </div>
 
@@ -920,8 +998,27 @@
         </div>
     </div>
 
+    @push('scripts')
+<script>
+    /* data-copy="…selector…" — copy the referenced node's text to the clipboard. */
+    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var target = document.querySelector(btn.getAttribute('data-copy'));
+            if (!target) return;
+            navigator.clipboard.writeText(target.textContent).then(function () {
+                btn.classList.add('is-copied');
+                setTimeout(function () { btn.classList.remove('is-copied'); }, 1500);
+            });
+        });
+    });
+</script>
+@endpush
+
     @include('sales_invoices.partials.payment-modal')
     @include('sales_invoices.partials.reminder-modal')
+    @include('sales_invoices.partials.email-modal')
+    @include('sales_invoices.partials.adjustments-modals')
+    <script type="application/json" data-email-payload="{{ $invoice->id }}">@json($invoice->emailDefaults())</script>
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
 @endpush

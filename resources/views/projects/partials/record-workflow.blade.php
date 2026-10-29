@@ -107,7 +107,7 @@
                                         <button type="button" class="master-btn master-btn-primary master-btn-sm" data-open-payment
                                             data-invoice-id="{{ $workflowReceiptInvoice->id }}"
                                             data-invoice-number="{{ $workflowReceiptInvoice->invoice_number }}"
-                                            data-invoice-amount="{{ number_format($receiptAmount > 0 ? $receiptAmount : (float)$workflowReceiptInvoice->balanceDue(), 2, '.', '') }}"
+                                            data-invoice-amount="{{ number_format($receiptAmount > 0 ? $receiptAmount : (float)$workflowReceiptInvoice->balanceDue(), 3, '.', '') }}"
                                             data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($workflowReceiptInvoice->balanceDue()) }}"
                                             data-invoice-client="{{ $workflowReceiptInvoice->client_company_name ?: $project->clientName() }}"
                                             data-invoice-currency="{{ $workflowReceiptInvoice->currency ?: 'INR' }}">

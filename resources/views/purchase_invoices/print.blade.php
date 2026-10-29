@@ -17,13 +17,15 @@
     $isImport = $invoice->gst_type === 'export';
     $money = fn ($amount) => \App\Helpers\CommonHelper::amount((float) $amount, $currency);
     $invoiceItems = $invoice->items->values();
-    $lineDiscountTotal = round((float) $invoiceItems->sum('discount_amount'), 2);
+    $precision = 3;
+    $scale = 10 ** $precision;
+    $lineDiscountTotal = round((float) $invoiceItems->sum('discount_amount'), $precision);
 
     /* Item tax values are saved before the invoice-wide discount. Use a
-       largest-remainder allocation of the final header amounts in cents, so
+       largest-remainder allocation at the document’s precision, so
        printed taxable/tax rows reconcile; the row discount includes its
        allocated share of the invoice-wide discount as well. */
-    $allocateCents = static function (float $target, array $weights): array {
+    $allocateCents = static function (float $target, array $weights) use ($scale): array {
         $weights = array_map(static fn ($weight) => max((float) $weight, 0), array_values($weights));
         $count = count($weights);
 
@@ -31,7 +33,7 @@
             return [];
         }
 
-        $targetCents = max(0, (int) round($target * 100));
+        $targetCents = max(0, (int) round($target * $scale));
         if ($targetCents === 0) {
             return array_fill(0, $count, 0.0);
         }
@@ -57,7 +59,7 @@
             $allocatedCents[$order[$cent % $count]]++;
         }
 
-        return array_map(static fn ($cents) => $cents / 100, $allocatedCents);
+        return array_map(static fn ($cents) => $cents / $scale, $allocatedCents);
     };
 
     $taxableWeights = $invoiceItems->map(fn ($item) => max((float) $item->taxable_amount, 0))->all();
@@ -98,7 +100,7 @@
 
     $received = $invoice->paidAmount();
     $receivedDisplay = $received > 0 ? '-'.$money($received) : $money($received);
-    $balanceDue = $invoice->balanceDue();
+    $balanceDue = $invoice->isOrder() ? $invoice->openAmount() : $invoice->balanceDue();
     $secondaryDate = $invoice->invoice_type === 'bill'
         ? ($invoice->due_date ?: $invoice->expected_date)
         : ($invoice->expected_date ?: $invoice->valid_until);
@@ -308,6 +310,10 @@
             </table>
         </div>
 
+        @if ($invoice->isPartialConversion())
+            <p class="line-tax-note">Bill quantities are financial references, not separate goods received. Check quantities, rates and round off against the supplier's documents.</p>
+            @if ($invoiceItems->contains(fn ($item) => (float) $item->unit_price === 0.0))<p class="line-tax-note">A zero rate may be a free item or the result of three-decimal price rounding; check the PO and round off.</p>@endif
+        @endif
         @if ($lineFiguresUnavailable)
             <p class="line-tax-note">Some line-level figures could not be allocated for this record. The invoice totals below remain authoritative.</p>
         @endif
@@ -332,7 +338,7 @@
             <div class="invoice-right">
                 <section class="summary">
                     <div class="summary-heading">
-                        <h2>Invoice summary</h2>
+                        <h2>{{ $invoice->hasPartialConversions() ? 'Original PO components' : 'Invoice summary' }}</h2>
                         <span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }}</span>
                     </div>
                     <table>
@@ -377,11 +383,15 @@
                             @if ((float) $invoice->other_charges !== 0.0)
                                 <tr><td>Other charges</td><td>{{ $money($invoice->other_charges) }}</td></tr>
                             @endif
-                            @if (abs((float) $invoice->round_off) >= 0.01)
+                            @if (abs((float) $invoice->round_off) >= 0.001)
                                 <tr><td>Round off</td><td>{{ $money($invoice->round_off) }}</td></tr>
                             @endif
+                            @if ($invoice->hasPartialConversions())
+                                <tr><td>Original PO total</td><td>{{ $money($invoice->original_total_amount) }}</td></tr>
+                                <tr><td>Less linked bills</td><td>-{{ $money($invoice->converted_amount) }}</td></tr>
+                            @endif
                             <tr class="grand-total">
-                                <td>Grand total</td>
+                                <td>{{ $invoice->hasPartialConversions() ? 'Remaining PO total' : 'Grand total' }}</td>
                                 <td>{{ $money($invoice->total_amount) }}</td>
                             </tr>
                             <tr class="settlement-row">

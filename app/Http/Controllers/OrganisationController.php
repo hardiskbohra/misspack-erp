@@ -7,6 +7,7 @@ use App\Models\OrganisationAddress;
 use App\Models\OrganisationBank;
 use App\Models\OrganisationContact;
 use App\Models\OrganisationSocial;
+use App\Rules\ValidGstin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -56,7 +57,7 @@ class OrganisationController extends Controller
             'mobile' => ['nullable', 'string', 'max:40'],
             'website' => ['nullable', 'string', 'max:160'],
             'website_url' => ['nullable', 'string', 'max:255'],
-            'gstin' => ['nullable', 'string', 'max:20'],
+            'gstin' => ['nullable', 'string', 'max:20', new ValidGstin],
             'pan' => ['nullable', 'string', 'max:20'],
             'cin' => ['nullable', 'string', 'max:30'],
             'iec' => ['nullable', 'string', 'max:20'],

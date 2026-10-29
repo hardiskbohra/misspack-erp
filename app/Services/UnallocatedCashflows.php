@@ -61,7 +61,12 @@ class UnallocatedCashflows
             $query->whereNotIn('cashflow_entries.id', \App\Models\VendorPaymentEntry::query()
                 ->select('cashflow_entry_id')
                 ->whereNotNull('cashflow_entry_id')
-                ->whereNotNull('purchase_invoice_id'));
+                ->where(function ($payment) {
+                    $payment->whereNotNull('purchase_invoice_id');
+                    if (Schema::hasTable('purchase_payment_splits')) {
+                        $payment->orWhereHas('purchaseSplits');
+                    }
+                }));
         }
 
         $entries = $query->get()
@@ -114,14 +119,14 @@ class UnallocatedCashflows
     private function snapshot(Collection $entries): array
     {
         $entries = $entries
-            ->filter(fn (CashflowEntry $entry) => $entry->unallocatedAmount() > 0.009)
+            ->filter(fn (CashflowEntry $entry) => $entry->unallocatedAmount() >= 0.001)
             ->values();
 
         $totals = $entries
             ->groupBy(fn (CashflowEntry $entry) => strtoupper((string) ($entry->currency ?: 'INR')))
             ->map(fn (Collection $rows) => round((float) $rows->sum(
                 fn (CashflowEntry $entry) => $entry->unallocatedAmount()
-            ), 2));
+            ), 3));
 
         return [
             'entries' => $entries,

@@ -6,7 +6,7 @@ Generated from [catalogue.json](catalogue.json); edit the JSON and run `npm run 
 
 ## Authentication and office permissions (`AUTH`)
 
-Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthController.php`, `app/Http/Middleware/EnsureUserIsAdmin.php`.
+Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthController.php`, `app/Http/Middleware/EnsureUserIsAdmin.php`, `app/Support/Totp.php`, `app/Services/TwoFactorAuthentication.php`, `app/Http/Controllers/TwoFactorController.php`, `app/Http/Controllers/TwoFactorChallengeController.php`.
 
 ### UT-AUTH-001 — Read permission cannot mutate
 
@@ -44,6 +44,20 @@ Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthControll
 **Expected:** Every office permission is denied.
 
 **Evidence:** `tests/Unit/PermissionMatrixTest.php#test_employee_never_gains_office_access_even_with_full_profile_or_explicit_grants`
+
+### UT-AUTH-004 — TOTP codes match RFC 6238 and the one-step window
+
+**Priority:** P0 · **Requirement:** REQ-AUTH · **Implementation:** linked executable evidence
+
+- **Preconditions:** No database; pure algorithm checks against the RFC test secret.
+- **Data:** RFC 6238 Base32 secret GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ; timestamps 59, 1111111109, 1234567890.
+1. Generate the six-digit code at each RFC timestamp and compare with the expected values
+2. Verify a code inside the one-step window passes and one four steps away fails
+3. Reject non six-digit input and invalid Base32 secrets
+
+**Expected:** Codes equal the RFC vectors to six digits; window rules hold; malformed input never verifies.
+
+**Evidence:** `tests/Unit/TotpTest.php#test_codes_match_the_rfc_6238_vectors`; `tests/Unit/TotpTest.php#test_verify_accepts_the_code_around_the_current_step`; `tests/Unit/TotpTest.php#test_verify_rejects_anything_that_is_not_six_digits`
 
 ## People, payroll and employee documents (`PEOPLE`)
 
@@ -98,7 +112,7 @@ Sources: `app/Services/EmployeeAccess.php`, `app/Services/EmployeeProfile.php`, 
 
 ## Client master, KYC and account profile (`CLIENT`)
 
-Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`.
+Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`, `app/Services/PublicShareLinks.php`.
 
 ### UT-CLIENT-001 — Currencies remain separate
 
@@ -435,7 +449,7 @@ Sources: `app/Http/Controllers/PackagingListController.php`, `app/Services/Packa
 
 ## Shipments, dispatch and delivery (`SHIP`)
 
-Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`.
+Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`, `app/Services/PublicShareLinks.php`.
 
 ### UT-SHIP-001 — Dispatch gate requires full financial balance
 
@@ -483,7 +497,7 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
-Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`.
+Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`, `app/Services/SalesInvoiceAdjustment.php`, `app/Models/SalesInvoiceNote.php`, `app/Http/Controllers/SalesInvoiceNoteController.php`, `tests/Feature/InvoiceAdjustmentTest.php`.
 
 ### UT-SALES-001 — Cash invoice excludes GST from its amount
 
@@ -518,7 +532,7 @@ Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDele
 
 ## Purchase documents and vendor settlement (`PURCHASE`)
 
-Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMoney.php`, `app/Http/Controllers/PurchaseInvoiceController.php`.
+Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMoney.php`, `app/Http/Controllers/PurchaseInvoiceController.php`, `app/Services/PurchasePartialConversion.php`, `app/Models/PurchasePaymentSplit.php`.
 
 ### UT-PURCHASE-001 — Active payments determine bill balance
 
@@ -620,7 +634,7 @@ Sources: `app/Services/RecurrenceSchedule.php`, `app/Services/RecurrencePosting.
 
 ## Party statements and reconciliation (`STATEMENT`)
 
-Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatementController.php`.
+Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
 
 ### UT-STATEMENT-001 — Running balance respects debit/credit direction
 
@@ -1110,13 +1124,17 @@ Sources: `app/Services/AuditTrail.php`, `app/Http/Middleware/AuditMutations.php`
 
 ### UT-AUDIT-001 — Public tokens are redacted from logged URL
 
-**Priority:** P0 · **Requirement:** REQ-AUDIT · **Implementation:** planned
+**Priority:** P0 · **Requirement:** REQ-AUDIT · **Implementation:** partial evidence
 
 - **Preconditions:** Office,portal and anonymous actors; sensitive settings mutation and secret URL token
 - **Data:** Request path includes secure token
 1. Build audit URL
 
 **Expected:** Token replaced with redacted marker rather than stored plaintext.
+
+**Note:** Component evidence exercises AuditTrail with a bound short-link route; this is not an isolated unit proof of all audit redaction.
+
+**Evidence:** `tests/Integration/PublicShortLinksTest.php#test_audit_redacts_the_alias_as_a_bearer_token`
 
 ### UT-AUDIT-002 — Sensitive request bodies are not logged wholesale
 
@@ -1225,3 +1243,23 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 **Expected:** minimumResultsForSearch is always0; selection class/width remain intact; no separate policy hides search; entry points receive updated script.
 
 **Note:** Executed Node unit regressions: tools/testing/select2-policy.test.cjs (8 tests), now part of npm run test:contracts. Catalogue exact-method links count PHP methods only; this is not an unexecuted case.
+
+## GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) (`TAX`)
+
+Sources: `app/Support/Gstin.php`, `app/Rules/ValidGstin.php`, `app/Models/HsnSacCode.php`, `app/Models/SalesInvoiceEInvoice.php`, `app/Services/EInvoice/EInvoicePayload.php`, `app/Services/EInvoice/EInvoiceRegistration.php`, `app/Services/EInvoice/HttpGateway.php`, `app/Services/EInvoice/ManualGateway.php`, `app/Http/Controllers/TaxSettingController.php`, `app/Http/Controllers/SalesInvoiceEInvoiceController.php`.
+
+### UT-TAX-001 — GSTIN check digit follows the published mod-36 algorithm and refuses typos
+
+**Priority:** P0 · **Requirement:** REQ-TAX-GSTIN · **Implementation:** linked executable evidence
+
+- **Preconditions:** No database; pure algorithm and rule checks.
+- **Data:** Pinned vectors 24AATCM8816E1Z5 / 33AAACC1206D1ZN / 24ABCDE1234F1Z6; single-character mutations at all 15 positions.
+1. Assert known-good GSTINs pass structure, state code and checksum
+2. Pin the check digits 5/N/6 against the published examples
+3. Verify every one-character mutation fails
+4. Verify structural rejections (length, wrong Z slot, entity zero, unallotted state)
+5. Confirm normalise/state/pan helpers and one shared validation message
+
+**Expected:** Structure, checksum and state gates hold independently; every typo is refused; nullable input stays nullable.
+
+**Evidence:** `tests/Unit/GstinTest.php#test_known_good_gstins_pass_structure_state_and_checksum`; `tests/Unit/GstinTest.php#test_the_check_digit_is_the_published_mod36_algorithm`; `tests/Unit/GstinTest.php#test_a_single_character_typo_anywhere_fails`; `tests/Unit/GstinTest.php#test_structural_and_state_rejections`; `tests/Unit/GstinTest.php#test_normalise_and_the_parts_it_unlocks`; `tests/Unit/GstinTest.php#test_the_validation_rule_carries_one_message_everywhere`

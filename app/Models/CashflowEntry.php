@@ -21,9 +21,9 @@ class CashflowEntry extends Model
 
     protected $casts = [
         'entry_date' => 'date',
-        'credit_amount' => 'decimal:2',
-        'debit_amount' => 'decimal:2',
-        'balance' => 'decimal:2',
+        'credit_amount' => \App\Casts\DecimalUpToThree::class,
+        'debit_amount' => \App\Casts\DecimalUpToThree::class,
+        'balance' => \App\Casts\DecimalUpToThree::class,
     ];
 
     protected static function booted(): void
@@ -66,12 +66,12 @@ class CashflowEntry extends Model
             ? $this->allocations->sum('amount')
             : $this->allocations()->sum('amount');
 
-        return round((float) $total, 2);
+        return round((float) $total, 3);
     }
 
     public function unallocatedAmount(): float
     {
-        return round(max($this->amountMoved() - $this->allocatedAmount(), 0), 2);
+        return round(max($this->amountMoved() - $this->allocatedAmount(), 0), 3);
     }
 
     /**
@@ -206,7 +206,7 @@ class CashflowEntry extends Model
     {
         return round((float) ($this->isMoneyOut()
             ? $this->debit_amount
-            : $this->credit_amount), 2);
+            : $this->credit_amount), 3);
     }
 
     public function isCashAccount(): bool

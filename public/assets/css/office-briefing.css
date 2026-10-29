@@ -187,3 +187,228 @@ body.ob-open {
         max-height: calc(100dvh - 24px);
     }
 }
+
+/* =====================================================================
+   NOTIFICATION CENTRE — the desk as a page
+   ---------------------------------------------------------------------
+   The bell panel is the glance; .obc-* is the whole desk: trays, two
+   filter rows and the resolved trail with who cleared what. Reuses the
+   dropdown's .ob-item rows so one item reads the same in both surfaces.
+   The page opener here is self-owned: the house's .set-head* set lives in
+   settings.css, which a non-settings page must not pull in — mirror its
+   proportions (52px mark, 18px/600 title) rather than borrow the sheet.
+   ===================================================================== */
+
+/* One rhythm for the whole page: the grid owns the gaps, sections don't.
+   Every direct child's own spacing is zeroed — .master-list .master-card
+   alone would add another 18px under each block and double the gutter. */
+.obc {
+    display: grid;
+    gap: 16px;
+}
+
+.obc > * {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* master-list.css spaces *its* cards (.master-list .master-card, margin 18px)
+   at specificity (0,2,0) — the page also wears .master-list, and that margin
+   was beating the zeroing above (0,1,1). Same-class specificity plus this
+   module sheet's later load order is what puts the gutter back to 16px
+   exactly, head/stats/filters/tray alike. */
+.obc > .master-card {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.obc .master-alert {
+    margin: 0;
+}
+
+.obc-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 22px;
+}
+
+.obc-head-mark {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--ui-muted-surface);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-accent);
+    font-size: 19px;
+}
+
+.obc-head-title {
+    margin: 0;
+    color: var(--ui-text);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.obc-head .master-sub {
+    margin: 5px 0 0;
+    max-width: 92ch;
+}
+
+.obc-filters,
+.obc-stats {
+    margin-bottom: 0;
+}
+
+.obc-filters {
+    padding: 14px 18px;
+    display: grid;
+    gap: 10px;
+}
+
+.obc-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.obc-filter-label {
+    flex: 0 0 64px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--mc-text-3);
+}
+
+.obc-list {
+    display: grid;
+    gap: 2px;
+}
+
+/* Inside the tray card the head already breathes for the section; the first
+   row must not re-pad into the title. */
+.obc-tray .master-section-head {
+    margin-bottom: 8px;
+}
+
+.obc-item:first-child {
+    padding-top: 6px;
+}
+
+.obc-item {
+    margin-bottom: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--mc-border);
+    padding: 16px 4px;
+}
+
+.obc-item:last-child {
+    border-bottom: 0;
+}
+
+.obc-item.is-resolved {
+    opacity: .78;
+}
+
+.obc-item.is-resolved:hover {
+    opacity: 1;
+}
+
+.obc-item h3 {
+    margin: 2px 0 4px;
+    font-size: 14.5px;
+}
+
+.obc-item > p {
+    margin: 0 0 6px;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    line-height: 1.55;
+    max-width: 78ch;
+}
+
+.obc-resolved-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #027a48;
+}
+
+.obc-resolved-line i {
+    font-size: 12px;
+}
+
+.obc-actions {
+    flex-wrap: wrap;
+}
+
+.obc-actions form {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.obc-snooze-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mc-text-3);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+@media (max-width: 767px) {
+    /* The desk reads single-column on a phone: the head tucks to a tighter
+       pad with a smaller mark, filter labels own their row, the chip rows
+       wrap, and an item's action row stacks buttons full-width in thumb
+       order — target, then clear, then snooze. */
+    .obc-head {
+        padding: 16px;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .obc-head-mark {
+        width: 44px;
+        height: 44px;
+        flex-basis: 44px;
+        border-radius: 14px;
+        font-size: 17px;
+    }
+
+    .obc-filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .obc-filter-label {
+        flex: none;
+    }
+
+    .obc-item {
+        padding: 14px 2px;
+    }
+
+    .obc-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .obc-actions > a,
+    .obc-actions > form > .master-btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .obc-snooze {
+        justify-content: space-between;
+    }
+}

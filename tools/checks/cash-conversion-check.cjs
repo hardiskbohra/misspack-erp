@@ -40,8 +40,8 @@ async function run() {
             await page.goto('about:blank');
             await page.setContent(`<section id="cashInvoiceConversion" data-convertible="${remainder}" data-received="${received}" data-currency="INR">
                 <select id="cashConversionMode"><option value="amount">Amount</option><option value="percent">Percent</option></select>
-                <input id="cashConversionValue" type="number" min="0.01" step="0.01" required value="${amount}">
-                <input id="cashTransferReceived" type="number" min="0" step="0.01" required data-preserve-transfer="${preserve}" value="${transfer}">
+                <input id="cashConversionValue" type="number" min="0.001" step="0.001" required value="${amount}">
+                <input id="cashTransferReceived" type="number" min="0" step="0.001" required data-preserve-transfer="${preserve}" value="${transfer}">
                 <p id="cashTransferSummary"></p></section>`);
             if (jquery) {
                 // Exercise the same event-binding branch used by the shared select.
@@ -56,15 +56,15 @@ async function run() {
         async function maxTransfer() { return page.locator('#cashTransferReceived').getAttribute('max'); }
         for (const jquery of [false, true]) {
             await fixture({ jquery });
-            check(`initial transfer is 150000, not the full 300000 (${jquery ? 'jQuery branch' : 'native'})`, await value('cashTransferReceived') === '150000.00');
+            check(`initial transfer is 150000, not the full 300000 (${jquery ? 'jQuery branch' : 'native'})`, await value('cashTransferReceived') === '150000.000');
             await page.locator('#cashConversionValue').fill('100000');
-            check('100000 Cash Invoice automatically gets only 100000 paid', await value('cashTransferReceived') === '100000.00');
-            check('100000 transfer is also the browser maximum', await maxTransfer() === '100000.00');
+            check('100000 Cash Invoice automatically gets only 100000 paid', await value('cashTransferReceived') === '100000.000');
+            check('100000 transfer is also the browser maximum', await maxTransfer() === '100000.000');
             check('live summary leaves 50000 with the PI', (await page.locator('#cashTransferSummary').textContent()).includes('50,000.00 INR stays with PI'));
             await page.locator('#cashConversionMode').selectOption('percent');
             check('percentage mode resets to 100 percent', await value('cashConversionValue') === '100');
             await page.locator('#cashConversionValue').fill('25');
-            check('25 percent applies 75000 of the remaining 300000', await value('cashTransferReceived') === '75000.00' && await maxTransfer() === '75000.00');
+            check('25 percent applies 75000 of the remaining 300000', await value('cashTransferReceived') === '75000.000' && await maxTransfer() === '75000.000');
             await page.locator('#cashTransferReceived').fill('0');
             await page.locator('#cashConversionValue').fill('50');
             check('an explicit zero transfer is never overwritten', await value('cashTransferReceived') === '0');
@@ -72,16 +72,16 @@ async function run() {
             await page.locator('#cashConversionValue').fill('75');
             check('an explicit partial transfer stays chosen on amount changes', await value('cashTransferReceived') === '50000');
             await page.locator('#cashConversionValue').fill('10');
-            check('an oversized manual choice is invalid, not silently transferred', await maxTransfer() === '30000.00' && !await page.locator('#cashTransferReceived').evaluate(el => el.checkValidity()));
+            check('an oversized manual choice is invalid, not silently transferred', await maxTransfer() === '30000.000' && !await page.locator('#cashTransferReceived').evaluate(el => el.checkValidity()));
             await page.locator('#cashTransferReceived').fill('20000');
             check('correcting the manual transfer clears its validity error', await page.locator('#cashTransferReceived').evaluate(el => el.checkValidity()));
         }
         await fixture({ remainder: 200000, received: 50000 });
         await page.locator('#cashConversionMode').selectOption('percent');
         await page.locator('#cashConversionValue').fill('10');
-        check('later conversions use the remaining PI base, not its original total', await value('cashTransferReceived') === '20000.00');
+        check('later conversions use the remaining PI base, not its original total', await value('cashTransferReceived') === '20000.000');
         await fixture({ received: 0 });
-        check('no receipts means zero transferable money', await value('cashTransferReceived') === '0.00' && await maxTransfer() === '0.00');
+        check('no receipts means zero transferable money', await value('cashTransferReceived') === '0.000' && await maxTransfer() === '0.000');
         await fixture({ amount: 100000, transfer: 50000, preserve: true });
         check('a failed request preserves the chosen 50000', await value('cashTransferReceived') === '50000');
         await fixture({ amount: 100000, transfer: 150000, preserve: true });
@@ -89,7 +89,9 @@ async function run() {
         await fixture({ remainder: 0.03, received: 0.03 });
         await page.locator('#cashConversionMode').selectOption('percent');
         await page.locator('#cashConversionValue').fill('33.33');
-        check('percentage caps round to invoice cents', await value('cashTransferReceived') === '0.01');
+        check('percentage caps round to invoice thousandths', await value('cashTransferReceived') === '0.010');
+        await fixture({ remainder: 1.574, received: 0.574, amount: 0.574 });
+        check('fractional conversion keeps the exact transferable amount', await value('cashTransferReceived') === '0.574' && await maxTransfer() === '0.574');
         check('module initializes without browser errors', errors.length === 0);
     } finally { await browser.close(); }
     console.log(`\ncash conversion UI: ${passed} passed, 0 failed (source audit + Chromium)`);

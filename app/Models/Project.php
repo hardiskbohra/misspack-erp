@@ -291,7 +291,7 @@ class Project extends Model
             }
         }
 
-        return round($total, 2);
+        return round($total, 3);
     }
 
     /**

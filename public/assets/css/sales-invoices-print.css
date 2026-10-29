@@ -738,3 +738,38 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+/* ---------------- e-invoice IRN + QR ----------------
+   Shows only when the invoice carries a GST-network registration. The QR is
+   meant for the government's verifier apps, so it prints solid dark on white
+   regardless of the screen theme. */
+.invoice-einvoice {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.invoice-irn {
+    margin: 0;
+    font-size: 9px;
+    line-height: 1.5;
+    color: #475467;
+}
+.invoice-irn strong {
+    display: block;
+    font-family: ui-monospace, monospace;
+    font-size: 8px;
+    word-break: break-all;
+    max-width: 300px;
+}
+.invoice-qr svg {
+    width: 84px;
+    height: auto;
+    display: block;
+}
+
+@media print {
+    .invoice-einvoice {
+        break-inside: avoid;
+    }
+}

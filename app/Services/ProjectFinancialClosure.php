@@ -24,6 +24,10 @@ class ProjectFinancialClosure
             'bills.payments', 'bills.cashflowAllocations.cashflowEntry',
         ]);
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('purchase_payment_splits')) {
+            $project->loadMissing('bills.paymentSplits.payment');
+        }
+
         $sales = $project->taxInvoices->concat($project->proformaInvoices)
             ->filter(fn ($invoice) => $invoice->countsTowardsProject())
             ->sortBy('id')->values();
@@ -39,17 +43,17 @@ class ProjectFinancialClosure
             'status' => $invoice->status,
             'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
             'document_total' => $invoice->receivableTotal(),
-            'allocated_receipts' => round($invoice->receivedAmount(), 2),
-            'outstanding' => round($invoice->balanceDue(), 2),
-            'advance' => round($invoice->advanceAmount(), 2),
+            'allocated_receipts' => round($invoice->receivedAmount(), 3),
+            'outstanding' => round($invoice->balanceDue(), 3),
+            'advance' => round($invoice->advanceAmount(), 3),
             'settlement_sources' => $invoice->payments->map(fn ($entry) => [
                 'source' => 'direct_cashflow', 'id' => $entry->id, 'date' => $entry->entry_date?->format('Y-m-d'),
-                'credit' => round((float) $entry->credit_amount, 2), 'debit' => round((float) $entry->debit_amount, 2),
+                'credit' => round((float) $entry->credit_amount, 3), 'debit' => round((float) $entry->debit_amount, 3),
                 'currency' => strtoupper((string) ($entry->currency ?: $invoice->currency ?: 'INR')),
                 'accounting_status' => $entry->accounting_status, 'updated_at' => $entry->updated_at?->toISOString(),
             ])->concat($invoice->cashflowAllocations->map(fn ($allocation) => [
                 'source' => 'cashflow_allocation', 'id' => $allocation->id, 'cashflow_entry_id' => $allocation->cashflow_entry_id,
-                'amount' => round((float) $allocation->amount, 2), 'document_amount' => round($allocation->documentAmount(), 2),
+                'amount' => round((float) $allocation->amount, 3), 'document_amount' => round($allocation->documentAmount(), 3),
                 'currency' => strtoupper((string) ($allocation->currency ?: 'INR')), 'document_currency' => strtoupper((string) ($allocation->document_currency ?: $invoice->currency ?: 'INR')),
                 'accounting_status' => $allocation->cashflowEntry?->accounting_status, 'updated_at' => $allocation->updated_at?->toISOString(),
             ]))->values()->all(),
@@ -63,18 +67,30 @@ class ProjectFinancialClosure
             'document_type' => $bill->invoice_type,
             'status' => $bill->status,
             'currency' => strtoupper((string) ($bill->currency ?: 'INR')),
-            'document_total' => round((float) $bill->total_amount, 2),
-            'allocated_payments' => round($bill->paidAmount(), 2),
-            'outstanding' => round($bill->balanceDue(), 2),
-            'advance' => round($bill->advanceAmount(), 2),
+            'document_total' => round((float) $bill->total_amount, 3),
+            'allocated_payments' => round($bill->paidAmount(), 3),
+            'outstanding' => round($bill->balanceDue(), 3),
+            'advance' => round($bill->advanceAmount(), 3),
             'settlement_sources' => $bill->payments->map(fn ($entry) => [
                 'source' => 'vendor_ledger', 'id' => $entry->id, 'cashflow_entry_id' => $entry->cashflow_entry_id,
-                'date' => $entry->transaction_date?->format('Y-m-d'), 'amount' => round((float) $entry->foreign_amount, 2),
+                'date' => $entry->transaction_date?->format('Y-m-d'), 'amount' => round((float) $entry->foreign_amount, 3),
                 'currency' => strtoupper((string) ($entry->foreign_currency ?: $bill->currency ?: 'INR')),
                 'status' => $entry->status, 'updated_at' => $entry->updated_at?->toISOString(),
-            ])->concat($bill->cashflowAllocations->map(fn ($allocation) => [
+            ])->concat(($bill->relationLoaded('paymentSplits') ? $bill->paymentSplits : collect())
+                ->filter(fn ($split) => $split->payment && $split->payment->transaction_type === 'debit' && $split->payment->status !== 'cancelled')
+                ->map(fn ($split) => [
+                    'source' => 'vendor_payment_split', 'id' => $split->id,
+                    'vendor_payment_entry_id' => $split->vendor_payment_entry_id,
+                    'cashflow_entry_id' => $split->payment->cashflow_entry_id,
+                    'date' => $split->payment->transaction_date?->format('Y-m-d'),
+                    'amount' => round((float) $split->amount, 3),
+                    'currency' => strtoupper((string) ($split->payment->foreign_currency ?: $bill->currency ?: 'INR')),
+                    'status' => $split->payment->status,
+                    'updated_at' => $split->updated_at?->toISOString(),
+                    'payment_updated_at' => $split->payment->updated_at?->toISOString(),
+                ]))->concat($bill->cashflowAllocations->map(fn ($allocation) => [
                 'source' => 'cashflow_allocation', 'id' => $allocation->id, 'cashflow_entry_id' => $allocation->cashflow_entry_id,
-                'amount' => round((float) $allocation->amount, 2), 'document_amount' => round($allocation->documentAmount(), 2),
+                'amount' => round((float) $allocation->amount, 3), 'document_amount' => round($allocation->documentAmount(), 3),
                 'currency' => strtoupper((string) ($allocation->currency ?: 'INR')), 'document_currency' => strtoupper((string) ($allocation->document_currency ?: $bill->currency ?: 'INR')),
                 'accounting_status' => $allocation->cashflowEntry?->accounting_status, 'updated_at' => $allocation->updated_at?->toISOString(),
             ]))->values()->all(),
@@ -90,14 +106,14 @@ class ProjectFinancialClosure
                 'particular' => $entry->particular,
                 'reference' => $entry->bank_reference_number ?: $entry->invoice_bill_number,
                 'currency' => strtoupper((string) ($entry->currency ?: 'INR')),
-                'amount_moved' => round($entry->amountMoved(), 2),
-                'allocated' => round($entry->allocatedAmount(), 2),
-                'unallocated' => round($entry->unallocatedAmount(), 2),
+                'amount_moved' => round($entry->amountMoved(), 3),
+                'allocated' => round($entry->allocatedAmount(), 3),
+                'unallocated' => round($entry->unallocatedAmount(), 3),
                 'accounting_status' => $entry->accounting_status,
                 'allocation_sources' => $entry->allocations->sortBy('id')->map(fn ($allocation) => [
                     'id' => $allocation->id, 'project_id' => $allocation->project_id,
                     'sales_invoice_id' => $allocation->sales_invoice_id, 'purchase_invoice_id' => $allocation->purchase_invoice_id,
-                    'amount' => round((float) $allocation->amount, 2), 'document_amount' => round($allocation->documentAmount(), 2),
+                    'amount' => round((float) $allocation->amount, 3), 'document_amount' => round($allocation->documentAmount(), 3),
                     'updated_at' => $allocation->updated_at?->toISOString(),
                 ])->values()->all(),
                 'updated_at' => $entry->updated_at?->toISOString(),
@@ -127,7 +143,7 @@ class ProjectFinancialClosure
             'totals' => $totals,
             'open_operational_steps' => $openSteps,
         ];
-        $snapshot['has_outstanding_financials'] = collect($totals)->flatten()->contains(fn ($amount) => (float) $amount > 0.009);
+        $snapshot['has_outstanding_financials'] = collect($totals)->flatten()->contains(fn ($amount) => (float) $amount >= 0.001);
         $snapshot['operationally_ready'] = count($openSteps) === 0;
         $snapshot['content_hash'] = hash('sha256', json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
@@ -283,7 +299,7 @@ class ProjectFinancialClosure
 
     private function totals(array $rows, string $column): array
     {
-        return collect($rows)->filter(fn ($row) => (float) $row[$column] > 0.009)
-            ->groupBy('currency')->map(fn ($group) => round((float) $group->sum($column), 2))->sortKeys()->all();
+        return collect($rows)->filter(fn ($row) => (float) $row[$column] >= 0.001)
+            ->groupBy('currency')->map(fn ($group) => round((float) $group->sum($column), 3))->sortKeys()->all();
     }
 }

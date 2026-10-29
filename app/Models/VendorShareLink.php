@@ -58,7 +58,7 @@ class VendorShareLink extends Model
         return in_array($permission, $this->permissions ?: [], true);
     }
 
-    public function publicUrl(): string { return route('vendor-shares.show', $this->token); }
+    public function publicUrl(): string { return \App\Services\PublicShareLinks::url($this); }
 
     public function recordView(?string $ip): void
     {

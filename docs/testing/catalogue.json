@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "prepared_on": "2026-10-25",
+  "prepared_on": "2026-10-26",
   "modules": [
     {
       "id": "AUTH",
@@ -8,7 +8,11 @@
       "sources": [
         "app/Services/PermissionMatrix.php",
         "app/Http/Controllers/AuthController.php",
-        "app/Http/Middleware/EnsureUserIsAdmin.php"
+        "app/Http/Middleware/EnsureUserIsAdmin.php",
+        "app/Support/Totp.php",
+        "app/Services/TwoFactorAuthentication.php",
+        "app/Http/Controllers/TwoFactorController.php",
+        "app/Http/Controllers/TwoFactorChallengeController.php"
       ],
       "fixture": "F-IDENTITY; empty disposable database for guest/employee boundary checks"
     },
@@ -28,7 +32,8 @@
       "sources": [
         "app/Http/Controllers/ClientController.php",
         "app/Services/ClientAccountSummary.php",
-        "app/Models/Client.php"
+        "app/Models/Client.php",
+        "app/Services/PublicShareLinks.php"
       ],
       "fixture": "F-IDENTITY and F-MONEY; two separate clients C1 and C2"
     },
@@ -108,7 +113,8 @@
       "sources": [
         "app/Http/Controllers/ShipmentController.php",
         "app/Services/ShipmentDispatchAuthorization.php",
-        "app/Services/ShipmentDocuments.php"
+        "app/Services/ShipmentDocuments.php",
+        "app/Services/PublicShareLinks.php"
       ],
       "fixture": "F-PRODUCTS and F-MONEY; partial shipments S1/S2; fake public upload disk"
     },
@@ -118,7 +124,11 @@
       "sources": [
         "app/Services/CashInvoiceConversion.php",
         "app/Services/CashInvoiceDeletion.php",
-        "app/Http/Controllers/SalesInvoiceController.php"
+        "app/Http/Controllers/SalesInvoiceController.php",
+        "app/Services/SalesInvoiceAdjustment.php",
+        "app/Models/SalesInvoiceNote.php",
+        "app/Http/Controllers/SalesInvoiceNoteController.php",
+        "tests/Feature/InvoiceAdjustmentTest.php"
       ],
       "fixture": "F-MONEY: PI INR300000; cash100000 plus bank50000; selected cash conversion100000"
     },
@@ -128,7 +138,9 @@
       "sources": [
         "app/Services/PurchaseBillLedger.php",
         "app/Services/PurchaseInvoiceMoney.php",
-        "app/Http/Controllers/PurchaseInvoiceController.php"
+        "app/Http/Controllers/PurchaseInvoiceController.php",
+        "app/Services/PurchasePartialConversion.php",
+        "app/Models/PurchasePaymentSplit.php"
       ],
       "fixture": "F-MONEY; V1 bill100000; active payments25000; cancelled payment10000"
     },
@@ -157,7 +169,8 @@
       "name": "Party statements and reconciliation",
       "sources": [
         "app/Services/PartyStatement.php",
-        "app/Http/Controllers/PartyStatementController.php"
+        "app/Http/Controllers/PartyStatementController.php",
+        "app/Services/PublicShareLinks.php"
       ],
       "fixture": "C1/V1 opening balances and dated receipts/documents in INR and USD"
     },
@@ -305,6 +318,23 @@
         "docs/ui-design-guidelines.md"
       ],
       "fixture": "Desktop1440,tablet768,mobile390 and320; light/dark; keyboard-only input"
+    },
+    {
+      "id": "TAX",
+      "name": "GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR)",
+      "sources": [
+        "app/Support/Gstin.php",
+        "app/Rules/ValidGstin.php",
+        "app/Models/HsnSacCode.php",
+        "app/Models/SalesInvoiceEInvoice.php",
+        "app/Services/EInvoice/EInvoicePayload.php",
+        "app/Services/EInvoice/EInvoiceRegistration.php",
+        "app/Services/EInvoice/HttpGateway.php",
+        "app/Services/EInvoice/ManualGateway.php",
+        "app/Http/Controllers/TaxSettingController.php",
+        "app/Http/Controllers/SalesInvoiceEInvoiceController.php"
+      ],
+      "fixture": "F-IDENTITY office user; disposable database with sales_invoices/items, e-invoice and HSN tables; fictitious but checksum-valid GSTINs (24AATCM8816E1Z5 seller, 24ABCDE1234F1Z6 buyer)"
     }
   ],
   "cases": [
@@ -1271,7 +1301,13 @@
         "Render each print mode"
       ],
       "expected": "Both thermal options available; selected orientation/columns/header/footer/page numbers respected.",
-      "automation": []
+      "automation": [
+        "tests/Feature/PackagingAllLabelsTest.php#test_all_formats_render_each_physical_carton_with_correct_data_and_audit_counts",
+        "tests/Feature/PackagingPrintSettingsTest.php#test_saving_only_changes_print_settings_and_returns_to_the_print_page",
+        "tests/Feature/PackagingPrintColumnsViewTest.php#test_print_headers_cells_spans_and_totals_follow_the_saved_selection"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Method links cover selected label, print-setting and column cases, not every configuration. Thermal typography and actual PDF checks are separately documented in thermal-label-typography.md."
     },
     {
       "id": "UT-SHIP-001",
@@ -1363,7 +1399,12 @@
         "Attempt dispatch for each failed prerequisite"
       ],
       "expected": "No dispatch timestamp/stock event; actionable missing-gate details returned.",
-      "automation": []
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Both real HTTP dispatch paths are covered with multiple simultaneous blockers and a long summary, on SQLite and strict MySQL. Individual prerequisite permutations and concurrent dispatch are not established by these links."
     },
     {
       "id": "UT-SALES-001",
@@ -2856,7 +2897,11 @@
         "GET link after revocation"
       ],
       "expected": "No cached authenticated content returned.",
-      "automation": []
+      "automation": [
+        "tests/Integration/PublicShortLinksTest.php#test_canonical_handlers_still_enforce_share_expiry_revocation_permissions_and_view_counts"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Exercises short redirect plus the original expired/revoked share response and view count; not all portal cache layers."
     },
     {
       "id": "IT-VPORTAL-003",
@@ -2987,7 +3032,11 @@
         "Build audit URL"
       ],
       "expected": "Token replaced with redacted marker rather than stored plaintext.",
-      "automation": []
+      "automation": [
+        "tests/Integration/PublicShortLinksTest.php#test_audit_redacts_the_alias_as_a_bearer_token"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Component evidence exercises AuditTrail with a bound short-link route; this is not an isolated unit proof of all audit redaction."
     },
     {
       "id": "UT-AUDIT-002",
@@ -3257,7 +3306,14 @@
         "Render each print page and inspect final print rules"
       ],
       "expected": "Correct paper geometry; black document text; sender branding and configured columns respected.",
-      "automation": []
+      "automation": [
+        "tests/Feature/PackagingCartonLabelViewTest.php#test_thermal_label_uses_100_by_140_mm_stock",
+        "tests/Feature/PackagingCartonLabelViewTest.php#test_100_by_150_is_an_additional_thermal_format_without_changing_140",
+        "tests/Feature/PackagingCartonLabelViewTest.php#test_misspack_sender_is_the_heading_and_has_our_print_logo_in_every_format",
+        "tests/Feature/PackagingCartonLabelViewTest.php#test_vendor_sender_has_its_own_heading_and_never_our_logo"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Method links cover carton-label Blade paper and branding only. Thermal PDF geometry, typography and overflow limitations are separately documented in thermal-label-typography.md."
     },
     {
       "id": "IT-SALES-004",
@@ -4401,6 +4457,1392 @@
         "tests/Integration/UserDetailPhotoTest.php#test_invalid_empty_and_oversize_uploads_reopen_the_photo_modal_without_losing_the_existing_photo",
         "tests/Integration/UserDetailPhotoTest.php#test_storage_failure_does_not_delete_the_current_photo_or_change_the_record",
         "tests/Integration/UserDetailPhotoTest.php#test_guest_employee_and_read_only_accounts_cannot_change_photos"
+      ]
+    },
+    {
+      "id": "UT-AUTH-004",
+      "module": "AUTH",
+      "level": "unit",
+      "priority": "P0",
+      "requirement": "REQ-AUTH",
+      "title": "TOTP codes match RFC 6238 and the one-step window",
+      "preconditions": "No database; pure algorithm checks against the RFC test secret.",
+      "test_data": "RFC 6238 Base32 secret GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ; timestamps 59, 1111111109, 1234567890.",
+      "steps": [
+        "Generate the six-digit code at each RFC timestamp and compare with the expected values",
+        "Verify a code inside the one-step window passes and one four steps away fails",
+        "Reject non six-digit input and invalid Base32 secrets"
+      ],
+      "expected": "Codes equal the RFC vectors to six digits; window rules hold; malformed input never verifies.",
+      "automation": [
+        "tests/Unit/TotpTest.php#test_codes_match_the_rfc_6238_vectors",
+        "tests/Unit/TotpTest.php#test_verify_accepts_the_code_around_the_current_step",
+        "tests/Unit/TotpTest.php#test_verify_rejects_anything_that_is_not_six_digits"
+      ]
+    },
+    {
+      "id": "IT-AUTH-004",
+      "module": "AUTH",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-AUTH",
+      "title": "Office login locks out after five wrong passwords",
+      "preconditions": "F-IDENTITY fixture tables (users, audit logs) on disposable SQLite.",
+      "test_data": "One office user with a strong password; five wrong attempts then one right one from the same client.",
+      "steps": [
+        "POST /login five times with a wrong password",
+        "POST /login with the right password during the lockout",
+        "Check the lockout is an audit event",
+        "Repeat with failures below the limit and confirm a success clears the counter"
+      ],
+      "expected": "The sixth attempt is refused with a retry-after message even with the right password; a successful sign-in clears earlier failures; auth.login.throttled is audited.",
+      "automation": [
+        "tests/Feature/LoginSecurityTest.php#test_five_wrong_passwords_lock_the_email_and_network_out",
+        "tests/Feature/LoginSecurityTest.php#test_a_successful_sign_in_forgets_earlier_failures"
+      ]
+    },
+    {
+      "id": "IT-AUTH-005",
+      "module": "AUTH",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-AUTH",
+      "title": "Two-factor accounts pass the password only to a challenge",
+      "preconditions": "F-IDENTITY fixture; user with two-factor confirmed via the service.",
+      "test_data": "Strong password; live TOTP codes from the stored secret; the eight recovery codes from enrolment.",
+      "steps": [
+        "POST /login with the right password and assert no session is created, only a challenge redirect",
+        "Finish at /two-factor-challenge with a current TOTP code and assert the session opens",
+        "Sign in with a recovery code, then replay the same code after logout, expecting refusal",
+        "Make six wrong code guesses and assert the challenge is torn up and audited"
+      ],
+      "expected": "Password alone never opens a session for a two-factor account; recovery codes are single-use; repeated guessing ends the challenge with an auth.two_factor.throttled audit event.",
+      "automation": [
+        "tests/Feature/LoginSecurityTest.php#test_a_right_password_only_buys_a_challenge_when_two_factor_is_on",
+        "tests/Feature/LoginSecurityTest.php#test_recovery_codes_work_exactly_once",
+        "tests/Feature/LoginSecurityTest.php#test_challenge_gives_up_after_five_wrong_codes"
+      ]
+    },
+    {
+      "id": "IT-AUTH-006",
+      "module": "AUTH",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-AUTH",
+      "title": "One password policy everywhere passwords are set",
+      "preconditions": "F-IDENTITY fixture; signed-in office user.",
+      "test_data": "A weak candidate (lowercaseonly1x) and a strong one (Str0nger-Passw0rd); enrolment confirm codes.",
+      "steps": [
+        "PUT /account/password with the weak candidate and expect a validation error on password",
+        "PUT /account/password with the strong candidate and expect the stored hash to change",
+        "Walk the account-page enrolment: start, wrong confirm code, right confirm code, then disable with the current password"
+      ],
+      "expected": "The default strength rule rejects the weak password and accepts the strong one; pending enrolment never locks sign-in; confirm turns two-factor on and disable turns it off again.",
+      "automation": [
+        "tests/Feature/LoginSecurityTest.php#test_password_change_enforces_the_default_strength_rule",
+        "tests/Feature/LoginSecurityTest.php#test_the_account_page_enrols_and_disables_two_factor"
+      ]
+    },
+    {
+      "id": "UT-TAX-001",
+      "module": "TAX",
+      "level": "unit",
+      "priority": "P0",
+      "requirement": "REQ-TAX-GSTIN",
+      "title": "GSTIN check digit follows the published mod-36 algorithm and refuses typos",
+      "preconditions": "No database; pure algorithm and rule checks.",
+      "test_data": "Pinned vectors 24AATCM8816E1Z5 / 33AAACC1206D1ZN / 24ABCDE1234F1Z6; single-character mutations at all 15 positions.",
+      "steps": [
+        "Assert known-good GSTINs pass structure, state code and checksum",
+        "Pin the check digits 5/N/6 against the published examples",
+        "Verify every one-character mutation fails",
+        "Verify structural rejections (length, wrong Z slot, entity zero, unallotted state)",
+        "Confirm normalise/state/pan helpers and one shared validation message"
+      ],
+      "expected": "Structure, checksum and state gates hold independently; every typo is refused; nullable input stays nullable.",
+      "automation": [
+        "tests/Unit/GstinTest.php#test_known_good_gstins_pass_structure_state_and_checksum",
+        "tests/Unit/GstinTest.php#test_the_check_digit_is_the_published_mod36_algorithm",
+        "tests/Unit/GstinTest.php#test_a_single_character_typo_anywhere_fails",
+        "tests/Unit/GstinTest.php#test_structural_and_state_rejections",
+        "tests/Unit/GstinTest.php#test_normalise_and_the_parts_it_unlocks",
+        "tests/Unit/GstinTest.php#test_the_validation_rule_carries_one_message_everywhere"
+      ]
+    },
+    {
+      "id": "IT-TAX-001",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "A proforma invoice cannot be e-registered",
+      "preconditions": "Office user; invoice with invoice_type proforma.",
+      "test_data": "Fully populated invoice body that would pass pre-flight if it were a tax invoice.",
+      "steps": [
+        "POST the generate route for the proforma",
+        "Verify the redirect carries a refusal flash and no e-invoice row exists"
+      ],
+      "expected": "No record is even parked; the error names the invoice type as the reason.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_a_proforma_is_refused_before_any_record_exists"
+      ]
+    },
+    {
+      "id": "IT-TAX-002",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "A tax invoice line without HSN/SAC is named in the refusal",
+      "preconditions": "Office user; tax invoice whose single line has hsn_sac null.",
+      "test_data": "One line of 1000 taxable at 18%.",
+      "steps": [
+        "POST generate",
+        "Read the refusal and confirm it names HSN and no record was created"
+      ],
+      "expected": "The e-invoice law's 4-digit minimum is enforced at pre-flight, not at the portal.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_a_line_without_hsn_is_named_in_the_refusal"
+      ]
+    },
+    {
+      "id": "IT-TAX-003",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Generate parks the NIC-schema payload pending acknowledgement",
+      "preconditions": "Office user; fully valid intra-state tax invoice with valid seller and buyer GSTINs.",
+      "test_data": "100 pcs cartons HSN 4819 at 18% GST.",
+      "steps": [
+        "POST generate",
+        "Verify record is pending, provider manual",
+        "Verify payload Version/TranDtls/DocDtls/SellerDtls/BuyerDtls/ItemList/ValDtls contents incl. dd/mm/yyyy date and HsnCd/GstRt"
+      ],
+      "expected": "The stored JSON matches the portal schema for a B2B intra-state invoice.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_generate_builds_the_portal_schema_and_parks_it_pending"
+      ]
+    },
+    {
+      "id": "IT-TAX-004",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Manual acknowledgement accepts only a 64-hex IRN and records registration",
+      "preconditions": "Pending e-invoice record for an office user.",
+      "test_data": "Bogus IRN 'NOT-AN-IRN'; then sha256-derived valid IRN with ack number/date and signed QR.",
+      "steps": [
+        "POST record with bogus IRN and verify the 64-hex refusal",
+        "POST record with the valid set and verify registered status, ack fields, registrar and audit event"
+      ],
+      "expected": "Only portal-real IRNs register; registration writes a sales_invoice.einvoice.registered audit row.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_the_acknowledgement_accepts_only_a_real_irn_and_marks_registration"
+      ]
+    },
+    {
+      "id": "IT-TAX-005",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Cancellation honours the portal's 24-hour window",
+      "preconditions": "Registered record whose ack_date is 30 hours ago, then 2 hours ago.",
+      "test_data": "Cancel reason code 2 (data entry mistake).",
+      "steps": [
+        "Attempt cancel past the window and verify refusal with the credit-note guidance",
+        "Move ack inside the window and cancel; verify status becomes cancelled"
+      ],
+      "expected": "The window belongs to the portal, not the ERP's preference.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_the_cancel_window_is_the_portals_twenty_four_hours_not_ours"
+      ]
+    },
+    {
+      "id": "IT-TAX-006",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "The HTTP gateway contract: bearer, schema Version in, artefacts out",
+      "preconditions": "config services.einvoice.provider=http with faked endpoint answering Irn/AckNo/AckDt/SignedQRCode.",
+      "test_data": "GSP-style JSON acknowledgement.",
+      "steps": [
+        "POST generate with Http::fake",
+        "Verify the record registers directly with provider http and stores the signed QR",
+        "Assert the request carried bearer auth and Version 1.1 with SupTyp B2B"
+      ],
+      "expected": "A configured GSP registers without any UI acknowledgement step.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_the_http_gateway_registers_from_the_endpoints_answer"
+      ]
+    },
+    {
+      "id": "IT-TAX-007",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-TAX-HSN",
+      "title": "The rate master ships packaging defaults and the area lists them",
+      "preconditions": "Migrated database incl. hsn_sac_codes; office user.",
+      "test_data": "Seeded goods/services codes (3923 at 18% et al.).",
+      "steps": [
+        "Count seeded rows",
+        "GET /settings/taxes and verify area chrome and a seeded code render"
+      ],
+      "expected": "A fresh install is usable immediately and the settings page is a directory area.",
+      "automation": [
+        "tests/Feature/TaxMasterTest.php#test_the_migration_seeds_packaging_defaults_and_the_area_lists_them"
+      ]
+    },
+    {
+      "id": "IT-TAX-008",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-TAX-HSN",
+      "title": "Add, edit and remove a code through the settings door",
+      "preconditions": "Office user; migrated HSN table.",
+      "test_data": "New code 39232100 then a rate edit and removal.",
+      "steps": [
+        "POST store",
+        "PUT update flipping rate and inactive",
+        "DELETE and verify the row is gone"
+      ],
+      "expected": "The office maintains its own master; an unchecked active box means false, not unchanged.",
+      "automation": [
+        "tests/Feature/TaxMasterTest.php#test_add_edit_and_remove_a_code_through_the_settings_door"
+      ]
+    },
+    {
+      "id": "IT-TAX-009",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-TAX-HSN",
+      "title": "Master validation refuses letters-as-codes, duplicates and impossible rates",
+      "preconditions": "Office user.",
+      "test_data": "Code 39A3; duplicate of seeded 3923; rate 450.",
+      "steps": [
+        "Attempt each of the three invalid stores and verify the right field errors"
+      ],
+      "expected": "Codes are 4-8 digits, unique; rates live inside 0-99.99.",
+      "automation": [
+        "tests/Feature/TaxMasterTest.php#test_the_rules_a_typo_breaks_against_all_fire"
+      ]
+    },
+    {
+      "id": "IT-TAX-010",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-HSN",
+      "title": "Guests cannot read or write the tax master",
+      "preconditions": "No session.",
+      "test_data": "Store attempt with a valid-looking payload.",
+      "steps": [
+        "GET the area and POST a store without auth",
+        "Verify redirects and an untouched table"
+      ],
+      "expected": "The master sits behind the office door like every settings area.",
+      "automation": [
+        "tests/Feature/TaxMasterTest.php#test_guests_cannot_touch_the_master"
+      ]
+    },
+    {
+      "id": "IT-TAX-011",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-GSTIN",
+      "title": "A client GSTIN that fails its check digit is refused at the invoice door",
+      "preconditions": "Office user; inline client creation from the invoice form.",
+      "test_data": "24ABCDE1234F1Z5 — structurally valid, checksum-wrong (correct digit is 6).",
+      "steps": [
+        "POST clients.quickStore with the defective GSTIN",
+        "Verify 422 on gstin and no client row"
+      ],
+      "expected": "The checksum rule fires on the historical quickStore path, not only on the full client form.",
+      "automation": [
+        "tests/Feature/InvoiceClientCreationTest.php#test_a_gstin_that_fails_its_check_digit_is_refused"
+      ]
+    },
+    {
+      "id": "IT-BRIEF-004",
+      "module": "BRIEF",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-BRIEF",
+      "title": "Notification centre lists open briefings with their actions",
+      "preconditions": "Office admin; open critical ops briefing and attention sales briefing",
+      "test_data": "Two raised alerts",
+      "steps": [
+        "Open /office-alerts/centre"
+      ],
+      "expected": "200 with both items, critical sorted first, tray/desk/severity chips present.",
+      "automation": [
+        "tests/Feature/OfficeAlertCentreTest.php#test_the_centre_is_locked_to_guests_and_the_payroll",
+        "tests/Feature/OfficeAlertCentreTest.php#test_the_centre_lists_open_briefings_with_their_actions"
+      ]
+    },
+    {
+      "id": "IT-BRIEF-005",
+      "module": "BRIEF",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-BRIEF",
+      "title": "Centre filters narrow by desk and severity without mutating state",
+      "preconditions": "Alerts on two desks and severities",
+      "test_data": "OPS-CASE critical, SALES-CASE info",
+      "steps": [
+        "Filter team=sales",
+        "then severity=critical",
+        "submit nonsense state value"
+      ],
+      "expected": "Only matching desks/severities show; invalid values 422; reader state untouched; chips preserve sibling filters.",
+      "automation": [
+        "tests/Feature/OfficeAlertCentreTest.php#test_filters_narrow_the_tray_and_keep_the_other_filters"
+      ]
+    },
+    {
+      "id": "IT-BRIEF-006",
+      "module": "BRIEF",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-BRIEF",
+      "title": "Acknowledging from the centre files a resolvable trail",
+      "preconditions": "Open shared-ack briefing",
+      "test_data": "KYC-TEAM-LEAD alert",
+      "steps": [
+        "PATCH ack from a plain form (no XHR)",
+        "re-open open tray",
+        "open resolved tray"
+      ],
+      "expected": "Redirect with flash (not JSON); acked_at/by stamped; open tray empties; resolved tray names who acted.",
+      "automation": [
+        "tests/Feature/OfficeAlertCentreTest.php#test_ack_from_the_centre_redirects_and_files_the_resolved_trail"
+      ]
+    },
+    {
+      "id": "IT-BRIEF-007",
+      "module": "BRIEF",
+      "level": "integration",
+      "priority": "P2",
+      "requirement": "REQ-BRIEF",
+      "title": "Snoozing from the centre moves the card to the snoozed tray",
+      "preconditions": "Open briefing",
+      "test_data": "until=1h form post",
+      "steps": [
+        "Snooze 1h from the centre",
+        "view open tray",
+        "view snoozed tray"
+      ],
+      "expected": "State row stamped; open tray hides it; snoozed tray shows it with wake time.",
+      "automation": [
+        "tests/Feature/OfficeAlertCentreTest.php#test_snooze_moves_the_card_out_of_open_and_back"
+      ]
+    },
+    {
+      "id": "IT-BRIEF-008",
+      "module": "BRIEF",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-BRIEF",
+      "title": "Centre respects the desk watcher scope",
+      "preconditions": "Sales-desk watcher; ops, sales and office-wide alerts open",
+      "test_data": "Three alerts across desks",
+      "steps": [
+        "Open centre",
+        "filter to operations desk"
+      ],
+      "expected": "Only sales + office-wide visible; filtering to another desk returns the empty state, not the data.",
+      "automation": [
+        "tests/Feature/OfficeAlertCentreTest.php#test_a_desk_watcher_sees_only_their_desks_briefings"
+      ]
+    },
+    {
+      "id": "IT-UI-007",
+      "module": "UI",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-UI-RESPONSIVE",
+      "title": "Delivery-receipt modal is a full-screen sheet with card lines on phones",
+      "preconditions": "Dispatched shipment with line items; ≤767px viewport",
+      "test_data": "One shipment, two lines",
+      "steps": [
+        "Open Record delivery receipt on a phone-width viewport"
+      ],
+      "expected": "Modal fills the screen; each line is a labelled card (data-label), inputs full-width, footer respects the safe area; no horizontal page scroll.",
+      "automation": [],
+      "notes": "Pinned by tools/checks/responsive-check.cjs rule 6 (no layout floor past 320px inside mobile blocks) plus the full-sheet/card rules in shipments.css's mobile pass; a device pass confirms the modal fills the screen and lines stack."
+    },
+    {
+      "id": "IT-UI-008",
+      "module": "UI",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-UI-RESPONSIVE",
+      "title": "No mobile media block pins a layout past 320px",
+      "preconditions": "Effective ≤767px rules across module sheets",
+      "test_data": "Contract scan",
+      "steps": [
+        "Run responsive check"
+      ],
+      "expected": "No min-width/width ≥321px on non-table selectors inside max-width media blocks; the trend-chart exception is named with its reason.",
+      "automation": [],
+      "notes": "Contract-only case: the check itself is the executable evidence (npm run test:contracts → responsive rule 6)."
+    },
+    {
+      "id": "IT-SALES-013",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Invoice can be emailed to the client and the send is provable",
+      "preconditions": "Office admin; draft tax invoice with a client snapshot e-mail",
+      "test_data": "To accounts+ops, cc director; mark-sent ticked",
+      "steps": [
+        "Open the compose dialog from the record page",
+        "Send"
+      ],
+      "expected": "Mail carries the posted recipients/subject/message, the invoice numbers and the portal link; a sales_invoice_sends row snapshots to/cc/subject/message/sender; the draft flips to sent+portal-visible; the record page shows the send.",
+      "automation": [
+        "tests/Feature/SalesInvoiceEmailTest.php#test_the_invoice_goes_out_and_the_send_lands_in_the_log"
+      ]
+    },
+    {
+      "id": "IT-SALES-014",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "A re-send of an issued invoice leaves the books alone",
+      "preconditions": "Issued invoice, portal flag off",
+      "test_data": "mark_sent omitted",
+      "steps": [
+        "Send with the box unticked"
+      ],
+      "expected": "Status/sent_at/portal flag untouched; send logged; the mail omits the View-invoice button because the link would 404.",
+      "automation": [
+        "tests/Feature/SalesInvoiceEmailTest.php#test_a_resend_of_an_issued_invoice_leaves_the_books_alone"
+      ]
+    },
+    {
+      "id": "IT-SALES-015",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "The composer refuses bad input and off-limits invoices",
+      "preconditions": "Cancelled invoice; malformed To address",
+      "test_data": "to=not-an-email and to=valid on a cancelled invoice",
+      "steps": [
+        "Attempt both sends"
+      ],
+      "expected": "Validation error / refusal flash; nothing mailed; zero send rows.",
+      "automation": [
+        "tests/Feature/SalesInvoiceEmailTest.php#test_the_composer_refuses_an_address_that_is_none",
+        "tests/Feature/SalesInvoiceEmailTest.php#test_a_cancelled_invoice_is_never_emailed"
+      ]
+    },
+    {
+      "id": "IT-SALES-016",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "A mailer refusal is logged and briefs the accounts desk",
+      "preconditions": "Throwing transport; briefings enabled with e-mails off in fixture",
+      "test_data": "SMTP connection refused",
+      "steps": [
+        "Attempt a send"
+      ],
+      "expected": "Flash error; send row status=failed with the transport's reason; invoice stays draft; office alert invoice.email_failed (ack-required, accounts desk) raised.",
+      "automation": [
+        "tests/Feature/SalesInvoiceEmailTest.php#test_a_refused_send_is_logged_and_briefs_the_desk"
+      ]
+    },
+    {
+      "id": "IT-SALES-017",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "Without a configured sender the office is told before any attempt",
+      "preconditions": "mail.from.address empty",
+      "test_data": "Valid compose post",
+      "steps": [
+        "Attempt a send"
+      ],
+      "expected": "Flash points at Organisation settings; nothing mailed; no send row — a configuration gap is not a send attempt.",
+      "automation": [
+        "tests/Feature/SalesInvoiceEmailTest.php#test_without_a_configured_sender_the_office_is_told_first"
+      ]
+    },
+    {
+      "id": "IT-SALES-018",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Guests and payroll cannot email invoices",
+      "preconditions": "Guest session; employee session",
+      "test_data": "POST to the email endpoint",
+      "steps": [
+        "Send unauthenticated",
+        "Send as an employee"
+      ],
+      "expected": "Guest → login; employee → their own dashboard; zero sends.",
+      "automation": [
+        "tests/Feature/SalesInvoiceEmailTest.php#test_guests_and_employees_are_held_at_the_wall"
+      ]
+    },
+    {
+      "id": "IT-SALES-022",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "An issued tax invoice refuses money and identity changes",
+      "preconditions": "Tax invoice MP/INV/26-27/001, status sent, one line 10 PCS at 100, total 1180",
+      "test_data": "PUT the full edit payload with items.quantity 20; then PUT with a changed client name",
+      "steps": [
+        "PUT /sales-invoices/{id} with the whole document unchanged except items quantity 10 to 20",
+        "Observe; then repeat with client_company_name changed only"
+      ],
+      "expected": "Both saves are refused with an invoice-level error that names the changed figures and tells the user to issue a credit or debit note; the stored row is untouched.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_a_sent_tax_invoice_refuses_money_and_identity_changes"
+      ]
+    },
+    {
+      "id": "IT-SALES-023",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "Terms and office notes stay editable on an issued invoice",
+      "preconditions": "Same issued invoice",
+      "test_data": "PUT with internal_notes and dispatch_terms changed, money untouched",
+      "steps": [
+        "PUT /sales-invoices/{id} changing internal_notes and dispatch_terms only"
+      ],
+      "expected": "The save succeeds; totals and identity are byte-identical.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_an_issued_invoice_still_edits_its_working_fields"
+      ]
+    },
+    {
+      "id": "IT-SALES-024",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "An issued tax invoice cannot be deleted; a draft can",
+      "preconditions": "Issued invoice plus a draft twin",
+      "test_data": "DELETE the issued invoice; DELETE the draft",
+      "steps": [
+        "Send DELETE to the issued invoice",
+        "Send DELETE to the draft"
+      ],
+      "expected": "The issued invoice refuses with a guiding error and survives; the draft deletes cleanly.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_an_issued_tax_invoice_cannot_be_deleted_but_a_draft_can"
+      ]
+    },
+    {
+      "id": "IT-SALES-025",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "A credit note lowers what is owed and caps at the document's worth",
+      "preconditions": "Issued invoice for 1180 (1000 + 90 CGST + 90 SGST)",
+      "test_data": "Issue credit note of 500 (+tax); then another of 500; then attempt 100 more",
+      "steps": [
+        "POST /sales-invoices/{id}/notes kind=credit subtotal=500 with a reason",
+        "Read payableTotal, balanceDue, stored balance_amount",
+        "Issue a second 500; then attempt a third of 100"
+      ],
+      "expected": "The note is numbered MP/CN/<FY>/001 with tax pro-rated to the invoice split (590); payable and the stored balance drop to 590, then to 0 with paymentState paid; the third attempt is refused because it exceeds what the invoice is still worth.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_a_credit_note_lowers_what_is_owed_and_stops_when_full"
+      ]
+    },
+    {
+      "id": "IT-SALES-026",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "A debit note raises what is owed",
+      "preconditions": "Same issued invoice",
+      "test_data": "Issue debit note of 200 (+tax)",
+      "steps": [
+        "POST /sales-invoices/{id}/notes kind=debit subtotal=200 with a reason"
+      ],
+      "expected": "The MP/DN note totals 236 and payable/balance rise from 1180 to 1416.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_a_debit_note_raises_what_is_owed"
+      ]
+    },
+    {
+      "id": "IT-SALES-027",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "A return posts its restock and credit in one flow, capped by what is outstanding per line",
+      "preconditions": "Issued invoice, one line of 10 PCS at 100",
+      "test_data": "Return 4 PCS with restock; then try returning 7 more",
+      "steps": [
+        "POST /sales-invoices/{id}/returns with lines[item_id,qty 4], restock ticked, reason given",
+        "Attempt a second return of 7"
+      ],
+      "expected": "A return flag = restock-carrying credit note of 472 (4*100 + tax) is created; the second attempt over the remaining 6 is refused and no extra note exists.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_a_return_restock_posts_its_credit_and_caps_quantities"
+      ]
+    },
+    {
+      "id": "IT-SALES-028",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "Cancelling a note needs a reason and restores the money",
+      "preconditions": "Invoice with a live credit note of 590",
+      "test_data": "Cancel without a reason; then with one; then again",
+      "steps": [
+        "PATCH /sales-invoice-notes/{id}/cancel with empty cancel_reason",
+        "Then with a reason",
+        "Then again"
+      ],
+      "expected": "The empty cancel is refused; with a reason the note flips to cancelled, keeps the reason, payable returns to 1180, and the note cannot be cancelled twice.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_a_cancelled_note_stops_applying_and_keeps_its_reason"
+      ]
+    },
+    {
+      "id": "IT-SALES-029",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "Corrections refuse drafts, proformas and superseded documents",
+      "preconditions": "A draft invoice and a proforma",
+      "test_data": "POST a credit note against each",
+      "steps": [
+        "POST notes to the draft",
+        "POST notes to the proforma"
+      ],
+      "expected": "Both are refused 422; no note rows exist afterwards.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_corrections_refuse_drafts_proformas_and_superseded_documents"
+      ]
+    },
+    {
+      "id": "IT-SALES-030",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SALES",
+      "title": "Notes change what is owed but never what was received",
+      "preconditions": "Issued invoice with 500 recorded as received",
+      "test_data": "Issue a credit note of 500 (+tax = 590) afterwards",
+      "steps": [
+        "Force amount_paid 500 to emulate a receipt",
+        "Issue the credit note",
+        "Read receivedAmount, payableTotal, balanceDue, paymentState"
+      ],
+      "expected": "Received stays 500; payable drops to 590; balance due is 90; the state reads partial — the receipt is never eaten by the correction.",
+      "automation": [
+        "tests/Feature/InvoiceAdjustmentTest.php#test_notes_change_what_the_listing_counts_but_never_the_receipts"
+      ]
+    },
+    {
+      "id": "IT-SALES-032",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "New eligible INR invoice totals round half-up after tax and charges",
+      "preconditions": "Full migrated schema; authorised office user; new INR proforma or tax invoice",
+      "test_data": "Final totals 100.49, 100.50, 100.99; fractional quantities; discounts, GST and charges",
+      "steps": [
+        "Create eligible invoices through HTTP",
+        "Inspect signed round-off, total, balance and words",
+        "Inspect detail, print and e-invoice payload"
+      ],
+      "expected": "The final total rounds to the nearest whole rupee with half-up boundaries; signed adjustment, balance, documents and payload reconcile.",
+      "automation": [
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_new_inr_proformas_and_tax_invoices_round_half_up_and_store_the_signed_difference",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_fractional_quantity_uses_the_documents_precision_before_whole_rupee_rounding",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_rounding_is_after_discounts_and_charges_and_is_visible_on_print_and_detail",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_auto_rounding_is_applied_after_gst_invoice_discount_and_charges",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_auto_rounding_is_included_in_the_e_invoice_payload",
+        "tests/Database/MySqlInvoiceAutoRoundingTest.php#test_auto_manual_and_ineligible_amounts_are_stored_at_mysql_decimal_precision"
+      ]
+    },
+    {
+      "id": "IT-SALES-033",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Staff can override automatic rounding without changing issued money",
+      "preconditions": "Eligible draft and issued tax invoice; authorised office user",
+      "test_data": "Manual signed adjustment; tampered auto preview; draft edit; policy and adjustment change on sent tax invoice",
+      "steps": [
+        "Choose manual mode and save an adjustment",
+        "Enable auto mode and submit a forged adjustment",
+        "Edit the draft and then try changing the issued invoice"
+      ],
+      "expected": "Manual values persist; the server recomputes auto values; issued monetary fields and rounding mode are locked while working fields remain editable.",
+      "automation": [
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_explicit_manual_override_is_preserved_and_auto_mode_does_not_trust_submitted_round_off",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_draft_edits_recompute_auto_mode_and_keep_manual_mode_when_it_is_selected",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_issued_tax_invoice_rejects_switching_rounding_policy_or_changing_the_adjustment"
+      ]
+    },
+    {
+      "id": "IT-SALES-034",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Legacy, foreign-currency and cash invoices are not automatically re-rounded",
+      "preconditions": "Existing manual invoice and new USD, RMB and cash documents; migrated schema",
+      "test_data": "Legacy fractional total; USD and RMB at 100.49; auto INR draft switched to foreign or cash without an adjustment",
+      "steps": [
+        "Migrate and read existing invoice values",
+        "Edit a legacy invoice",
+        "Create foreign/cash invoices and switch an auto draft to an ineligible type"
+      ],
+      "expected": "Existing money is unchanged, ineligible invoices do not auto-round, and a prior computed INR adjustment does not leak into an ineligible document. Rollback refuses to discard active policies.",
+      "automation": [
+        "tests/Integration/InvoiceAutoRoundingMigrationTest.php#test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped",
+        "tests/Database/MySqlWideningMigrationSafetyTest.php#test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_existing_legacy_invoice_is_not_automatically_changed_on_edit",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_foreign_currency_and_cash_invoices_are_not_auto_rounded",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_switching_an_auto_draft_to_foreign_or_cash_without_a_round_off_does_not_leak_the_old_adjustment",
+        "tests/Database/MySqlInvoiceAutoRoundingTest.php#test_auto_manual_and_ineligible_amounts_are_stored_at_mysql_decimal_precision"
+      ]
+    },
+    {
+      "id": "IT-SALES-035",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Conversions preserve exact claims and duplicate drafts round afresh",
+      "preconditions": "Existing proforma with a fractional outstanding claim or partial cash conversion",
+      "test_data": "Full transfer of opening receipts; partial cash conversion leaving a fractional tax remainder; duplicate with manual round-off",
+      "steps": [
+        "Convert proforma in full and in part",
+        "Compare source and child totals and transferred receipts",
+        "Duplicate an eligible invoice"
+      ],
+      "expected": "Tax and cash continuations preserve the exact outstanding claim including paise and never re-round; an eligible duplicate is a new automatically rounded draft and leaves its source untouched.",
+      "automation": [
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_proforma_conversion_preserves_exact_fractional_remainder_and_cash_claim",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_a_rounded_proforma_keeps_the_exact_fractional_remainder_after_a_partial_cash_conversion",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_partial_conversion_preserves_fractional_receipts_and_the_outstanding_balance",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_full_conversion_keeps_fractional_total_and_transferred_opening_receipt",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_duplicate_is_a_new_draft_with_auto_rounding_but_does_not_change_the_source",
+        "tests/Database/MySqlInvoiceAutoRoundingTest.php#test_partial_conversion_keeps_the_fractional_tax_remainder_on_mysql"
+      ]
+    },
+    {
+      "id": "IT-SHIP-009",
+      "module": "SHIP",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SHIP",
+      "title": "Reject malformed lines and storage-incompatible shipment numbers without data loss",
+      "preconditions": "Fresh full schema; authenticated operations user; existing shipment and line on disposable SQLite or strict MySQL",
+      "test_data": "Null/malformed/non-array and incomplete rows; omitted and explicitly cleared rows; overflowing and excess-precision decimals/integers; valid boundary values; blank INR template row under a USD header",
+      "steps": [
+        "Submit malformed or out-of-range edits",
+        "Check errors and re-read shipment and items",
+        "Submit boundary values and a blank template row",
+        "Omit lines and then explicitly clear them; evaluate dispatch with omitted lines"
+      ],
+      "expected": "Invalid edits produce field errors and preserve existing rows; valid limits and a blank template row save; omitted lines are preserved and evaluated from storage, while explicit clearing removes them.",
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_values_with_excess_precision_are_not_silently_rounded",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_values_with_excess_precision_are_not_silently_rounded",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_database_boundary_values_and_an_empty_template_row_are_accepted",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_database_boundary_values_and_an_empty_template_row_are_accepted",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_dispatch_with_omitted_lines_evaluates_the_stored_lines",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_dispatch_with_omitted_lines_evaluates_the_stored_lines"
+      ]
+    },
+    {
+      "id": "IT-PROJECT-004",
+      "module": "PROJECT",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PROJECT",
+      "title": "Normal planning save persists and recalculates a long readiness evaluation",
+      "preconditions": "Fresh full schema; authenticated office user; project and shipment with paid commercial baseline on disposable SQLite or strict MySQL",
+      "test_data": "Save a normal project planning field while packing, QC and document prerequisites produce a long evaluation",
+      "steps": [
+        "Post a normal planning change",
+        "Read project and latest gate evaluation"
+      ],
+      "expected": "Save succeeds and the complete evaluation is retained; no database exception or truncation.",
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness"
+      ]
+    },
+    {
+      "id": "IT-BRIEF-009",
+      "module": "BRIEF",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-BRIEF",
+      "title": "Composed notification titles and links retain their complete text",
+      "preconditions": "Fresh full schema; authenticated office user; real services and HTTP shipment change on disposable SQLite or strict MySQL",
+      "test_data": "Long shipment name and carrier, portal token/link, project and workflow-step names",
+      "steps": [
+        "Create a changed shipment and inspect office and client messages",
+        "Register a project exception and read it back"
+      ],
+      "expected": "Composed titles and action URLs preserve their complete values without a MySQL length failure.",
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_project_exception_keeps_the_full_composed_project_and_step_title",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_project_exception_keeps_the_full_composed_project_and_step_title"
+      ]
+    },
+    {
+      "id": "IT-SALES-031",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Invoice mail audit remains honest before, during and after delivery attempt",
+      "preconditions": "Fresh full schema; authenticated sales manager; disposable SQLite or strict MySQL; fake mail or an in-process failing transport",
+      "test_data": "Normalised To/CC longer than raw input; initial audit failure; post-send update failure; 70,000-character transport error",
+      "steps": [
+        "Submit each email attempt",
+        "Inspect transport calls, HTTP result, invoice state, alert and stored send record",
+        "Read the unconfirmed attempt in the invoice view"
+      ],
+      "expected": "The initial audit failure prevents sending; one successful request creates one complete audit record; uncertain outcomes are never reported as confirmed success and advise checking delivery; long failures do not overflow the alert.",
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_long_mail_transport_error_cannot_overflow_alert_or_response",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_mail_transport_error_cannot_overflow_alert_or_response",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_is_not_sent_when_its_initial_audit_write_fails",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_is_not_sent_when_its_initial_audit_write_fails",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success"
+      ],
+      "notes": "One mail invocation per request is asserted; this is not an idempotency guarantee across repeated requests, nor a real external-provider delivery test."
+    },
+    {
+      "id": "IT-UI-009",
+      "module": "UI",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-UI",
+      "title": "Unexpected production HTTP 500s have a safe correlated response",
+      "preconditions": "Production environment with debug mistakenly enabled; fake in-process routes and loggers",
+      "test_data": "Thrown exception; explicit HTML/API 500; logging outage; validation/auth/403; local debug",
+      "steps": [
+        "Request each failure path",
+        "Compare status, response type, reference and logged context",
+        "Check known 4xx and local diagnostics"
+      ],
+      "expected": "500s stay 500, suppress details, guide safe retry and use the appropriate HTML/JSON contract; correlation is recorded when the logger works; 4xx and local debug remain intact.",
+      "automation": [
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_production_html_error_is_safe_even_with_debug_enabled_and_matches_the_reported_reference",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_production_api_error_is_json_and_contains_no_debug_details",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_explicit_500_response_exception_does_not_bypass_the_safe_fallback",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_explicit_api_500_uses_json_even_if_the_original_response_was_html",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_failure_of_the_fallback_log_transport_does_not_expose_the_response_or_cause_another_failure",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_validation_authentication_and_other_client_errors_keep_their_status_and_contract",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_local_debug_mode_retains_the_diagnostic_exception_output"
+      ],
+      "notes": "A logger outage cannot guarantee a corresponding log entry. Browser evidence is recorded separately, not inferred from PHPUnit."
+    },
+    {
+      "id": "IT-WORKFLOW-006",
+      "module": "WORKFLOW",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-WORKFLOW",
+      "title": "Fresh schema and message-widening migrations preserve data and refuse lossy rollback",
+      "preconditions": "Disposable SQLite and strict MySQL; CREATE/DROP DATABASE privileges for isolated MySQL upgrade schemas",
+      "test_data": "Existing short values, all widened fields, and values exceeding their old column limits",
+      "steps": [
+        "Run fresh SQLite migration chain and legacy-data upgrade",
+        "Apply both widenings on SQLite and MySQL",
+        "Attempt unsafe rollback and verify all values remain; shorten data and roll back"
+      ],
+      "expected": "Existing values survive upgrade; rollback is blocked before narrowing if any value would be lost; safe short values can roll back.",
+      "automation": [
+        "tests/Integration/FreshSchemaTest.php#test_all_migrations_apply_to_a_disposable_fresh_sqlite_database",
+        "tests/Integration/FreshSchemaTest.php#test_progress_migration_copies_matching_workflow_and_preserves_unmatched_project",
+        "tests/Integration/WideningMigrationSafetyTest.php#test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
+        "tests/Database/MySqlWideningMigrationSafetyTest.php#test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
+        "tests/Integration/WideningMigrationSafetyTest.php#test_message_widening_preserves_old_values_and_checks_every_column_before_rollback",
+        "tests/Database/MySqlWideningMigrationSafetyTest.php#test_message_widening_preserves_old_values_and_checks_every_column_before_rollback"
+      ],
+      "notes": "Full fresh MySQL migrations are a separate CI/local setup command. Rollback must be run with writers stopped; these checks do not prove atomicity under concurrent writes.",
+      "evidence_scope": "partial"
+    },
+    {
+      "id": "IT-CLIENT-008",
+      "module": "CLIENT",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-CLIENT; REQ-VENDOR; REQ-AUTH; REQ-AUDIT",
+      "title": "Short public bearer links retain the original security and legacy routes",
+      "preconditions": "Full disposable schema, private fake vendor evidence, testing-only application keys, guest and office sessions",
+      "test_data": "Client and vendor KYC, other public types, altered signature/type/id, rotated token and previous app key; mounted subdirectory",
+      "steps": [
+        "Copy and open short KYC links; submit through the canonical forms",
+        "Rotate and revoke vendor tokens; try altered and noncanonical aliases",
+        "Verify previous-key handling, same-origin paths and isolated throttling",
+        "Check document ownership, privacy headers and audit redaction"
+      ],
+      "expected": "Short links resolve only to allowlisted current tokens; old full links still work; tampered, deleted and rotated-token aliases fail; original KYC security remains authoritative.",
+      "automation": [
+        "tests/Integration/PublicShortLinksTest.php#test_client_kyc_copy_field_contains_a_short_working_link_and_the_old_link_still_works",
+        "tests/Integration/PublicShortLinksTest.php#test_vendor_kyc_link_can_be_copied_opened_submitted_rotated_and_revoked",
+        "tests/Integration/PublicShortLinksTest.php#test_invalid_tampered_rotated_and_deleted_links_fail_without_redirecting_or_disclosing_secrets",
+        "tests/Integration/PublicShortLinksTest.php#test_old_signing_key_works_only_while_retained_and_never_invalidates_the_legacy_url",
+        "tests/Integration/PublicShortLinksTest.php#test_short_link_throttle_is_isolated_from_the_existing_vendor_kyc_limit",
+        "tests/Integration/PublicShortLinksTest.php#test_redirect_keeps_the_application_mount_prefix_without_becoming_an_external_url",
+        "tests/Integration/PublicShortLinksTest.php#test_authority_like_mount_prefixes_cannot_make_an_external_redirect",
+        "tests/Integration/PublicShortLinksTest.php#test_audit_redacts_the_alias_as_a_bearer_token"
+      ],
+      "notes": "Real Chromium clipboard and guest navigation are a separate check; web-server access logs still need operational redaction. See public-short-links.md."
+    },
+    {
+      "id": "IT-SHIP-010",
+      "module": "SHIP",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-SHIP; REQ-UI",
+      "title": "Short tracking link is consistent across copy, notifications and shipping marks",
+      "preconditions": "Full disposable schema, guest tracking page and visible client notification",
+      "test_data": "A live shipment with a 48-character original token",
+      "steps": [
+        "Read office tracking copy controls, shipment sticker and public share controls",
+        "Open the short URL as a guest",
+        "Notify the client of a status change and rotate the token"
+      ],
+      "expected": "All recipients receive the same short link; it redirects to the existing tracking page, and the old short alias stops working on token rotation.",
+      "automation": [
+        "tests/Integration/PublicShortLinksTest.php#test_shipment_share_fields_sticker_qr_and_tracking_link_use_the_same_short_url",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels"
+      ],
+      "notes": "Chromium additionally copies the URL on desktop/mobile and decodes the actual rendered QR. See public-short-links.md."
+    },
+    {
+      "id": "IT-STATEMENT-007",
+      "module": "STATEMENT",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-STATEMENT; REQ-CPORTAL",
+      "title": "Shared client statements work with empty receipts and do not double count overlapping receipts",
+      "preconditions": "Full disposable schema and guest statement link; both no-project and published-project cases",
+      "test_data": "Empty project receipts; one INR100 invoice and one INR40 receipt linked to both project and invoice",
+      "steps": [
+        "Open the short statement as a guest with no published project receipts",
+        "Open a statement where the same booked receipt appears through both sources",
+        "Revoke or expire the shared link and inspect view counts"
+      ],
+      "expected": "Empty statements open instead of failing; the receipt appears once with INR60 closing balance; expiry/revocation and view counts remain authoritative at the original handler.",
+      "automation": [
+        "tests/Integration/PublicShortLinksTest.php#test_canonical_handlers_still_enforce_share_expiry_revocation_permissions_and_view_counts",
+        "tests/Integration/PublicShortLinksTest.php#test_client_statement_with_an_overlapping_project_receipt_counts_it_only_once",
+        "tests/Database/MySqlPublicShortLinksTest.php#test_guest_links_use_current_tokens_and_the_original_handlers_on_mysql"
+      ],
+      "notes": "The empty-receipts failure predated short links; both SQLite and strict MySQL exercise its fix."
+    },
+    {
+      "id": "IT-SALES-036",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Three-decimal prices with document-specific monetary precision",
+      "preconditions": "Full migrated schema and authorised office user",
+      "test_data": "Rate 0.574, quantities 1 and 5000; PI and tax invoice",
+      "steps": [
+        "Save both invoice types through HTTP",
+        "Inspect unit rate, totals, print, and tax JSON"
+      ],
+      "expected": "PI keeps 0.574; tax money remains in paise; 5000 × 0.574 is 2870; no rate truncation.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_proforma_keeps_three_decimal_unit_price_total_print_and_words",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_tax_invoice_keeps_the_rate_but_calculates_monetary_amounts_at_two_decimals",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_quantity_5000_times_0574_is_2870_and_the_tax_payload_keeps_the_rate",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_sql_columns_and_http_writers_preserve_three_place_values"
+      ]
+    },
+    {
+      "id": "IT-SALES-037",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Conversions and reversals conserve fractional claims and receipts",
+      "preconditions": "Full migrated schema; PI with a fractional rate and receipts",
+      "test_data": "Cash conversion, exact tax conversion, unrepresentable remainders and a one-thousandth rate edit",
+      "steps": [
+        "Convert and reverse a cash invoice",
+        "Convert a paise-representable PI",
+        "Attempt unsafe conversions and an issued rate edit"
+      ],
+      "expected": "Exact claims and receipts survive; a tax conversion that cannot represent the remaining claim or line is refused atomically; issued money is locked.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_cash_conversion_and_reversal_preserve_fractional_receipts_and_claims",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_exact_claim_conversion_recalculates_tax_components_and_keeps_fractional_receipts",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_unrepresentable_proforma_to_tax_conversion_is_blocked_without_changing_the_claim",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_partial_conversion_refuses_an_unrepresentable_tax_line_without_changing_the_claim",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_issued_tax_invoice_rejects_a_one_thousandth_rate_change",
+        "tests/Feature/CashInvoiceConversionTest.php#test_unrepresentable_fx_allocation_split_rolls_back_without_zero_value_slices",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_unsafe_partial_tax_conversion_is_atomic_on_native_mysql"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-004",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "title": "Three-decimal purchase totals, posting and carried advances",
+      "preconditions": "Full migrated schema; authorised office user and vendor",
+      "test_data": "PO and bill at 0.574; PO advance 0.001",
+      "steps": [
+        "Save PO and bill",
+        "Post to vendor ledger",
+        "Convert an approved PO to a bill"
+      ],
+      "expected": "Three-decimal totals, vendor posting and carried advance remain exact.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_purchase_order_and_bill_store_three_decimal_unit_price_and_total",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_purchase_order_conversion_and_vendor_posting_retain_fractional_values",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_vendor_payment_mirror_keeps_three_decimal_bank_and_ledger_amounts",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_sql_columns_and_http_writers_preserve_three_place_values"
+      ]
+    },
+    {
+      "id": "IT-CASH-007",
+      "module": "CASH",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-CASH",
+      "title": "Three-decimal entry, balance, allocation and account edit",
+      "preconditions": "Full migrated schema; active bank account and invoice",
+      "test_data": "Credit 0.574, debit 0.426, allocation and over-allocation by 0.001",
+      "steps": [
+        "Save credit/debit and allocate",
+        "Edit account opening balance",
+        "Attempt over-allocation or a fourth decimal"
+      ],
+      "expected": "Balances and linked document amounts retain thousandths; invalid or excessive entries are rejected without changes.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_cashflow_entries_and_running_balances_keep_three_decimal_places",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_editing_an_account_recalculates_running_balances_without_losing_thousandths",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_three_decimal_cashflow_allocation_settles_the_exact_document_balance",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_over_allocating_by_one_thousandth_is_rejected_atomically",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_prices_and_cashflow_amounts_over_three_decimal_places_are_refused",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_sql_columns_and_http_writers_preserve_three_place_values",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_statement_and_report_csv_preserve_the_third_decimal"
+      ]
+    },
+    {
+      "id": "IT-WORKFLOW-007",
+      "module": "WORKFLOW",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-WORKFLOW",
+      "title": "A thousandth outstanding prevents ordinary financial closure",
+      "preconditions": "Project with a linked PI and a client",
+      "test_data": "PI 0.574 with 0.573 received",
+      "steps": [
+        "Take a financial closure snapshot",
+        "Inspect client summary and closure flags"
+      ],
+      "expected": "The INR 0.001 receivable remains visible and financial closure is not incorrectly marked complete.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_financial_closure_detects_a_thousandth_balance_and_client_summary_preserves_it"
+      ]
+    },
+    {
+      "id": "IT-TAX-012",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Reject inconsistent saved legal figures before e-registration",
+      "preconditions": "Tax invoice and saved item values",
+      "test_data": "Quantity 100, rate 666.667, allocated gross 66666.67",
+      "steps": [
+        "Try generating JSON with inconsistent gross",
+        "Try with mismatched header totals"
+      ],
+      "expected": "The payload is refused with a repair message instead of silently exporting different legal figures.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_einvoice_refuses_inconsistent_saved_line_and_header_figures"
+      ]
+    },
+    {
+      "id": "IT-PROJECT-005",
+      "module": "PROJECT",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PROJECT",
+      "title": "Preserve three-decimal product snapshot from an invoice",
+      "preconditions": "Project with editable product sourced from a PI",
+      "test_data": "Unit price 0.574",
+      "steps": [
+        "Save PI against project",
+        "Reload the project product snapshot"
+      ],
+      "expected": "The source rate and derived amount retain their thousandths.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_invoice_product_snapshot_preserves_the_three_decimal_rate"
+      ]
+    },
+    {
+      "id": "IT-CASH-008",
+      "module": "CASH",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-CASH",
+      "title": "Decimal schema widening preserves values and guards lossy rollback",
+      "preconditions": "Disposable strict MySQL test schema; stop writers before DDL",
+      "test_data": "Existing cent values and one nonzero third-decimal value",
+      "steps": [
+        "Migrate up",
+        "Attempt rollback with fractional data",
+        "Clear fractional data, rollback and reapply"
+      ],
+      "expected": "Legacy data and defaults survive; the complete preflight refuses rollback before any table changes when a thousandth would be lost.",
+      "automation": [
+        "tests/Database/MySqlWideningMigrationSafetyTest.php#test_precision_migration_preserves_old_decimals_and_preflights_every_table_before_rollback"
+      ],
+      "notes": "DDL tests use a unique disposable database because MySQL commits schema changes independently."
+    },
+    {
+      "id": "IT-TAX-013",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Allocate an invoice-wide discount once in the legal payload",
+      "preconditions": "Tax invoice with two GST-rated items and a pre-tax document-wide discount",
+      "test_data": "INR 10 at 18%, INR 20 at 5%, invoice-wide INR 3 discount",
+      "steps": [
+        "Create and save the tax invoice",
+        "Build the portal JSON",
+        "Compare line discounts, taxable values, GST and header total"
+      ],
+      "expected": "The allocated line discounts total INR 3, item taxable and tax values sum to the saved header, and the discount is not subtracted again at invoice level.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_einvoice_allocates_an_invoice_wide_discount_without_double_counting",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_discounted_tax_payload_reconciles_saved_mysql_totals"
+      ]
+    },
+    {
+      "id": "IT-SALES-038",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES-PI",
+      "title": "Fractional cash conversion of a whole-paise PI preserves its exact remainder",
+      "preconditions": "A PI has an exact 1.00 claim and a recorded 0.001 advance",
+      "test_data": "Convert 0.001 to cash and transfer the 0.001 advance",
+      "steps": [
+        "Create the PI",
+        "Create the cash conversion",
+        "Compare the consumed claim, cash invoice, transferred receipt and remaining PI",
+        "Attempt tax conversion of the fractional remainder"
+      ],
+      "expected": "Cash and consumed claim are 0.001, PI remains 0.999, receipt transfers unchanged, and two-decimal tax conversion is blocked atomically.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_fractional_cash_conversion_of_a_paise_pi_preserves_the_exact_claim",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_fractional_cash_conversion_of_a_paise_claim_keeps_the_exact_remainder_on_mysql"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-005",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Partial purchase example preserves independent advance provenance",
+      "test_data": "INR, RMB and USD; PO 10000, advances 2000 and 1000; bill 2500",
+      "steps": [
+        "Create advances and choose 2000 cash plus 500 bank",
+        "Create cash purchase bill and compare PO, bill, vendor and bank"
+      ],
+      "expected": "PO 7500, paid 500, open 7000; bill paid 2500; one unchanged movement per payment.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_user_example_preserves_payment_provenance_in_all_three_currencies"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-006",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Multiple partial purchase bills apportion original GST",
+      "test_data": "GST-inclusive PO and multiple cash and purchase bills",
+      "steps": [
+        "Convert gross slices",
+        "Compare item rates, tax components and remaining claim"
+      ],
+      "expected": "Cash carries no GST; multiple bills and remainder reconcile to original gross.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_multiple_partial_bills_and_cash_reduce_the_gross_and_apportion_gst",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_price_rounding_is_visible_while_unrepresentable_fx_splits_are_atomic"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-007",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Manual source selection preserves FX and opening advances",
+      "test_data": "Opening advance; individual vendor payment slices; foreign-currency cashflow allocation",
+      "steps": [
+        "Select source amounts including a partial split",
+        "Repeat on the remaining source; reverse and try an impossible FX split"
+      ],
+      "expected": "Only selected amounts move; source/native/document currencies, balances and bank entries are conserved.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_opening_and_fx_allocation_split_and_reverse_without_changing_the_bank_entry",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_repeated_manual_splits_and_full_transferred_payment_are_protected",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_foreign_or_excess_payment_selections_fail_atomically_and_unselected_advance_stays"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-008",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Linked purchase reversal and reporting preserve accounting history",
+      "test_data": "Linked bills, cashflow and vendor ledger, project, downstream packaging",
+      "steps": [
+        "Try out-of-band mutations and reverse in last-in-first-out order",
+        "Review project, vendor provenance and document number reuse"
+      ],
+      "expected": "Unsafe changes are blocked; reversal restores payments and PO without bank movement; numbers remain reserved.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_latest_conversion_reversal_restores_claim_payments_and_bank_without_duplication",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_reversal_refuses_downstream_packaging_and_manual_credits",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_split_payment_is_not_unallocated_and_closure_retains_its_provenance",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_reversed_bill_number_is_reserved_against_automatic_and_manual_reuse",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_linked_documents_and_split_payment_cannot_be_mutated_or_deleted_out_of_band",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_reversal_refuses_vendor_collaboration_and_share_links"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-009",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Purchase conversion permissions, stale state and native concurrency",
+      "test_data": "Guest, purchase reader, stale PO model and two native MySQL connections",
+      "steps": [
+        "Attempt unauthorized and stale mutations",
+        "Run overlapping conversions and guarded migration rollback"
+      ],
+      "expected": "Unauthorized or stale actions cannot mutate claims; overlapping conversions cannot consume the same remainder.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_purchase_reader_and_guest_cannot_create_or_change_conversions",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_stale_controller_models_cannot_cancel_or_delete_a_newly_split_order",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_stale_order_cannot_record_a_payment_after_full_conversion",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_native_money_slices_and_lossy_rollback_guard",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_two_overlapping_conversions_serialize_and_cannot_consume_the_same_remainder",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_cross_order_bill_number_collision_retries_without_losing_either_conversion"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-010",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "title": "Scaled purchase rates use decimal rounding with an explicit residual",
+      "preconditions": "Approved itemised PO; cash and purchase bill conversions in INR or RMB",
+      "test_data": "RMB 21,000 → 9,000 cash and 12,000 bill; positive and negative rounding; half-up boundary; GST, discounts and freight",
+      "steps": [
+        "Create cash and purchase bills and compare full quantities and scaled prices",
+        "Check line arithmetic, GST, exact totals, visible round-off, payments and reversal",
+        "Attempt inconsistent sources, negative taxable values and unrepresentable FX allocations"
+      ],
+      "expected": "RMB bills retain 10,000 units at rates 0.9 and 1.2. Three-decimal price residuals, even beyond 0.005, are visible; exact selected totals and payments are conserved. Invalid sources and FX slices fail atomically.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_rmb_remainder_bill_scales_rate_and_preserves_payments",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_rate_rounding_uses_decimal_half_up_and_preserves_amount",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_scaled_prices_recalculate_gst_and_reconcile_bill_total",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_scaled_prices_preserve_discounts_gst_and_freight",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_rate_rounding_allows_cancelling_lines_and_tiny_slices_with_exact_totals",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_rounding_cannot_make_line_or_invoice_taxable_amount_negative",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_native_rmb_remainder_saves_full_quantity_and_scaled_rate",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_native_scaled_price_rounding_keeps_three_decimal_amounts_on_both_bills"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-011",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "title": "Purchase cash and tax bills retain full PO quantities with proportionally scaled prices",
+      "preconditions": "Approved itemised PO; new linked cash and purchase bill conversions",
+      "test_data": "Three 1,000-quantity items at INR 1/2/3, INR 3,000 bill; GST/discount/charges; positive and negative price rounding above 0.005; stale or invalid sources",
+      "steps": [
+        "Convert selected cash and purchase portions, explicitly select payment sources, and inspect bill detail/print",
+        "Check arithmetic, PO and payment conservation, reversal, invalid-source atomicity and packaging prefill"
+      ],
+      "expected": "Both bills retain all original items and quantities, scale prices to the selected amount, show any unavoidable price-rounding adjustment, retain truthful GST on purchase bills, absorb GST/discounts/charges into cash prices, and never treat repeated financial quantities as physical packing quantities.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_scaled_prices_keep_all_original_quantities_on_cash_and_purchase_bills",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_cash_prices_include_gst_discounts_and_charges_without_separate_components",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_visible_price_rounding_preserves_exact_totals_and_never_fabricates_a_price",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_inconsistent_purchase_source_is_not_hidden_as_round_off",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_converted_bill_packing_requires_actual_physical_quantities",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_intra_state_percentage_discount_and_original_manual_round_off_are_preserved",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_existing_legacy_split_is_not_rewritten_when_a_new_bill_is_created",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_packing_verification_does_not_claim_linked_financial_quantities_are_physical",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_manual_packing_quantities_are_saved_without_inventing_a_physical_bill_balance",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_native_scaled_price_rounding_keeps_three_decimal_amounts_on_both_bills",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_purchase_bill_recalculates_mixed_gst_rates_after_invoice_discount",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_packaging_from_a_real_shipment_is_not_misclassified_by_an_associated_financial_bill",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_valid_legacy_float_halfway_percentages_are_accepted_without_accepting_arbitrary_errors",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_valid_legacy_float_halfway_item_gross_is_accepted"
       ]
     }
   ]

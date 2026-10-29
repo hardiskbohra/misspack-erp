@@ -197,7 +197,12 @@ check('label quantities are whole per-carton values', label.includes("quantity_p
 check('labels omit chargeable weight and CBM details', !label.includes('CHARGEABLE')&&!label.includes('data-chargeable')&&!label.includes('cbmPerCarton'));
 check('labels support fitted A4, A5 and both 100 mm thermal formats', controller.includes("Rule::in(['a4','a5','thermal','thermal150'])")&&label.includes("'A5 landscape'")&&label.includes("'100mm 140mm'")&&labelCss.includes('.format-a5 .carton-label{width:210mm;height:148mm')&&labelCss.includes('.format-thermal .carton-label{width:100mm;height:140mm')&&labelCss.includes('.format-thermal150 .carton-label{height:150mm}')&&label.includes("'100mm 150mm'"));
 check('carton headings name the sender and use conditional organisation print branding', label.includes('->issuedByUs($organisation)')&&label.includes("$senderName = $carton->packagingList->from_name")&&label.includes('@if ($senderIsMissPack)')&&label.includes("->logoUrl('print')")&&label.includes('<h1>{{ $senderName }}</h1>')&&!label.includes('shipping_mark ?:'));
-check('party details add exactly two points to every existing format-specific size', ['.72','1.05','.88','.84','.8'].every(size=>labelCss.includes(`font-size:calc(${size}em + 2pt)`)));
+check('party details retain the previous two-point increase on all formats, plus one more point on thermal',
+    ['.72','1.05','.88','.84'].every(size=>labelCss.includes(`font-size:calc(${size}em + 2pt)`))
+    && labelCss.includes('.format-thermal .carton-label{width:100mm;height:140mm;padding:3.5mm;gap:0;font-size:6.6pt}')
+    && labelCss.includes('.format-thermal .carton-label .label-parties span.label-key{font-size:calc(.72em + 2.28pt)}')
+    && labelCss.includes('.format-thermal .label-parties strong{font-size:calc(1.05em + 1.95pt)}')
+    && labelCss.includes('.format-thermal .label-parties p{font-size:calc(.8em + 2.2pt)}'));
 check('source document screens offer packing actions', read('resources/views/sales_invoices/show.blade.php').includes('Pack items')&&read('resources/views/purchase_invoices/show.blade.php').includes('Pack items')&&read('resources/views/shipments/show.blade.php').includes('Create Packaging List'));
 /* A list can hold a dozen carton groups. The strip scrolls inside its card, and
    the form must not be allowed to size itself to the tabs: a grid item defaults

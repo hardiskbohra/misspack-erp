@@ -22,7 +22,7 @@
     /* Scanning the sticker lands on the public tracking page when the shipment
        has a share token; otherwise it opens the internal record. */
     $markTrackingUrl = $markTrackingUrl ?? ($shipment->public_token
-        ? route('shipments.publicTrack', $shipment->public_token)
+        ? \App\Services\PublicShareLinks::url($shipment)
         : route('shipments.show', $shipment));
 
     /* The free-text address usually already ends with the city, state, pin code
