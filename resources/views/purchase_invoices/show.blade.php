@@ -225,6 +225,10 @@
             <div>
                 <h2 class="master-section-title">{{ $invoice->hasPartialConversions() ? 'Original PO products' : 'Products' }}</h2>
                 @if ($invoice->hasPartialConversions())<p class="master-sub">Original quantities and prices are retained for audit; linked bills represent the converted portions.</p>@endif
+                @if ($invoice->isPartialConversion())
+                    <p class="master-sub">Bill quantities are financial references, not separate goods received. Check quantities, rates and round off against the supplier's documents.</p>
+                    @if ($invoice->items->contains(fn ($item) => (float) $item->unit_price === 0.0))<p class="master-help">A zero rate may be a free item or the result of three-decimal price rounding; check the PO and round off.</p>@endif
+                @endif
             </div>
         </div>
         @if ($invoice->items->isEmpty())

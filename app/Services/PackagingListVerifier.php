@@ -99,13 +99,18 @@ class PackagingListVerifier
         $checks[] = $this->check('traceability', 'Batch and expiry consistency', $traceStatus, $traceMessage);
 
         $warnings = collect($list->packing_warnings ?? []);
+        $financialReference = $list->source_type === 'purchase_invoice' && $list->purchase_invoice_id
+            && $list->purchaseInvoice?->isPartialConversion();
+        $allocationMessage = $warnings->isEmpty() ? '' : $warnings->count().' source line(s) are overpacked and require acknowledgement. ';
+        if ($financialReference) {
+            $allocationMessage .= 'Linked purchase bill quantities are financial references, not a physical source balance. Compare actual physical quantities against receiving and packing records.';
+        } elseif ($allocationMessage === '') {
+            $allocationMessage = 'Packed quantities do not exceed their linked source quantities.';
+        }
         $checks[] = $this->check(
-            'source_allocation',
-            'Source quantity allocation',
-            $warnings->isEmpty() ? 'pass' : 'warning',
-            $warnings->isEmpty()
-                ? 'Packed quantities do not exceed their linked source quantities.'
-                : $warnings->count().' source line(s) are overpacked and require acknowledgement.'
+            'source_allocation', 'Source quantity allocation',
+            $warnings->isEmpty() && ! $financialReference ? 'pass' : 'warning',
+            $allocationMessage
         );
 
         $missingLabels = $cartons->filter(fn ($carton) => ! $carton->barcode || ! $carton->public_token);

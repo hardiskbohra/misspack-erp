@@ -8,6 +8,9 @@ use App\Models\CashflowEntry;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchasePaymentSplit;
 use App\Models\VendorPaymentEntry;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -63,21 +66,7 @@ class PurchasePartialConversion
                         'received_at' => now(), 'amount_paid' => 0, 'balance_amount' => $amount, 'created_by' => Auth::id(),
                         'notes' => trim(($data['kind'] === 'cash' ? 'Cash purchase' : 'Purchase bill').' from '.$order->invoice_number.'. '.($order->notes ?? '')),
                     ]);
-                    if ($data['kind'] === 'cash') {
-                        $bill->fill(['gst_type' => 'export', 'place_of_supply' => null, 'subtotal' => $amount,
-                            'discount_type' => 'amount', 'discount_value' => 0, 'discount_amount' => 0,
-                            'taxable_amount' => $amount, 'cgst_amount' => 0, 'sgst_amount' => 0, 'igst_amount' => 0,
-                            'freight_amount' => 0, 'packing_amount' => 0, 'other_charges' => 0, 'round_off' => 0,
-                            'total_amount' => $amount, 'amount_in_words' => CommonHelper::inWords($amount, $order->currency)]);
-                        $bill->save();
-                        $bill->items()->create(['product_name' => 'Cash purchase against '.$order->invoice_number,
-                            'quantity' => 1, 'unit' => 'lot', 'unit_price' => $amount, 'gross_amount' => $amount,
-                            'discount_percent' => 0, 'discount_amount' => 0, 'taxable_amount' => $amount,
-                            'gst_percent' => 0, 'cgst_amount' => 0, 'sgst_amount' => 0, 'igst_amount' => 0,
-                            'line_total' => $amount, 'sort_order' => 1]);
-                    } else {
-                        $this->createItemisedBill($order, $bill, $original, $already, $amount);
-                    }
+                    $this->createItemisedBill($order, $bill, $original, $already, $amount, $data['kind'] === 'cash');
 
                     $this->applySelection($order, $bill, $selection);
                     $order->original_total_amount = $original;
@@ -330,78 +319,219 @@ class PurchasePartialConversion
         }
     }
 
-    private function createItemisedBill(PurchaseInvoice $order, PurchaseInvoice $bill, float $original, float $before, float $amount): void
+    /**
+     * Keep the full ordered quantities; only the financial rates are scaled.
+     * Cash bills spread the selected gross over the original item gross values,
+     * while purchase bills scale against the original PO total and preserve
+     * the PO's tax/discount/charge treatment.
+     */
+    private function createItemisedBill(PurchaseInvoice $order, PurchaseInvoice $bill, float $original, float $before, float $amount, bool $cash): void
     {
-        $items = $order->items()->get();
-        if ($items->isEmpty()) throw ValidationException::withMessages(['conversion' => 'The PO has no item lines to apportion. Ask Accounts to review it.']);
-        // Cumulative decimal apportionment prevents a binary-float half-way
-        // value such as 0.1005 from being rounded down to 0.100 by accident.
-        $beforeDecimal = \Brick\Math\BigDecimal::of(number_format($before, 3, '.', ''));
-        $afterDecimal = $beforeDecimal->plus(number_format($amount, 3, '.', ''));
-        $originalDecimal = \Brick\Math\BigDecimal::of(number_format($original, 3, '.', ''));
-        $portion = static function ($value) use ($beforeDecimal, $afterDecimal, $originalDecimal): float {
-            $value = \Brick\Math\BigDecimal::of((string) ($value ?? '0'));
-            $after = $value->multipliedBy($afterDecimal)->dividedBy($originalDecimal, 3, \Brick\Math\RoundingMode::HalfUp);
-            $before = $value->multipliedBy($beforeDecimal)->dividedBy($originalDecimal, 3, \Brick\Math\RoundingMode::HalfUp);
-            return (float) (string) $after->minus($before);
+        $items = $order->items()->orderBy('sort_order')->orderBy('id')->lockForUpdate()->get();
+        $originalDecimal = self::decimal(number_format($original, 3, '.', ''));
+        $amountDecimal = self::decimal(number_format($amount, 3, '.', ''));
+        $beforeDecimal = self::decimal(number_format($before, 3, '.', ''));
+        $afterDecimal = $beforeDecimal->plus($amountDecimal);
+        $originalSubtotal = $this->assertSourceComponents($order, $items, $originalDecimal);
+        if ($cash && $originalSubtotal->isZero()) {
+            throw ValidationException::withMessages(['conversion' => 'The PO has no priced items to distribute the cash amount. Ask Accounts to review it; nothing was changed.']);
+        }
+
+        // Cumulative apportionment of fixed components makes repeated portions
+        // add back to the original even at half-thousandth boundaries.
+        $portion = static function ($value) use ($beforeDecimal, $afterDecimal, $originalDecimal): BigDecimal {
+            $value = self::decimal($value);
+            $after = $value->multipliedBy($afterDecimal)->dividedBy($originalDecimal, 3, RoundingMode::HalfUp);
+            $before = $value->multipliedBy($beforeDecimal)->dividedBy($originalDecimal, 3, RoundingMode::HalfUp);
+            return $after->minus($before);
         };
+        $denominator = $cash ? $originalSubtotal : $originalDecimal;
+        if ($cash) {
+            $bill->fill(['gst_type' => 'export', 'place_of_supply' => null, 'discount_type' => 'amount', 'discount_value' => 0]);
+        }
         $bill->save();
-        $subtotal = $lineTaxable = 0.0;
-        $roundingBudget = \Brick\Math\BigDecimal::zero();
+        $subtotal = $lineTaxable = $lineCgst = $lineSgst = $lineIgst = BigDecimal::zero();
         foreach ($items as $item) {
-            $apportionedGross = round($portion($item->gross_amount), 3);
-            $quantity = round($portion($item->quantity), 3);
-            // The visible line gross must equal its displayed quantity × original
-            // rate. Up to five thousandths across the *whole bill* may be
-            // reconciled by the visible round-off below; summing absolute line
-            // differences prevents opposite discrepancies from hiding each other.
-            $grossDecimal = \Brick\Math\BigDecimal::of(number_format($quantity, 3, '.', ''))
-                ->multipliedBy((string) ($item->unit_price ?? '0'))
-                ->toScale(3, \Brick\Math\RoundingMode::HalfUp);
-            $gross = (float) (string) $grossDecimal;
-            $difference = $grossDecimal->minus(number_format($apportionedGross, 3, '.', ''))->abs();
-            $roundingBudget = $roundingBudget->plus($difference);
-            if ($roundingBudget->isGreaterThan('0.005') || ($apportionedGross > 0 && ($quantity <= 0 || $gross <= 0))
-                || ($apportionedGross <= 0 && $gross > 0)) {
-                throw ValidationException::withMessages(['conversion' => 'This bill portion cannot be represented by the original item rates and three-decimal quantities within the small rounding limit. Ask Accounts to review the split; nothing was changed.']);
-            }
+            $price = self::decimal($item->unit_price)->multipliedBy($amountDecimal)
+                ->dividedBy($denominator, 3, RoundingMode::HalfUp);
+            $gross = self::decimal($item->quantity)->multipliedBy($price)->toScale(3, RoundingMode::HalfUp);
+            $discountPercent = $cash ? BigDecimal::zero() : self::decimal($item->discount_percent);
+            $gstPercent = $cash ? BigDecimal::zero() : self::decimal($item->gst_percent);
+            $discount = $gross->multipliedBy($discountPercent)->dividedBy(100, 3, RoundingMode::HalfUp);
+            $taxable = $gross->minus($discount);
+            [$cgst, $sgst, $igst] = $this->itemTaxes($bill->gst_type, $taxable, $gstPercent);
+            $total = $taxable->plus($cgst)->plus($sgst)->plus($igst);
+            foreach ([$price, $gross, $discount, $taxable, $cgst, $sgst, $igst, $total] as $value) $this->assertMoneyFits($value);
+
             $line = $item->replicate(['purchase_invoice_id']);
             $line->purchase_invoice_id = $bill->id;
-            $line->quantity = $quantity;
-            $line->gross_amount = $gross;
-            $line->discount_amount = round($portion($item->discount_amount), 3);
-            if ((float) $line->discount_amount > $gross + 0.0005) {
-                throw ValidationException::withMessages(['conversion' => 'The apportioned discount exceeds the rounded item amount. Ask Accounts to review the split; nothing was changed.']);
-            }
-            $line->taxable_amount = round($gross - (float) $line->discount_amount, 3);
-            $line->cgst_amount = round($portion($item->cgst_amount), 3);
-            $line->sgst_amount = round($portion($item->sgst_amount), 3);
-            $line->igst_amount = round($portion($item->igst_amount), 3);
-            $line->line_total = round((float) $line->taxable_amount + (float) $line->cgst_amount + (float) $line->sgst_amount + (float) $line->igst_amount, 3);
+            // Replication keeps the PO quantity, description, product links,
+            // unit, HSN, remarks and sort order unchanged.
+            $line->unit_price = (string) $price;
+            $line->gross_amount = (string) $gross;
+            $line->discount_percent = (string) $discountPercent;
+            $line->discount_amount = (string) $discount;
+            $line->taxable_amount = (string) $taxable;
+            $line->gst_percent = (string) $gstPercent;
+            $line->cgst_amount = (string) $cgst;
+            $line->sgst_amount = (string) $sgst;
+            $line->igst_amount = (string) $igst;
+            $line->line_total = (string) $total;
             $line->save();
-            $subtotal += $gross;
-            $lineTaxable += (float) $line->taxable_amount;
+            $subtotal = $subtotal->plus($gross);
+            $lineTaxable = $lineTaxable->plus($taxable);
+            $lineCgst = $lineCgst->plus($cgst);
+            $lineSgst = $lineSgst->plus($sgst);
+            $lineIgst = $lineIgst->plus($igst);
         }
-        $discount = round($portion($order->discount_amount), 3);
-        if ($discount > $lineTaxable + 0.0005) {
-            throw ValidationException::withMessages(['conversion' => 'The apportioned invoice discount exceeds the rounded taxable amount. Ask Accounts to review the split; nothing was changed.']);
+
+        $zero = BigDecimal::zero();
+        $discount = $cash ? $zero : ($order->discount_type === 'percent'
+            ? $lineTaxable->multipliedBy(self::decimal($order->discount_value))->dividedBy(100, 3, RoundingMode::HalfUp)
+            : $portion($order->discount_amount));
+        if ($discount->isGreaterThan($lineTaxable)) {
+            throw ValidationException::withMessages(['conversion' => 'The apportioned invoice discount exceeds the scaled taxable amount. Ask Accounts to review the split; nothing was changed.']);
         }
-        $taxable = round($lineTaxable - $discount, 3);
-        $cgst = round($portion($order->cgst_amount), 3);
-        $sgst = round($portion($order->sgst_amount), 3);
-        $igst = round($portion($order->igst_amount), 3);
-        $freight = round($portion($order->freight_amount), 3);
-        $packing = round($portion($order->packing_amount), 3);
-        $other = round($portion($order->other_charges), 3);
-        $roundOff = round($amount - $taxable - $cgst - $sgst - $igst - $freight - $packing - $other, 3);
-        if (abs($roundOff - $portion($order->round_off)) > max(0.005, $items->count() * 0.005)) {
-            throw ValidationException::withMessages(['conversion' => 'The PO amounts cannot be apportioned consistently. Ask Accounts to review them; nothing was changed.']);
-        }
-        $bill->fill(['subtotal' => round($subtotal, 3), 'discount_amount' => $discount,
-            'discount_value' => $order->discount_type === 'amount' ? $discount : $order->discount_value,
-            'taxable_amount' => $taxable, 'cgst_amount' => $cgst, 'sgst_amount' => $sgst, 'igst_amount' => $igst,
-            'freight_amount' => $freight, 'packing_amount' => $packing, 'other_charges' => $other,
-            'round_off' => $roundOff, 'total_amount' => $amount, 'amount_in_words' => CommonHelper::inWords($amount, $order->currency)]);
+        $taxable = $lineTaxable->minus($discount);
+        // This mirrors the normal purchase calculation: line GST is computed
+        // before a document discount, then header GST is reduced by its ratio.
+        $headerTax = static fn (BigDecimal $tax): BigDecimal => $lineTaxable->isZero() ? $tax
+            : $tax->multipliedBy($taxable)->dividedBy($lineTaxable, 3, RoundingMode::HalfUp);
+        $cgst = $headerTax($lineCgst);
+        $sgst = $headerTax($lineSgst);
+        $igst = $headerTax($lineIgst);
+        $freight = $cash ? $zero : $portion($order->freight_amount);
+        $packing = $cash ? $zero : $portion($order->packing_amount);
+        $other = $cash ? $zero : $portion($order->other_charges);
+        // Source components have been validated independently below, so this
+        // residual consists of the apportioned original round-off and the
+        // unavoidable price/line/tax apportionment precision, not a hidden
+        // arbitrary mismatch in the PO.
+        $roundOff = $amountDecimal->minus($taxable)->minus($cgst)->minus($sgst)->minus($igst)
+            ->minus($freight)->minus($packing)->minus($other);
+        foreach ([$subtotal, $discount, $taxable, $cgst, $sgst, $igst, $freight, $packing, $other, $roundOff] as $value) $this->assertMoneyFits($value);
+        $bill->fill(['subtotal' => (string) $subtotal, 'discount_amount' => (string) $discount,
+            'discount_value' => $cash || $order->discount_type === 'amount' ? (string) $discount : $order->discount_value,
+            'taxable_amount' => (string) $taxable, 'cgst_amount' => (string) $cgst,
+            'sgst_amount' => (string) $sgst, 'igst_amount' => (string) $igst,
+            'freight_amount' => (string) $freight, 'packing_amount' => (string) $packing,
+            'other_charges' => (string) $other, 'round_off' => (string) $roundOff,
+            'total_amount' => (string) $amountDecimal, 'amount_in_words' => CommonHelper::inWords($amount, $order->currency)]);
         $bill->save();
+    }
+
+    /**
+     * Validate original item and header arithmetic before allowing an unbounded
+     * price-rounding residual. Otherwise a stale or edited PO could be made to
+     * look balanced merely by writing its unrelated error into round-off.
+     */
+    private function assertSourceComponents(PurchaseInvoice $order, Collection $items, BigDecimal $original): BigDecimal
+    {
+        if ($items->isEmpty()) throw ValidationException::withMessages(['conversion' => 'The PO has no item lines to apportion. Ask Accounts to review it.']);
+        $invalid = static function (): never {
+            throw ValidationException::withMessages(['conversion' => 'The PO item, discount or tax amounts do not reconcile. Ask Accounts to review them; nothing was changed.']);
+        };
+        // Older POs were calculated with PHP floats; at a half-thousandth,
+        // those can differ by 0.001 from decimal half-up. Accept either exact
+        // calculation, not an arbitrary ±0.001 tolerance that could conceal
+        // a genuinely wrong gross, tax or discount.
+        $matchesRounded = static fn (BigDecimal $actual, BigDecimal $decimal, float $legacy): bool =>
+            $actual->isEqualTo($decimal) || $actual->isEqualTo(self::decimal(number_format(round($legacy, 3), 3, '.', '')));
+        $subtotal = $lineTaxable = $lineCgst = $lineSgst = $lineIgst = BigDecimal::zero();
+        $legacyLineTaxable = $legacyLineCgst = $legacyLineSgst = $legacyLineIgst = 0.0;
+        foreach ($items as $item) {
+            $quantity = self::decimal($item->quantity);
+            $price = self::decimal($item->unit_price);
+            $gross = self::decimal($item->gross_amount);
+            $discountPercent = self::decimal($item->discount_percent);
+            $discount = self::decimal($item->discount_amount);
+            $taxable = self::decimal($item->taxable_amount);
+            $gstPercent = self::decimal($item->gst_percent);
+            $cgst = self::decimal($item->cgst_amount);
+            $sgst = self::decimal($item->sgst_amount);
+            $igst = self::decimal($item->igst_amount);
+            if ($quantity->isNegative() || $price->isNegative() || $gross->isNegative() || $discountPercent->isNegative()
+                || $discountPercent->isGreaterThan(100) || $discount->isNegative() || $discount->isGreaterThan($gross)
+                || $taxable->isNegative() || $gstPercent->isNegative() || $cgst->isNegative() || $sgst->isNegative() || $igst->isNegative()) $invalid();
+            $expectedGross = $quantity->multipliedBy($price)->toScale(3, RoundingMode::HalfUp);
+            $expectedDiscount = $gross->multipliedBy($discountPercent)->dividedBy(100, 3, RoundingMode::HalfUp);
+            [$expectedCgst, $expectedSgst, $expectedIgst] = $this->itemTaxes($order->gst_type, $taxable, $gstPercent);
+            $legacyTaxable = max((float) (string) $gross - (float) (string) $discount, 0);
+            $legacyDiscount = (float) (string) $gross * ((float) (string) $discountPercent / 100);
+            $legacyTax = $legacyTaxable * ((float) (string) $gstPercent / 100);
+            $legacyHalfTax = $legacyTaxable * (((float) (string) $gstPercent / 2) / 100);
+            $legacyCgst = $order->gst_type === 'intra_state' ? $legacyHalfTax : 0.0;
+            $legacySgst = $legacyCgst;
+            $legacyIgst = $order->gst_type === 'inter_state' ? $legacyTax : 0.0;
+            if (! $matchesRounded($gross, $expectedGross, (float) (string) $quantity * (float) (string) $price)
+                || ! $matchesRounded($discount, $expectedDiscount, $legacyDiscount)
+                || ! $taxable->isEqualTo($gross->minus($discount)) || ! $matchesRounded($cgst, $expectedCgst, $legacyCgst)
+                || ! $matchesRounded($sgst, $expectedSgst, $legacySgst) || ! $matchesRounded($igst, $expectedIgst, $legacyIgst)
+                || ! self::decimal($item->line_total)->isEqualTo($taxable->plus($cgst)->plus($sgst)->plus($igst))) $invalid();
+            $subtotal = $subtotal->plus($gross);
+            $lineTaxable = $lineTaxable->plus($taxable);
+            $lineCgst = $lineCgst->plus($cgst);
+            $lineSgst = $lineSgst->plus($sgst);
+            $lineIgst = $lineIgst->plus($igst);
+            $legacyLineTaxable += $legacyTaxable;
+            $legacyLineCgst += (float) (string) $cgst;
+            $legacyLineSgst += (float) (string) $sgst;
+            $legacyLineIgst += (float) (string) $igst;
+        }
+        $discount = self::decimal($order->discount_amount);
+        $discountValue = self::decimal($order->discount_value);
+        $taxable = self::decimal($order->taxable_amount);
+        if ($discount->isNegative() || $discountValue->isNegative() || $discount->isGreaterThan($lineTaxable) || $taxable->isNegative()) $invalid();
+        $expectedDiscount = $order->discount_type === 'percent'
+            ? $lineTaxable->multipliedBy($discountValue)->dividedBy(100, 3, RoundingMode::HalfUp)
+            : ($discountValue->isGreaterThan($lineTaxable) ? $lineTaxable : $discountValue);
+        $legacyDiscount = $order->discount_type === 'percent'
+            ? $legacyLineTaxable * ((float) (string) $discountValue / 100)
+            : min((float) (string) $discountValue, $legacyLineTaxable);
+        if (! $subtotal->isEqualTo(self::decimal($order->subtotal)) || ! $matchesRounded($discount, $expectedDiscount, $legacyDiscount)
+            || ! $taxable->isEqualTo($lineTaxable->minus($discount))) $invalid();
+        $headerTax = static fn (BigDecimal $tax): BigDecimal => $lineTaxable->isZero() ? $tax
+            : $tax->multipliedBy($taxable)->dividedBy($lineTaxable, 3, RoundingMode::HalfUp);
+        $legacyRatio = $legacyLineTaxable > 0 ? max($legacyLineTaxable - (float) (string) $discount, 0) / $legacyLineTaxable : 1;
+        $cgst = self::decimal($order->cgst_amount);
+        $sgst = self::decimal($order->sgst_amount);
+        $igst = self::decimal($order->igst_amount);
+        $freight = self::decimal($order->freight_amount);
+        $packing = self::decimal($order->packing_amount);
+        $other = self::decimal($order->other_charges);
+        if ($cgst->isNegative() || $sgst->isNegative() || $igst->isNegative() || $freight->isNegative()
+            || $packing->isNegative() || $other->isNegative() || ! $matchesRounded($cgst, $headerTax($lineCgst), $legacyLineCgst * $legacyRatio)
+            || ! $matchesRounded($sgst, $headerTax($lineSgst), $legacyLineSgst * $legacyRatio)
+            || ! $matchesRounded($igst, $headerTax($lineIgst), $legacyLineIgst * $legacyRatio)
+            || ! $original->isEqualTo($taxable->plus($cgst)->plus($sgst)->plus($igst)->plus($freight)->plus($packing)
+                ->plus($other)->plus(self::decimal($order->round_off)))) $invalid();
+        return $subtotal;
+    }
+
+    /** Item taxes use the same pre-document-discount basis as ordinary purchases. */
+    private function itemTaxes(?string $type, BigDecimal $taxable, BigDecimal $percent): array
+    {
+        $zero = BigDecimal::zero();
+        if ($type === 'inter_state') {
+            return [$zero, $zero, $taxable->multipliedBy($percent)->dividedBy(100, 3, RoundingMode::HalfUp)];
+        }
+        if ($type === 'intra_state') {
+            $half = $taxable->multipliedBy($percent)->dividedBy(200, 3, RoundingMode::HalfUp);
+            return [$half, $half, $zero];
+        }
+        return [$zero, $zero, $zero];
+    }
+
+    private static function decimal(mixed $value): BigDecimal
+    {
+        return BigDecimal::of((string) ($value ?? '0'));
+    }
+
+    private function assertMoneyFits(BigDecimal $value): void
+    {
+        // Purchase monetary columns are DECIMAL(17,3) after the precision migration.
+        if ($value->abs()->isGreaterThan('99999999999999.999')) {
+            throw ValidationException::withMessages(['conversion' => 'A scaled price or total is too large to save. Ask Accounts to review the split; nothing was changed.']);
+        }
     }
 }

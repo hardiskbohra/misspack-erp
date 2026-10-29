@@ -1456,7 +1456,7 @@ Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMon
 
 **Expected:** Cash carries no GST; multiple bills and remainder reconcile to original gross.
 
-**Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_multiple_partial_bills_and_cash_reduce_the_gross_and_apportion_gst`; `tests/Integration/PurchasePartialConversionsTest.php#test_unrepresentable_item_and_fx_splits_are_atomic`
+**Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_multiple_partial_bills_and_cash_reduce_the_gross_and_apportion_gst`; `tests/Integration/PurchasePartialConversionsTest.php#test_price_rounding_is_visible_while_unrepresentable_fx_splits_are_atomic`
 
 ### IT-PURCHASE-007 — Manual source selection preserves FX and opening advances
 
@@ -1497,19 +1497,32 @@ Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMon
 
 **Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_purchase_reader_and_guest_cannot_create_or_change_conversions`; `tests/Integration/PurchasePartialConversionsTest.php#test_stale_controller_models_cannot_cancel_or_delete_a_newly_split_order`; `tests/Integration/PurchasePartialConversionsTest.php#test_stale_order_cannot_record_a_payment_after_full_conversion`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_native_money_slices_and_lossy_rollback_guard`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_two_overlapping_conversions_serialize_and_cannot_consume_the_same_remainder`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_cross_order_bill_number_collision_retries_without_losing_either_conversion`
 
-### IT-PURCHASE-010 — Small quantity rounding on a partial purchase bill is visible and bounded
+### IT-PURCHASE-010 — Scaled purchase rates use decimal rounding with an explicit residual
 
 **Priority:** P0 · **Requirement:** REQ-PURCHASE · **Implementation:** linked executable evidence
 
-- **Preconditions:** Approved RMB PO, 10,000 units at 2.1, with a 9,000 cash conversion
-- **Data:** 12,000 RMB remaining tax bill; reverse sign, 0.005 boundary, GST, cancellation and zero-quantity cases
-1. Create the cash bill and then the remaining purchase bill
-2. Check original rate, three-decimal quantity, line totals, round-off, payments and print
-3. Attempt larger, cancelling and zero-quantity discrepancies
+- **Preconditions:** Approved itemised PO; cash and purchase bill conversions in INR or RMB
+- **Data:** RMB 21,000 → 9,000 cash and 12,000 bill; positive and negative rounding; half-up boundary; GST, discounts and freight
+1. Create cash and purchase bills and compare full quantities and scaled prices
+2. Check line arithmetic, GST, exact totals, visible round-off, payments and reversal
+3. Attempt inconsistent sources, negative taxable values and unrepresentable FX allocations
 
-**Expected:** Quantity 5,714.286, gross 12,000.001 and visible -0.001 round-off yield exactly 12,000; payment movements are unchanged. Up to 0.005 absolute line discrepancy is permitted per bill; unsafe splits fail atomically.
+**Expected:** RMB bills retain 10,000 units at rates 0.9 and 1.2. Three-decimal price residuals, even beyond 0.005, are visible; exact selected totals and payments are conserved. Invalid sources and FX slices fail atomically.
 
-**Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_rmb_remainder_bill_preserves_rate_and_payments_with_visible_round_off`; `tests/Integration/PurchasePartialConversionsTest.php#test_purchase_bill_can_use_positive_rounding_and_the_five_thousandth_limit`; `tests/Integration/PurchasePartialConversionsTest.php#test_small_quantity_rounding_keeps_apportioned_gst_and_reconciles_bill_total`; `tests/Integration/PurchasePartialConversionsTest.php#test_purchase_rounding_rejects_large_cancelling_and_zero_quantity_slices_atomically`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_native_rmb_remainder_saves_a_visible_thousandth_round_off`; `tests/Integration/PurchasePartialConversionsTest.php#test_quantity_rounding_preserves_discounts_gst_and_freight`; `tests/Integration/PurchasePartialConversionsTest.php#test_rounding_cannot_make_line_or_invoice_taxable_amount_negative`
+**Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_rmb_remainder_bill_scales_rate_and_preserves_payments`; `tests/Integration/PurchasePartialConversionsTest.php#test_rate_rounding_uses_decimal_half_up_and_preserves_amount`; `tests/Integration/PurchasePartialConversionsTest.php#test_scaled_prices_recalculate_gst_and_reconcile_bill_total`; `tests/Integration/PurchasePartialConversionsTest.php#test_scaled_prices_preserve_discounts_gst_and_freight`; `tests/Integration/PurchasePartialConversionsTest.php#test_rate_rounding_allows_cancelling_lines_and_tiny_slices_with_exact_totals`; `tests/Integration/PurchasePartialConversionsTest.php#test_rounding_cannot_make_line_or_invoice_taxable_amount_negative`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_native_rmb_remainder_saves_full_quantity_and_scaled_rate`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_native_scaled_price_rounding_keeps_three_decimal_amounts_on_both_bills`
+
+### IT-PURCHASE-011 — Purchase cash and tax bills retain full PO quantities with proportionally scaled prices
+
+**Priority:** P0 · **Requirement:** REQ-PURCHASE · **Implementation:** linked executable evidence
+
+- **Preconditions:** Approved itemised PO; new linked cash and purchase bill conversions
+- **Data:** Three 1,000-quantity items at INR 1/2/3, INR 3,000 bill; GST/discount/charges; positive and negative price rounding above 0.005; stale or invalid sources
+1. Convert selected cash and purchase portions, explicitly select payment sources, and inspect bill detail/print
+2. Check arithmetic, PO and payment conservation, reversal, invalid-source atomicity and packaging prefill
+
+**Expected:** Both bills retain all original items and quantities, scale prices to the selected amount, show any unavoidable price-rounding adjustment, retain truthful GST on purchase bills, absorb GST/discounts/charges into cash prices, and never treat repeated financial quantities as physical packing quantities.
+
+**Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_scaled_prices_keep_all_original_quantities_on_cash_and_purchase_bills`; `tests/Integration/PurchasePartialConversionsTest.php#test_cash_prices_include_gst_discounts_and_charges_without_separate_components`; `tests/Integration/PurchasePartialConversionsTest.php#test_visible_price_rounding_preserves_exact_totals_and_never_fabricates_a_price`; `tests/Integration/PurchasePartialConversionsTest.php#test_inconsistent_purchase_source_is_not_hidden_as_round_off`; `tests/Integration/PurchasePartialConversionsTest.php#test_converted_bill_packing_requires_actual_physical_quantities`; `tests/Integration/PurchasePartialConversionsTest.php#test_intra_state_percentage_discount_and_original_manual_round_off_are_preserved`; `tests/Integration/PurchasePartialConversionsTest.php#test_existing_legacy_split_is_not_rewritten_when_a_new_bill_is_created`; `tests/Integration/PurchasePartialConversionsTest.php#test_packing_verification_does_not_claim_linked_financial_quantities_are_physical`; `tests/Integration/PurchasePartialConversionsTest.php#test_manual_packing_quantities_are_saved_without_inventing_a_physical_bill_balance`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_native_scaled_price_rounding_keeps_three_decimal_amounts_on_both_bills`; `tests/Integration/PurchasePartialConversionsTest.php#test_purchase_bill_recalculates_mixed_gst_rates_after_invoice_discount`; `tests/Integration/PurchasePartialConversionsTest.php#test_packaging_from_a_real_shipment_is_not_misclassified_by_an_associated_financial_bill`; `tests/Integration/PurchasePartialConversionsTest.php#test_valid_legacy_float_halfway_percentages_are_accepted_without_accepting_arbitrary_errors`; `tests/Integration/PurchasePartialConversionsTest.php#test_valid_legacy_float_halfway_item_gross_is_accepted`
 
 ## Cashflow, allocations and account transfers (`CASH`)
 

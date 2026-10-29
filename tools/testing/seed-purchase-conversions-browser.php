@@ -54,5 +54,27 @@ foreach ([1440, 390] as $width) {
         'gross_amount' => 21000, 'taxable_amount' => 21000, 'line_total' => 21000, 'sort_order' => 1]);
     app(PurchaseBillLedger::class)->sync($rmb);
     $orders['rmb'.$width] = $rmb->id;
+
+    // User's exact three-product example; no payment is selected implicitly.
+    $priced = PurchaseInvoice::create(['invoice_number' => 'BROWSER-PRICE-PO-'.$width, 'invoice_type' => 'order',
+        'status' => 'approved', 'public_token' => \Illuminate\Support\Str::random(48), 'vendor_id' => $vendor->id,
+        'vendor_company_name' => 'Example supplier', 'invoice_date' => '2026-10-29', 'currency' => 'INR', 'gst_type' => 'export',
+        'subtotal' => 6000, 'taxable_amount' => 6000, 'total_amount' => 6000, 'created_by' => $user->id]);
+    foreach ([1, 2, 3] as $i => $price) {
+        $priced->items()->create(['product_name' => 'Product '.($i + 1), 'quantity' => 1000, 'unit' => 'pcs', 'unit_price' => $price,
+            'gross_amount' => 1000 * $price, 'taxable_amount' => 1000 * $price, 'line_total' => 1000 * $price, 'sort_order' => $i + 1]);
+    }
+    app(PurchaseBillLedger::class)->sync($priced);
+    $orders['priced'.$width] = $priced->id;
+
+    // A separate order makes both signs of a visible, >0.005 rate adjustment.
+    $rounded = PurchaseInvoice::create(['invoice_number' => 'BROWSER-ROUND-PO-'.$width, 'invoice_type' => 'order',
+        'status' => 'approved', 'public_token' => \Illuminate\Support\Str::random(48), 'vendor_id' => $vendor->id,
+        'vendor_company_name' => 'Example supplier', 'invoice_date' => '2026-10-29', 'currency' => 'INR', 'gst_type' => 'export',
+        'subtotal' => 1000, 'taxable_amount' => 1000, 'total_amount' => 1000, 'created_by' => $user->id]);
+    $rounded->items()->create(['product_name' => 'Rounded product', 'quantity' => 1000, 'unit' => 'pcs', 'unit_price' => 1,
+        'gross_amount' => 1000, 'taxable_amount' => 1000, 'line_total' => 1000, 'sort_order' => 1]);
+    app(PurchaseBillLedger::class)->sync($rounded);
+    $orders['round'.$width] = $rounded->id;
 }
 echo json_encode($orders, JSON_THROW_ON_ERROR)."\n";

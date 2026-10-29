@@ -57,6 +57,406 @@ class PurchasePartialConversionsTest extends TestCase
         ], $sources));
     }
 
+    public function test_scaled_prices_keep_all_original_quantities_on_cash_and_purchase_bills(): void
+    {
+        $order = $this->order('INR', ['items' => [
+            ['product_name' => 'First', 'description' => 'First details', 'hsn_sac' => '1001', 'quantity' => 1000, 'unit' => 'pcs', 'unit_price' => '1', 'gst_percent' => 0],
+            ['product_name' => 'Second', 'quantity' => 1000, 'unit' => 'sets', 'unit_price' => '2', 'gst_percent' => 0],
+            ['product_name' => 'Third', 'quantity' => 1000, 'unit' => 'box', 'unit_price' => '3', 'gst_percent' => 0],
+        ]]);
+        $cashPayment = $this->payment($order, '2000', 'cash');
+        $bankPayment = $this->payment($order, '1000', 'bank_transfer');
+        $cashflows = CashflowEntry::whereIn('id', [$cashPayment->cashflow_entry_id, $bankPayment->cashflow_entry_id])
+            ->orderBy('id')->pluck('debit_amount', 'id')->all();
+        $this->assertEqualsWithDelta(6000, (float) $order->total_amount, 0.000001);
+        $this->get(route('purchase-invoices.show', $order))->assertOk()
+            ->assertSee('full PO quantities')->assertSee('round off');
+
+        $this->convert($order, 'cash', '3000', ['payments' => [$cashPayment->id => '2000', $bankPayment->id => '1000']])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $cash = $order->partialConversions()->firstOrFail();
+        $this->assertEqualsWithDelta(3000, (float) $order->fresh()->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(3000, $cash->fresh()->paidAmount(), 0.000001);
+        $this->assertEqualsWithDelta(0, $order->fresh()->paidAmount(), 0.000001);
+        $this->convert($order->fresh(), 'bill', '3000')->assertRedirect()->assertSessionHasNoErrors();
+        $taxBill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
+
+        foreach ([$cash, $taxBill] as $bill) {
+            $items = $bill->items()->orderBy('sort_order')->get();
+            $this->assertCount(3, $items);
+            $this->assertSame(['First', 'Second', 'Third'], $items->pluck('product_name')->all());
+            $this->assertSame(['pcs', 'sets', 'box'], $items->pluck('unit')->all());
+            $this->assertSame('First details', $items[0]->description);
+            $this->assertSame('1001', $items[0]->hsn_sac);
+            foreach ([0.5, 1, 1.5] as $i => $rate) {
+                $this->assertEqualsWithDelta(1000, (float) $items[$i]->quantity, 0.000001);
+                $this->assertEqualsWithDelta($rate, (float) $items[$i]->unit_price, 0.000001);
+                $this->assertEqualsWithDelta(1000 * $rate, (float) $items[$i]->gross_amount, 0.000001);
+            }
+            $this->assertEqualsWithDelta(3000, (float) $bill->total_amount, 0.000001);
+            $this->assertEqualsWithDelta(0, (float) $bill->round_off, 0.000001);
+            $this->get(route('purchase-invoices.show', $bill))->assertOk()->assertSee('financial references');
+            $this->get(route('purchase-invoices.print', $bill))->assertOk()->assertSee('financial references');
+        }
+        $this->assertEqualsWithDelta(0, (float) $order->fresh()->total_amount, 0.000001);
+        $this->assertSame([1.0, 2.0, 3.0], $order->items()->orderBy('sort_order')->get()->map(fn ($item) => (float) $item->unit_price)->all());
+        $this->assertEqualsWithDelta(6000, (float) VendorPaymentEntry::where('vendor_id', $order->vendor_id)
+            ->where('transaction_type', 'credit')->sum('foreign_amount'), 0.000001);
+        $this->assertSame($cashflows, CashflowEntry::whereIn('id', array_keys($cashflows))->orderBy('id')->pluck('debit_amount', 'id')->all());
+
+        $this->delete(route('purchase-invoices.destroy', $taxBill))->assertRedirect()->assertSessionHas('success');
+        $this->delete(route('purchase-invoices.destroy', $cash))->assertRedirect()->assertSessionHas('success');
+        $this->assertEqualsWithDelta(6000, (float) $order->fresh()->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(3000, $order->fresh()->paidAmount(), 0.000001);
+        $this->assertSame($cashflows, CashflowEntry::whereIn('id', array_keys($cashflows))->orderBy('id')->pluck('debit_amount', 'id')->all());
+    }
+
+    public function test_cash_prices_include_gst_discounts_and_charges_without_separate_components(): void
+    {
+        $order = $this->order('INR', ['gst_type' => 'inter_state', 'discount_type' => 'amount', 'discount_value' => '100',
+            'freight_amount' => '100', 'packing_amount' => '50', 'other_charges' => '25', 'items' => [
+                ['product_name' => 'A', 'quantity' => 100, 'unit_price' => '20', 'discount_percent' => 10, 'gst_percent' => 18],
+                ['product_name' => 'B', 'quantity' => 100, 'unit_price' => '10', 'discount_percent' => 20, 'gst_percent' => 18],
+            ]]);
+        $this->assertEqualsWithDelta(3125, (float) $order->total_amount, 0.000001);
+        $this->convert($order, 'cash', '625')->assertRedirect()->assertSessionHasNoErrors();
+        $cash = $order->partialConversions()->firstOrFail();
+        $items = $cash->items()->orderBy('sort_order')->get();
+        $this->assertCount(2, $items);
+        $this->assertSame('export', $cash->gst_type);
+        foreach ([4.167, 2.083] as $i => $rate) {
+            $this->assertEqualsWithDelta(100, (float) $items[$i]->quantity, 0.000001);
+            $this->assertEqualsWithDelta($rate, (float) $items[$i]->unit_price, 0.000001);
+            $this->assertEqualsWithDelta(round(100 * $rate, 3), (float) $items[$i]->gross_amount, 0.000001);
+            foreach (['discount_percent', 'discount_amount', 'gst_percent', 'cgst_amount', 'sgst_amount', 'igst_amount'] as $field) {
+                $this->assertEqualsWithDelta(0, (float) $items[$i]->$field, 0.000001, $field);
+            }
+        }
+        foreach (['discount_value', 'discount_amount', 'cgst_amount', 'sgst_amount', 'igst_amount', 'freight_amount', 'packing_amount', 'other_charges'] as $field) {
+            $this->assertEqualsWithDelta(0, (float) $cash->$field, 0.000001, $field);
+        }
+        $this->assertEqualsWithDelta(625, (float) $cash->subtotal + (float) $cash->round_off, 0.000001);
+        $this->assertEqualsWithDelta(2500, (float) $order->fresh()->total_amount, 0.000001);
+
+        // The next purchase bill keeps the normal tax convention: line GST is
+        // calculated before the fixed invoice discount; the header uses its tax ratio.
+        $this->convert($order->fresh(), 'bill', '1250')->assertRedirect()->assertSessionHasNoErrors();
+        $taxBill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
+        $taxItems = $taxBill->items()->orderBy('sort_order')->get();
+        $this->assertSame([8.0, 4.0], $taxItems->map(fn ($item) => (float) $item->unit_price)->all());
+        $this->assertSame([100.0, 100.0], $taxItems->map(fn ($item) => (float) $item->quantity)->all());
+        $this->assertEqualsWithDelta(80, (float) $taxItems[0]->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(80, (float) $taxItems[1]->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(129.6, (float) $taxItems[0]->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(57.6, (float) $taxItems[1]->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(40, (float) $taxBill->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(180, (float) $taxBill->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(40, (float) $taxBill->freight_amount, 0.000001);
+        $this->assertEqualsWithDelta(20, (float) $taxBill->packing_amount, 0.000001);
+        $this->assertEqualsWithDelta(10, (float) $taxBill->other_charges, 0.000001);
+        $this->assertEqualsWithDelta(1250, (float) $taxBill->taxable_amount + (float) $taxBill->igst_amount
+            + (float) $taxBill->freight_amount + (float) $taxBill->packing_amount + (float) $taxBill->other_charges + (float) $taxBill->round_off, 0.000001);
+    }
+
+    public function test_visible_price_rounding_preserves_exact_totals_and_never_fabricates_a_price(): void
+    {
+        $order = $this->order('INR', ['items' => [
+            ['product_name' => 'Paid', 'quantity' => 1000, 'unit_price' => '1', 'gst_percent' => 0],
+            ['product_name' => 'Free', 'quantity' => 1000, 'unit_price' => '0', 'gst_percent' => 0],
+        ]]);
+        $this->convert($order, 'cash', '333.333')->assertRedirect()->assertSessionHasNoErrors();
+        $cash = $order->partialConversions()->firstOrFail();
+        $paid = $cash->items()->orderBy('sort_order')->firstOrFail();
+        $this->assertEqualsWithDelta(1000, (float) $paid->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.333, (float) $paid->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(333, (float) $paid->gross_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.333, (float) $cash->round_off, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $cash->items()->where('product_name', 'Free')->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(333.333, (float) $cash->total_amount, 0.000001);
+        $this->get(route('purchase-invoices.show', $cash))->assertOk()->assertSee('Round off')->assertSee('₹0.333');
+        $this->get(route('purchase-invoices.print', $cash))->assertOk()->assertSee('Round off')->assertSee('₹0.333');
+
+        $this->convert($order->fresh(), 'bill', '666.667')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
+        $paid = $bill->items()->where('product_name', 'Paid')->firstOrFail();
+        $this->assertEqualsWithDelta(1000, (float) $paid->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.667, (float) $paid->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(667, (float) $paid->gross_amount, 0.000001);
+        $this->assertEqualsWithDelta(-0.333, (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(666.667, (float) $bill->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $order->fresh()->total_amount, 0.000001);
+        $this->get(route('purchase-invoices.show', $bill))->assertOk()->assertSee('Round off')->assertSee('-₹0.333');
+        $this->get(route('purchase-invoices.print', $bill))->assertOk()->assertSee('Round off')->assertSee('-₹0.333');
+
+        // A genuinely zero three-decimal scaled rate must not be artificially
+        // promoted to 0.001 to make the maths look closer; expose the residual.
+        $tiny = $this->order('INR', ['items' => [['product_name' => 'Tiny rate', 'quantity' => 10000, 'unit_price' => '1', 'gst_percent' => 0]]]);
+        $this->convert($tiny, 'bill', '1')->assertRedirect()->assertSessionHasNoErrors();
+        $tinyBill = $tiny->partialConversions()->firstOrFail();
+        $this->assertEqualsWithDelta(0, (float) $tinyBill->items()->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(1, (float) $tinyBill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(1, (float) $tinyBill->total_amount, 0.000001);
+        $this->get(route('purchase-invoices.show', $tinyBill))->assertOk()->assertSee('A zero rate may be');
+        $this->get(route('purchase-invoices.print', $tinyBill))->assertOk()->assertSee('A zero rate may be');
+    }
+
+    public function test_intra_state_percentage_discount_and_original_manual_round_off_are_preserved(): void
+    {
+        $order = $this->order('INR', ['gst_type' => 'intra_state', 'discount_type' => 'percent', 'discount_value' => '10',
+            'freight_amount' => '5', 'round_off' => '0.05', 'items' => [['product_name' => 'Item',
+                'quantity' => 1000, 'unit_price' => '1', 'gst_percent' => 18]]]);
+        $this->assertEqualsWithDelta(1067.05, (float) $order->total_amount, 0.000001);
+        $this->convert($order, 'bill', '533.525')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $item = $bill->items()->firstOrFail();
+        $this->assertEqualsWithDelta(1000, (float) $item->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.5, (float) $item->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(500, (float) $item->gross_amount, 0.000001);
+        $this->assertEqualsWithDelta(45, (float) $item->cgst_amount, 0.000001);
+        $this->assertEqualsWithDelta(45, (float) $item->sgst_amount, 0.000001);
+        $this->assertSame('percent', $bill->discount_type);
+        $this->assertEqualsWithDelta(10, (float) $bill->discount_value, 0.000001);
+        $this->assertEqualsWithDelta(50, (float) $bill->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(450, (float) $bill->taxable_amount, 0.000001);
+        $this->assertEqualsWithDelta(40.5, (float) $bill->cgst_amount, 0.000001);
+        $this->assertEqualsWithDelta(40.5, (float) $bill->sgst_amount, 0.000001);
+        $this->assertEqualsWithDelta(2.5, (float) $bill->freight_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.025, (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(533.525, (float) $bill->total_amount, 0.000001);
+
+        $this->convert($order->fresh(), 'cash', '533.525')->assertRedirect()->assertSessionHasNoErrors();
+        $cash = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
+        $this->assertEqualsWithDelta(0.534, (float) $cash->items()->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(-0.475, (float) $cash->round_off, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $cash->discount_amount + (float) $cash->cgst_amount
+            + (float) $cash->sgst_amount + (float) $cash->freight_amount, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $order->fresh()->total_amount, 0.000001);
+    }
+
+    public function test_purchase_bill_recalculates_mixed_gst_rates_after_invoice_discount(): void
+    {
+        $order = $this->order('INR', ['gst_type' => 'inter_state', 'discount_type' => 'amount', 'discount_value' => 100,
+            'freight_amount' => 30, 'items' => [
+                ['product_name' => 'Five percent', 'quantity' => 100, 'unit_price' => 10, 'gst_percent' => 5],
+                ['product_name' => 'Eighteen percent', 'quantity' => 100, 'unit_price' => 20, 'gst_percent' => 18],
+            ]]);
+        $this->assertEqualsWithDelta(3326.333, (float) $order->total_amount, 0.000001);
+        $this->convert($order, 'bill', '1663.167')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $items = $bill->items()->orderBy('sort_order')->get();
+        $this->assertSame([100.0, 100.0], $items->map(fn ($item) => (float) $item->quantity)->all());
+        $this->assertSame([5.0, 10.0], $items->map(fn ($item) => (float) $item->unit_price)->all());
+        $this->assertSame([5.0, 18.0], $items->map(fn ($item) => (float) $item->gst_percent)->all());
+        $this->assertSame([25.0, 180.0], $items->map(fn ($item) => (float) $item->igst_amount)->all());
+        $this->assertEqualsWithDelta(50, (float) $bill->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(1450, (float) $bill->taxable_amount, 0.000001);
+        $this->assertEqualsWithDelta(198.167, (float) $bill->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(15, (float) $bill->freight_amount, 0.000001);
+        $this->assertEqualsWithDelta(1663.167, (float) $bill->taxable_amount + (float) $bill->igst_amount
+            + (float) $bill->freight_amount + (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(1663.166, (float) $order->fresh()->total_amount, 0.000001);
+        $this->get(route('purchase-invoices.print', $bill))->assertOk()->assertSee('5%')->assertSee('18%');
+    }
+
+    public function test_valid_legacy_float_halfway_item_gross_is_accepted(): void
+    {
+        $order = $this->order('INR', ['items' => [['product_name' => 'Halfway gross', 'quantity' => '0.29',
+            'unit_price' => '0.05', 'gst_percent' => 0]]]);
+        $item = $order->items()->firstOrFail();
+        // The existing purchase controller computes round(0.29 * 0.05, 3)
+        // with PHP floats as 0.014; exact decimal half-up would be 0.015.
+        $this->assertEqualsWithDelta(0.014, (float) $item->gross_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.014, (float) $order->total_amount, 0.000001);
+        $this->convert($order, 'cash', '0.007')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $this->assertEqualsWithDelta(0.29, (float) $bill->items()->firstOrFail()->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.025, (float) $bill->items()->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(0.007, (float) $bill->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.007, (float) $order->fresh()->total_amount, 0.000001);
+    }
+
+    public function test_valid_legacy_float_halfway_percentages_are_accepted_without_accepting_arbitrary_errors(): void
+    {
+        $order = $this->order('INR', ['gst_type' => 'inter_state', 'items' => [
+            ['product_name' => 'GST halfway', 'quantity' => 29, 'unit_price' => '0.01', 'gst_percent' => 5],
+            ['product_name' => 'Discount halfway', 'quantity' => 29, 'unit_price' => '0.01', 'discount_percent' => 5, 'gst_percent' => 0],
+        ]]);
+        $source = $order->items()->orderBy('sort_order')->get();
+        // The existing controller used PHP floats, where 0.29 × 5% rounds to
+        // 0.014 on this runtime rather than decimal half-up's 0.015.
+        $this->assertEqualsWithDelta(0.014, (float) $source[0]->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.014, (float) $source[1]->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.58, (float) $order->total_amount, 0.000001);
+        $this->convert($order, 'bill', '0.29')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $items = $bill->items()->orderBy('sort_order')->get();
+        $this->assertSame([0.005, 0.005], $items->map(fn ($item) => (float) $item->unit_price)->all());
+        $this->assertEqualsWithDelta(0.007, (float) $items[0]->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.007, (float) $items[1]->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.29, (float) $bill->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(0.29, (float) $order->fresh()->total_amount, 0.000001);
+    }
+
+    public function test_inconsistent_purchase_source_is_not_hidden_as_round_off(): void
+    {
+        foreach (['cash', 'bill'] as $kind) {
+            $order = $this->order('INR', ['items' => [['product_name' => 'Tampered', 'quantity' => 1000, 'unit_price' => '1', 'gst_percent' => 0]]]);
+            $payment = $this->payment($order, '100', 'cash');
+            $flow = $payment->cashflow_entry_id;
+            $before = CashflowEntry::findOrFail($flow)->debit_amount;
+            $order->items()->update(['gross_amount' => '1001']);
+            $this->convert($order, $kind, '500', ['payments' => [$payment->id => '100']])
+                ->assertRedirect()->assertSessionHasErrors('conversion');
+            $this->assertSame(0, $order->partialConversions()->count());
+            $this->assertEqualsWithDelta(1000, (float) $order->fresh()->total_amount, 0.000001);
+            $this->assertEqualsWithDelta(100, $order->fresh()->paidAmount(), 0.000001);
+            $this->assertSame($before, CashflowEntry::findOrFail($flow)->debit_amount);
+        }
+        // A fully self-balanced yet incorrect item gross must also fail, even
+        // when the discrepancy is only one thousandth.
+        $tinyGross = $this->order('INR', ['items' => [['product_name' => 'Wrong gross',
+            'quantity' => 1000, 'unit_price' => 1, 'gst_percent' => 0]]]);
+        $tinyGross->items()->update(['gross_amount' => '1000.001', 'taxable_amount' => '1000.001', 'line_total' => '1000.001']);
+        $tinyGross->update(['subtotal' => '1000.001', 'taxable_amount' => '1000.001', 'total_amount' => '1000.001']);
+        $this->convert($tinyGross->fresh(), 'cash', '500')->assertRedirect()->assertSessionHasErrors('conversion');
+        $this->assertSame(0, $tinyGross->partialConversions()->count());
+
+        // A self-balanced but falsified GST amount must not be masked merely
+        // because the tampered header and line total still add up.
+        $wrongGst = $this->order('INR', ['gst_type' => 'inter_state', 'items' => [['product_name' => 'Wrong GST',
+            'quantity' => 1000, 'unit_price' => 1, 'gst_percent' => 18]]]);
+        $wrongGst->items()->update(['igst_amount' => 185, 'line_total' => 1185]);
+        $wrongGst->update(['igst_amount' => 185, 'total_amount' => 1185]);
+        foreach (['cash', 'bill'] as $kind) {
+            $this->convert($wrongGst->fresh(), $kind, '500')->assertRedirect()->assertSessionHasErrors('conversion');
+            $this->assertEqualsWithDelta(1185, (float) $wrongGst->fresh()->total_amount, 0.000001);
+            $this->assertSame(0, $wrongGst->partialConversions()->count());
+        }
+        // A balanced but incorrect single thousandth is not automatically a
+        // legacy float rounding error; it cannot be hidden in the new round-off.
+        $tinyGst = $this->order('INR', ['gst_type' => 'inter_state', 'items' => [['product_name' => 'Wrong GST',
+            'quantity' => 1000, 'unit_price' => 1, 'gst_percent' => 18]]]);
+        $tinyGst->items()->update(['igst_amount' => '180.001', 'line_total' => '1180.001']);
+        $tinyGst->update(['igst_amount' => '180.001', 'total_amount' => '1180.001']);
+        $this->convert($tinyGst->fresh(), 'bill', '500')->assertRedirect()->assertSessionHasErrors('conversion');
+        $this->assertEqualsWithDelta(1180.001, (float) $tinyGst->fresh()->total_amount, 0.000001);
+        $this->assertSame(0, $tinyGst->partialConversions()->count());
+        $noItems = $this->order();
+        $noItems->items()->delete();
+        $this->convert($noItems, 'cash', '500')->assertRedirect()->assertSessionHasErrors('conversion');
+        $this->assertEqualsWithDelta(10000, (float) $noItems->fresh()->total_amount, 0.000001);
+        $zero = $this->order('INR', ['freight_amount' => '1000', 'items' => [['product_name' => 'No value',
+            'quantity' => 100, 'unit_price' => 0, 'gst_percent' => 0]]]);
+        $this->convert($zero, 'cash', '500')->assertRedirect()->assertSessionHasErrors('conversion');
+        $this->assertSame(0, $zero->partialConversions()->count());
+    }
+
+    public function test_converted_bill_packing_requires_actual_physical_quantities(): void
+    {
+        $order = $this->order('INR', ['items' => [['product_name' => 'Cartons', 'quantity' => 1000, 'unit_price' => '1', 'gst_percent' => 0]]]);
+        $this->convert($order, 'cash', '500')->assertRedirect()->assertSessionHasNoErrors();
+        $this->convert($order->fresh(), 'bill', '500')->assertRedirect()->assertSessionHasNoErrors();
+        foreach ($order->partialConversions()->get() as $bill) {
+            $source = app(\App\Services\PackagingListSource::class)->purchaseInvoice($bill);
+            $row = $source['cartons'][0]['items'][0];
+            $this->assertSame('Cartons', $row['item_description']);
+            $this->assertSame($bill->items()->firstOrFail()->id, $row['source_item_id']);
+            $this->assertNull($row['source_quantity']);
+            $this->assertSame('', $row['quantity_per_carton']);
+            $this->assertSame('', $row['total_quantity']);
+            $this->get(route('packaging-lists.create', ['purchase_invoice' => $bill->id]))->assertOk()
+                ->assertSee('Enter actual physical quantities');
+        }
+        // Ordinary purchase bills still prefill actual source quantities as before.
+        $regular = $this->order('INR', ['invoice_type' => 'bill', 'status' => 'received',
+            'items' => [['product_name' => 'Regular', 'quantity' => 42, 'unit_price' => '1', 'gst_percent' => 0]]]);
+        $this->assertTrue($regular->isBill());
+        $source = app(\App\Services\PackagingListSource::class)->purchaseInvoice($regular);
+        $this->assertEqualsWithDelta(42, $source['cartons'][0]['items'][0]['quantity_per_carton'], 0.000001);
+    }
+
+    public function test_existing_legacy_split_is_not_rewritten_when_a_new_bill_is_created(): void
+    {
+        $order = $this->order('INR', ['items' => [['product_name' => 'Original item', 'quantity' => 1000, 'unit_price' => 1, 'gst_percent' => 0]]]);
+        $this->convert($order, 'cash', '400')->assertRedirect()->assertSessionHasNoErrors();
+        $legacy = $order->partialConversions()->firstOrFail();
+        // Represent the previously saved synthetic cash line; no migration of
+        // historical invoice items should occur when another bill is created.
+        $legacy->items()->delete();
+        $legacy->items()->create(['product_name' => 'Legacy cash lot', 'quantity' => 1, 'unit' => 'lot', 'unit_price' => 400,
+            'gross_amount' => 400, 'taxable_amount' => 400, 'line_total' => 400, 'sort_order' => 1]);
+        $this->convert($order->fresh(), 'bill', '600')->assertRedirect()->assertSessionHasNoErrors();
+        $freshLegacy = $legacy->fresh()->items()->firstOrFail();
+        $this->assertSame('Legacy cash lot', $freshLegacy->product_name);
+        $this->assertEqualsWithDelta(1, (float) $freshLegacy->quantity, 0.000001);
+        $this->assertEqualsWithDelta(400, (float) $freshLegacy->unit_price, 0.000001);
+        $newLine = $order->partialConversions()->reorder('id', 'desc')->firstOrFail()->items()->firstOrFail();
+        $this->assertSame('Original item', $newLine->product_name);
+        $this->assertEqualsWithDelta(1000, (float) $newLine->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.6, (float) $newLine->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $order->fresh()->total_amount, 0.000001);
+    }
+
+    public function test_packing_verification_does_not_claim_linked_financial_quantities_are_physical(): void
+    {
+        $order = $this->order();
+        $this->convert($order, 'cash', '500')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $list = \App\Models\PackagingList::create(['packing_number' => 'PL-FINANCIAL', 'packing_date' => '2026-10-29',
+            'source_type' => 'purchase_invoice', 'source_id' => $bill->id, 'purchase_invoice_id' => $bill->id,
+            'from_name' => 'Supplier', 'bill_to_name' => 'Buyer', 'ship_to_name' => 'Buyer']);
+        $carton = $list->cartons()->create(['carton_count' => 1, 'length_cm' => 30, 'width_cm' => 20,
+            'height_cm' => 10, 'net_weight_per_carton' => 2, 'gross_weight_per_carton' => 3]);
+        $carton->items()->create(['item_description' => 'Manually counted', 'quantity_per_carton' => 10, 'total_quantity' => 10, 'unit' => 'pcs']);
+        $check = collect(app(\App\Services\PackagingListVerifier::class)->inspect($list->fresh())['checks'])->firstWhere('key', 'source_allocation');
+        $this->assertSame('warning', $check['status']);
+        $this->assertStringContainsString('physical quantities', $check['message']);
+        $this->get(route('packaging-lists.edit', $list))->assertOk()->assertSee('Enter actual physical quantities');
+    }
+
+    public function test_packaging_from_a_real_shipment_is_not_misclassified_by_an_associated_financial_bill(): void
+    {
+        $order = $this->order();
+        $this->convert($order, 'cash', '500')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $list = \App\Models\PackagingList::create(['packing_number' => 'PL-SHIPMENT', 'packing_date' => '2026-10-29',
+            'source_type' => 'shipment', 'source_id' => 123, 'purchase_invoice_id' => $bill->id,
+            'from_name' => 'Supplier', 'bill_to_name' => 'Buyer', 'ship_to_name' => 'Buyer']);
+        $carton = $list->cartons()->create(['carton_count' => 1, 'length_cm' => 30, 'width_cm' => 20,
+            'height_cm' => 10, 'net_weight_per_carton' => 2, 'gross_weight_per_carton' => 3]);
+        $carton->items()->create(['item_description' => 'Shipment item', 'source_type' => 'shipment', 'source_item_id' => 7,
+            'source_quantity' => 20, 'quantity_per_carton' => 10, 'total_quantity' => 10, 'unit' => 'pcs']);
+        $check = collect(app(\App\Services\PackagingListVerifier::class)->inspect($list->fresh())['checks'])->firstWhere('key', 'source_allocation');
+        $this->assertSame('pass', $check['status']);
+        $this->get(route('packaging-lists.edit', $list))->assertOk()->assertDontSee('Enter actual physical quantities');
+    }
+
+    public function test_manual_packing_quantities_are_saved_without_inventing_a_physical_bill_balance(): void
+    {
+        $order = $this->order('INR', ['items' => [['product_name' => 'Cartons', 'quantity' => 1000, 'unit_price' => 1, 'gst_percent' => 0]]]);
+        $this->convert($order, 'cash', '500')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $line = $bill->items()->firstOrFail();
+        $this->post(route('packaging-lists.store'), [
+            'packing_number' => 'MP/PL/26-27/999', 'packing_date' => '2026-10-29', 'transport_mode' => 'road', 'status' => 'draft',
+            'source_type' => 'purchase_invoice', 'source_id' => $bill->id, 'purchase_invoice_id' => $bill->id,
+            'from_name' => 'Supplier', 'bill_to_name' => 'Buyer', 'ship_to_name' => 'Buyer',
+            'cartons' => [['packing_mode' => 'grouped', 'carton_type' => 'box', 'carton_count' => 2,
+                'length_cm' => 30, 'width_cm' => 20, 'height_cm' => 10, 'net_weight_per_carton' => 2, 'gross_weight_per_carton' => 3,
+                'items' => [['source_type' => 'purchase_invoice', 'source_item_id' => $line->id, 'source_quantity' => null,
+                    'item_description' => 'Cartons', 'quantity_per_carton' => 12, 'total_quantity' => 24, 'unit' => 'pcs']]]],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $list = \App\Models\PackagingList::where('packing_number', 'MP/PL/26-27/999')->firstOrFail();
+        $item = $list->cartons()->firstOrFail()->items()->firstOrFail();
+        $this->assertSame($line->id, $item->source_item_id);
+        $this->assertNull($item->source_quantity);
+        $this->assertEqualsWithDelta(12, (float) $item->quantity_per_carton, 0.000001);
+        $this->assertEqualsWithDelta(24, (float) $item->total_quantity, 0.000001);
+        $check = collect(app(\App\Services\PackagingListVerifier::class)->inspect($list)['checks'])->firstWhere('key', 'source_allocation');
+        $this->assertSame('warning', $check['status']);
+        $this->get(route('packaging-lists.show', $list))->assertOk()->assertSee('Compare actual physical quantities');
+    }
+
     public function test_user_example_preserves_payment_provenance_in_all_three_currencies(): void
     {
         foreach (['INR' => 1, 'RMB' => 12, 'USD' => 82] as $currency => $rate) {
@@ -106,18 +506,18 @@ class PurchasePartialConversionsTest extends TestCase
         $this->assertEqualsWithDelta(0, (float) $children[0]->igst_amount, 0.000001);
         $this->assertEqualsWithDelta(450, (float) $children[1]->igst_amount, 0.000001);
         $this->assertEqualsWithDelta(900, (float) $children[2]->igst_amount, 0.000001);
-        $this->assertEqualsWithDelta(25, (float) $children[1]->items->first()->quantity, 0.000001);
-        $this->assertEqualsWithDelta(100, (float) $children[1]->items->first()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(100, (float) $children[1]->items->first()->quantity, 0.000001);
+        $this->assertEqualsWithDelta(25, (float) $children[1]->items->first()->unit_price, 0.000001);
         $this->assertSame('SUP-001', $children[1]->vendor_bill_number);
         $this->assertEqualsWithDelta(11800, (float) VendorPaymentEntry::where('vendor_id', $order->vendor_id)->where('transaction_type', 'credit')->sum('foreign_amount'), 0.000001);
     }
 
-    public function test_rmb_remainder_bill_preserves_rate_and_payments_with_visible_round_off(): void
+    public function test_rmb_remainder_bill_scales_rate_and_preserves_payments(): void
     {
         $order = $this->order('RMB', ['items' => [['product_name' => 'Packaging', 'quantity' => 10000,
             'unit' => 'pcs', 'unit_price' => '2.1', 'gst_percent' => 0]]]);
         $this->assertEqualsWithDelta(21000, (float) $order->total_amount, 0.000001);
-        $this->get(route('purchase-invoices.show', $order))->assertOk()->assertSee('Up to 0.005 RMB in item-quantity rounding');
+        $this->get(route('purchase-invoices.show', $order))->assertOk()->assertSee('full PO quantities')->assertSee('round off');
         $cashPayment = $this->payment($order, '9000', 'cash', 12);
         $bankPayment = $this->payment($order, '3000', 'bank_transfer', 12);
         $cashflowIds = [$cashPayment->cashflow_entry_id, $bankPayment->cashflow_entry_id];
@@ -130,12 +530,14 @@ class PurchasePartialConversionsTest extends TestCase
             'vendor_bill_number' => 'SUP-RMB'])->assertRedirect()->assertSessionHasNoErrors();
         $bill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
         $item = $bill->items()->firstOrFail();
-        $this->assertEqualsWithDelta(5714.286, (float) $item->quantity, 0.000001);
-        $this->assertEqualsWithDelta(2.1, (float) $item->unit_price, 0.000001);
-        $this->assertEqualsWithDelta(12000.001, (float) $item->gross_amount, 0.000001);
-        $this->assertEqualsWithDelta(12000.001, (float) $item->line_total, 0.000001);
-        $this->assertEqualsWithDelta(12000.001, (float) $bill->subtotal, 0.000001);
-        $this->assertEqualsWithDelta(-0.001, (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(10000, (float) $item->quantity, 0.000001);
+        $this->assertEqualsWithDelta(1.2, (float) $item->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(0.9, (float) $cashBill->items()->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(10000, (float) $cashBill->items()->firstOrFail()->quantity, 0.000001);
+        $this->assertEqualsWithDelta(12000, (float) $item->gross_amount, 0.000001);
+        $this->assertEqualsWithDelta(12000, (float) $item->line_total, 0.000001);
+        $this->assertEqualsWithDelta(12000, (float) $bill->subtotal, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $bill->round_off, 0.000001);
         $this->assertEqualsWithDelta(12000, (float) $bill->total_amount, 0.000001);
         $this->assertEqualsWithDelta(0, (float) $order->fresh()->total_amount, 0.000001);
         $this->assertEqualsWithDelta(9000, $cashBill->fresh()->paidAmount(), 0.000001);
@@ -144,8 +546,8 @@ class PurchasePartialConversionsTest extends TestCase
             ->where('transaction_type', 'credit')->sum('foreign_amount'), 0.000001);
         $this->assertSame($cashflows, CashflowEntry::whereIn('id', $cashflowIds)->orderBy('id')->pluck('debit_amount', 'id')->all());
         $this->assertSame(2, CashflowEntry::count());
-        $this->get(route('purchase-invoices.show', $bill))->assertOk()->assertSee('5714.286')->assertSee('Round off')->assertSee('-¥0.001');
-        $this->get(route('purchase-invoices.print', $bill))->assertOk()->assertSee('5,714.286')->assertSee('Round off')->assertSee('-¥0.001');
+        $this->get(route('purchase-invoices.show', $bill))->assertOk()->assertSee('10000')->assertSee('¥1.20')->assertSee('¥12,000');
+        $this->get(route('purchase-invoices.print', $bill))->assertOk()->assertSee('10,000')->assertSee('¥1.20')->assertSee('¥12,000');
 
         $this->delete(route('purchase-invoices.destroy', $bill))->assertRedirect()->assertSessionHas('success');
         $this->assertEqualsWithDelta(12000, (float) $order->fresh()->total_amount, 0.000001);
@@ -153,30 +555,33 @@ class PurchasePartialConversionsTest extends TestCase
         $this->assertSame($cashflows, CashflowEntry::whereIn('id', $cashflowIds)->orderBy('id')->pluck('debit_amount', 'id')->all());
     }
 
-    public function test_purchase_bill_can_use_positive_rounding_and_the_five_thousandth_limit(): void
+    public function test_rate_rounding_uses_decimal_half_up_and_preserves_amount(): void
     {
         $order = $this->order('RMB', ['items' => [['product_name' => 'Packaging', 'quantity' => 10000,
             'unit_price' => '2.1', 'gst_percent' => 0]]]);
         $this->convert($order, 'cash', '12000')->assertRedirect()->assertSessionHasNoErrors();
         $this->convert($order->fresh(), 'bill', '9000')->assertRedirect()->assertSessionHasNoErrors();
         $bill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
-        $this->assertEqualsWithDelta(4285.714, (float) $bill->items()->firstOrFail()->quantity, 0.000001);
-        $this->assertEqualsWithDelta(8999.999, (float) $bill->subtotal, 0.000001);
-        $this->assertEqualsWithDelta(0.001, (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(10000, (float) $bill->items()->firstOrFail()->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.9, (float) $bill->items()->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(9000, (float) $bill->subtotal, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $bill->round_off, 0.000001);
         $this->assertEqualsWithDelta(9000, (float) $bill->total_amount, 0.000001);
-        $this->get(route('purchase-invoices.show', $bill))->assertOk()->assertSee('Round off')->assertSee('¥0.001');
 
         $boundary = $this->order('INR', ['items' => [['product_name' => 'Boundary', 'quantity' => 100,
             'unit_price' => '10', 'gst_percent' => 0]]]);
-        $this->convert($boundary, 'bill', '1.005')->assertRedirect()->assertSessionHasNoErrors();
+        // 10 × 1.05 / 1000 = 0.0105, which must become 0.011, not 0.010.
+        $this->convert($boundary, 'bill', '1.05')->assertRedirect()->assertSessionHasNoErrors();
         $boundaryBill = $boundary->partialConversions()->firstOrFail();
-        $this->assertEqualsWithDelta(0.101, (float) $boundaryBill->items()->firstOrFail()->quantity, 0.000001);
-        $this->assertEqualsWithDelta(1.010, (float) $boundaryBill->subtotal, 0.000001);
-        $this->assertEqualsWithDelta(-0.005, (float) $boundaryBill->round_off, 0.000001);
-        $this->assertEqualsWithDelta(1.005, (float) $boundaryBill->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(100, (float) $boundaryBill->items()->firstOrFail()->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.011, (float) $boundaryBill->items()->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(1.1, (float) $boundaryBill->subtotal, 0.000001);
+        $this->assertEqualsWithDelta(-0.05, (float) $boundaryBill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(1.05, (float) $boundaryBill->total_amount, 0.000001);
+        $this->get(route('purchase-invoices.show', $boundaryBill))->assertOk()->assertSee('Round off')->assertSee('-₹0.05');
     }
 
-    public function test_small_quantity_rounding_keeps_apportioned_gst_and_reconciles_bill_total(): void
+    public function test_scaled_prices_recalculate_gst_and_reconcile_bill_total(): void
     {
         $order = $this->order('INR', ['gst_type' => 'inter_state', 'items' => [['product_name' => 'GST item',
             'quantity' => 10000, 'unit_price' => '2.1', 'gst_percent' => 18]]]);
@@ -185,16 +590,17 @@ class PurchasePartialConversionsTest extends TestCase
         $this->convert($order->fresh(), 'bill', '15780')->assertRedirect()->assertSessionHasNoErrors();
         $bill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
         $item = $bill->items()->firstOrFail();
-        $this->assertEqualsWithDelta(6368.039, (float) $item->quantity, 0.000001);
-        $this->assertEqualsWithDelta(13372.882, (float) $item->gross_amount, 0.000001);
-        $this->assertEqualsWithDelta(2407.119, (float) $item->igst_amount, 0.000001);
-        $this->assertEqualsWithDelta(2407.119, (float) $bill->igst_amount, 0.000001);
-        $this->assertEqualsWithDelta(-0.001, (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(10000, (float) $item->quantity, 0.000001);
+        $this->assertEqualsWithDelta(1.337, (float) $item->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(13370, (float) $item->gross_amount, 0.000001);
+        $this->assertEqualsWithDelta(2406.6, (float) $item->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(2406.6, (float) $bill->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(3.4, (float) $bill->round_off, 0.000001);
         $this->assertEqualsWithDelta(15780, (float) $bill->total_amount, 0.000001);
         $this->assertEqualsWithDelta(15780, (float) $bill->taxable_amount + (float) $bill->igst_amount + (float) $bill->round_off, 0.000001);
     }
 
-    public function test_quantity_rounding_preserves_discounts_gst_and_freight(): void
+    public function test_scaled_prices_preserve_discounts_gst_and_freight(): void
     {
         $order = $this->order('INR', ['gst_type' => 'inter_state', 'discount_type' => 'amount', 'discount_value' => '100',
             'freight_amount' => '7', 'items' => [['product_name' => 'Discounted item', 'quantity' => 10000,
@@ -204,13 +610,15 @@ class PurchasePartialConversionsTest extends TestCase
         $this->convert($order->fresh(), 'bill', '13390')->assertRedirect()->assertSessionHasNoErrors();
         $bill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
         $item = $bill->items()->firstOrFail();
-        $this->assertEqualsWithDelta(6033.978, (float) $item->quantity, 0.000001);
-        $this->assertEqualsWithDelta(12671.354, (float) $item->gross_amount, 0.000001);
-        $this->assertEqualsWithDelta(1267.135, (float) $item->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(10000, (float) $item->quantity, 0.000001);
+        $this->assertEqualsWithDelta(1.267, (float) $item->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(12670, (float) $item->gross_amount, 0.000001);
+        $this->assertEqualsWithDelta(1267, (float) $item->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(2052.54, (float) $item->igst_amount, 0.000001);
         $this->assertEqualsWithDelta(60.340, (float) $bill->discount_amount, 0.000001);
-        $this->assertEqualsWithDelta(2041.898, (float) $bill->igst_amount, 0.000001);
+        $this->assertEqualsWithDelta(2041.679, (float) $bill->igst_amount, 0.000001);
         $this->assertEqualsWithDelta(4.224, (float) $bill->freight_amount, 0.000001);
-        $this->assertEqualsWithDelta(-0.001, (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(1.437, (float) $bill->round_off, 0.000001);
         $this->assertEqualsWithDelta(13390, (float) $bill->total_amount, 0.000001);
         $this->assertEqualsWithDelta(13390, (float) $bill->taxable_amount + (float) $bill->igst_amount
             + (float) $bill->freight_amount + (float) $bill->round_off, 0.000001);
@@ -223,35 +631,49 @@ class PurchasePartialConversionsTest extends TestCase
             ['product_name' => 'Paid', 'quantity' => 10000, 'unit_price' => '2.1', 'gst_percent' => 0],
         ]]);
         $this->convert($lineDiscount, 'cash', '12000')->assertRedirect()->assertSessionHasNoErrors();
-        $this->convert($lineDiscount->fresh(), 'bill', '9000')->assertRedirect()->assertSessionHasErrors('conversion');
-        $this->assertEqualsWithDelta(9000, (float) $lineDiscount->fresh()->total_amount, 0.000001);
-        $this->assertSame(1, $lineDiscount->partialConversions()->count());
+        $this->convert($lineDiscount->fresh(), 'bill', '9000')->assertRedirect()->assertSessionHasNoErrors();
+        $free = $lineDiscount->partialConversions()->reorder('id', 'desc')->firstOrFail()->items()->where('product_name', 'Free')->firstOrFail();
+        $this->assertEqualsWithDelta((float) $free->gross_amount, (float) $free->discount_amount, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $free->taxable_amount, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $lineDiscount->fresh()->total_amount, 0.000001);
 
+        // A fixed invoice discount of 9,000.001 exceeds the 9,000 gross after
+        // rate rounding; the discount must not make the invoice taxable negative.
         $invoiceDiscount = $this->order('INR', ['discount_type' => 'amount', 'discount_value' => '21000', 'freight_amount' => '21000',
             'items' => [['product_name' => 'Discounted', 'quantity' => 10000, 'unit_price' => '2.1', 'gst_percent' => 0]]]);
-        $this->convert($invoiceDiscount, 'cash', '12000')->assertRedirect()->assertSessionHasNoErrors();
-        $this->convert($invoiceDiscount->fresh(), 'bill', '9000')->assertRedirect()->assertSessionHasErrors('conversion');
-        $this->assertEqualsWithDelta(9000, (float) $invoiceDiscount->fresh()->total_amount, 0.000001);
+        $this->convert($invoiceDiscount, 'cash', '11999.999')->assertRedirect()->assertSessionHasNoErrors();
+        $this->convert($invoiceDiscount->fresh(), 'bill', '9000.001')->assertRedirect()->assertSessionHasErrors('conversion');
+        $this->assertEqualsWithDelta(9000.001, (float) $invoiceDiscount->fresh()->total_amount, 0.000001);
         $this->assertSame(1, $invoiceDiscount->partialConversions()->count());
     }
 
-    public function test_purchase_rounding_rejects_large_cancelling_and_zero_quantity_slices_atomically(): void
+    public function test_rate_rounding_allows_cancelling_lines_and_tiny_slices_with_exact_totals(): void
     {
-        // The two line discrepancies are -0.004 and +0.004: their net is zero,
-        // but the absolute rounding budget is 0.008 and must not be concealed.
         $order = $this->order('INR', ['items' => [
             ['product_name' => 'First', 'quantity' => 10, 'unit_price' => '12', 'gst_percent' => 0],
             ['product_name' => 'Second', 'quantity' => 20, 'unit_price' => '10', 'gst_percent' => 0],
         ]]);
-        $this->convert($order, 'bill', '1.002')->assertRedirect()->assertSessionHasErrors('conversion');
-        $this->assertEqualsWithDelta(320, (float) $order->fresh()->total_amount, 0.000001);
-        $this->assertSame(0, $order->partialConversions()->count());
+        $this->convert($order, 'bill', '1.002')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $items = $bill->items()->orderBy('sort_order')->get();
+        $this->assertEqualsWithDelta(10, (float) $items[0]->quantity, 0.000001);
+        $this->assertEqualsWithDelta(20, (float) $items[1]->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.038, (float) $items[0]->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(0.031, (float) $items[1]->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(1, (float) $bill->subtotal, 0.000001);
+        $this->assertEqualsWithDelta(0.002, (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(1.002, (float) $bill->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(318.998, (float) $order->fresh()->total_amount, 0.000001);
 
         $tiny = $this->order('INR', ['items' => [['product_name' => 'Tiny portion', 'quantity' => 1,
             'unit_price' => '100', 'gst_percent' => 0]]]);
-        $this->convert($tiny, 'bill', '0.001')->assertRedirect()->assertSessionHasErrors('conversion');
-        $this->assertEqualsWithDelta(100, (float) $tiny->fresh()->total_amount, 0.000001);
-        $this->assertSame(0, $tiny->partialConversions()->count());
+        $this->convert($tiny, 'bill', '0.001')->assertRedirect()->assertSessionHasNoErrors();
+        $tinyBill = $tiny->partialConversions()->firstOrFail();
+        $this->assertEqualsWithDelta(1, (float) $tinyBill->items()->firstOrFail()->quantity, 0.000001);
+        $this->assertEqualsWithDelta(0.001, (float) $tinyBill->items()->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(0, (float) $tinyBill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(0.001, (float) $tinyBill->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(99.999, (float) $tiny->fresh()->total_amount, 0.000001);
     }
 
     public function test_foreign_or_excess_payment_selections_fail_atomically_and_unselected_advance_stays(): void
@@ -366,12 +788,16 @@ class PurchasePartialConversionsTest extends TestCase
         $this->get(route('purchase-invoices.print', $order))->assertOk()->assertSee('Original PO total')->assertSee('Less linked bills')->assertSee('9,000');
     }
 
-    public function test_unrepresentable_item_and_fx_splits_are_atomic(): void
+    public function test_price_rounding_is_visible_while_unrepresentable_fx_splits_are_atomic(): void
     {
         $order = $this->order('INR', ['items' => [['product_name' => 'Cartons', 'quantity' => 100, 'unit_price' => '1000', 'gst_percent' => 0]]]);
-        $this->convert($order, 'bill', '33333.333')->assertRedirect()->assertSessionHasErrors('conversion');
-        $this->assertEqualsWithDelta(100000, (float) $order->fresh()->total_amount, 0.000001);
-        $this->assertSame(0, $order->partialConversions()->count());
+        $this->convert($order, 'bill', '33333.333')->assertRedirect()->assertSessionHasNoErrors();
+        $bill = $order->partialConversions()->firstOrFail();
+        $this->assertEqualsWithDelta(100, (float) $bill->items()->firstOrFail()->quantity, 0.000001);
+        $this->assertEqualsWithDelta(333.333, (float) $bill->items()->firstOrFail()->unit_price, 0.000001);
+        $this->assertEqualsWithDelta(0.033, (float) $bill->round_off, 0.000001);
+        $this->assertEqualsWithDelta(33333.333, (float) $bill->total_amount, 0.000001);
+        $this->assertEqualsWithDelta(66666.667, (float) $order->fresh()->total_amount, 0.000001);
         $fx = $this->order('USD');
         $account = CashflowAccount::create(['account_name' => 'Tiny FX', 'currency' => 'INR']);
         $this->post(route('cashflows.store'), [

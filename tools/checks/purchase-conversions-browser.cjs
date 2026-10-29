@@ -81,24 +81,86 @@ async function main() {
         }
         const rmbOrderPath = `/purchase-invoices/${orders['rmb' + width]}`;
         await page.goto(new URL(rmbOrderPath, base).href, { waitUntil: 'domcontentloaded' });
-        assert.match(await page.locator('#purchasePartialConversion').innerText(), /Up to 0\.005 RMB in item-quantity rounding/);
+        assert.match(await page.locator('#purchasePartialConversion').innerText(), /full PO quantities.*round off/s);
         await page.locator('#purchaseConversionValue').fill('9000');
         await Promise.all([page.waitForURL(url => url.pathname !== rmbOrderPath), page.getByRole('button', { name: 'Create linked bill' }).click()]);
+        let row = page.locator('table.si-lines tbody tr').first();
+        assert.match(await row.locator('[data-label="Qty"]').innerText(), /10000/);
+        assert.match(await row.locator('[data-label="Rate"]').innerText(), /¥0\.90/);
         await page.goto(new URL(rmbOrderPath, base).href, { waitUntil: 'domcontentloaded' });
         await page.locator('#purchaseConversionKind').selectOption('bill');
         await page.locator('#purchaseConversionValue').fill('12000');
         await Promise.all([page.waitForURL(url => url.pathname !== rmbOrderPath), page.getByRole('button', { name: 'Create linked bill' }).click()]);
         const rmbBillPath = new URL(page.url()).pathname;
         const billText = await page.locator('body').innerText();
-        assert.match(billText, /5714\.286/);
-        assert.match(billText, /Round off\s+-¥0\.001/);
+        row = page.locator('table.si-lines tbody tr').first();
+        assert.match(await row.locator('[data-label="Qty"]').innerText(), /10000/);
+        assert.match(await row.locator('[data-label="Rate"]').innerText(), /¥1\.20/);
         assert.match(billText, /Grand total\s+¥12,000(?:\.00)?/);
         await page.goto(new URL(rmbBillPath + '/print', base).href, { waitUntil: 'domcontentloaded' });
         const rmbPrint = await page.locator('body').innerText();
-        assert.match(rmbPrint, /5,714\.286/);
-        assert.match(rmbPrint, /Round off\s+-¥0\.001/);
+        assert.match(rmbPrint, /10,000/);
+        assert.match(rmbPrint, /¥1\.20/);
         assert.match(rmbPrint, /Grand total\s+¥12,000(?:\.00)?/);
-        console.log(`PASS ${width}px: manual payments, vendor provenance and RMB 21,000 → 9,000 cash + 12,000 bill with visible -0.001 round off`);
+
+        const pricesPath = `/purchase-invoices/${orders['priced' + width]}`;
+        const checkProductLines = async () => {
+            const rows = page.locator('table.si-lines tbody tr');
+            assert.equal(await rows.count(), 3, `${width}px all three PO lines appear`);
+            for (const [i, rate] of ['₹0.50', '₹1', '₹1.50'].entries()) {
+                const line = rows.nth(i);
+                assert.match(await line.locator('[data-label="Product"]').innerText(), new RegExp(`Product ${i + 1}`));
+                assert.match(await line.locator('[data-label="Qty"]').innerText(), /1000/);
+                assert.equal((await line.locator('[data-label="Rate"]').innerText()).trim(), rate);
+            }
+            assert.match(await page.locator('body').innerText(), /financial references/);
+        };
+        await page.goto(new URL(pricesPath, base).href, { waitUntil: 'domcontentloaded' });
+        await page.locator('#purchaseConversionValue').fill('3000');
+        await Promise.all([page.waitForURL(url => url.pathname !== pricesPath), page.getByRole('button', { name: 'Create linked bill' }).click()]);
+        const pricedCashPath = new URL(page.url()).pathname;
+        await checkProductLines();
+        await page.goto(new URL(pricesPath, base).href, { waitUntil: 'domcontentloaded' });
+        await page.locator('#purchaseConversionKind').selectOption('bill');
+        await page.locator('#purchaseConversionValue').fill('3000');
+        await Promise.all([page.waitForURL(url => url.pathname !== pricesPath), page.getByRole('button', { name: 'Create linked bill' }).click()]);
+        const pricedBillPath = new URL(page.url()).pathname;
+        await checkProductLines();
+        await page.goto(new URL(pricedBillPath + '/print', base).href, { waitUntil: 'domcontentloaded' });
+        const pricePrint = await page.locator('body').innerText();
+        assert.match(pricePrint, /Product 1[\s\S]*1,000[\s\S]*₹0\.50/);
+        assert.match(pricePrint, /Product 2[\s\S]*1,000[\s\S]*₹1/);
+        assert.match(pricePrint, /Product 3[\s\S]*1,000[\s\S]*₹1\.50/);
+        assert.match(pricePrint, /financial references/);
+        for (const path of [pricedCashPath, pricedBillPath]) {
+            const id = path.split('/').at(-1);
+            await page.goto(new URL(`/packaging-lists/create?purchase_invoice=${id}`, base).href, { waitUntil: 'domcontentloaded' });
+            assert.match(await page.locator('body').innerText(), /Enter actual physical quantities/);
+            assert.match(await page.locator('body').innerText(), /No physical source balance/);
+            const inputs = page.locator('.pl-carton-panels [data-item] [data-qty]');
+            assert.equal(await inputs.count(), 3);
+            for (const input of await inputs.all()) assert.equal(await input.inputValue(), '');
+        }
+
+        const roundPath = `/purchase-invoices/${orders['round' + width]}`;
+        await page.goto(new URL(roundPath, base).href, { waitUntil: 'domcontentloaded' });
+        await page.locator('#purchaseConversionValue').fill('333.333');
+        await Promise.all([page.waitForURL(url => url.pathname !== roundPath), page.getByRole('button', { name: 'Create linked bill' }).click()]);
+        const roundCashPath = new URL(page.url()).pathname;
+        assert.match(await page.locator('body').innerText(), /Round off\s+₹0\.333/);
+        assert.match(await page.locator('body').innerText(), /Grand total\s+₹333\.333/);
+        await page.goto(new URL(roundCashPath + '/print', base).href, { waitUntil: 'domcontentloaded' });
+        assert.match(await page.locator('body').innerText(), /Round off\s+₹0\.333/);
+        await page.goto(new URL(roundPath, base).href, { waitUntil: 'domcontentloaded' });
+        await page.locator('#purchaseConversionKind').selectOption('bill');
+        await page.locator('#purchaseConversionValue').fill('666.667');
+        await Promise.all([page.waitForURL(url => url.pathname !== roundPath), page.getByRole('button', { name: 'Create linked bill' }).click()]);
+        const roundBillPath = new URL(page.url()).pathname;
+        assert.match(await page.locator('body').innerText(), /Round off\s+-₹0\.333/);
+        assert.match(await page.locator('body').innerText(), /Grand total\s+₹666\.667/);
+        await page.goto(new URL(roundBillPath + '/print', base).href, { waitUntil: 'domcontentloaded' });
+        assert.match(await page.locator('body').innerText(), /Round off\s+-₹0\.333/);
+        console.log(`PASS ${width}px: manual payments, repeated PO lines and scaled cash/tax rates, ±0.333 visible round off, RMB and packing warnings`);
     }
     assert.deepEqual(errors, [], 'No uncaught browser JavaScript errors');
     await browser.close();

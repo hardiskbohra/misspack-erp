@@ -310,6 +310,10 @@
             </table>
         </div>
 
+        @if ($invoice->isPartialConversion())
+            <p class="line-tax-note">Bill quantities are financial references, not separate goods received. Check quantities, rates and round off against the supplier's documents.</p>
+            @if ($invoiceItems->contains(fn ($item) => (float) $item->unit_price === 0.0))<p class="line-tax-note">A zero rate may be a free item or the result of three-decimal price rounding; check the PO and round off.</p>@endif
+        @endif
         @if ($lineFiguresUnavailable)
             <p class="line-tax-note">Some line-level figures could not be allocated for this record. The invoice totals below remain authoritative.</p>
         @endif

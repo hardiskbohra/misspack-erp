@@ -76,7 +76,7 @@ class MySqlPurchasePartialConversionTest extends TestCase
         }
     }
 
-    public function test_native_rmb_remainder_saves_a_visible_thousandth_round_off(): void
+    public function test_native_rmb_remainder_saves_full_quantity_and_scaled_rate(): void
     {
         $db = DB::connection();
         $db->setTransactionManager(new DatabaseTransactionsManager([$db->getName()]));
@@ -97,13 +97,70 @@ class MySqlPurchasePartialConversionTest extends TestCase
             $bill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
             $line = DB::table('purchase_invoice_items')->where('purchase_invoice_id', $bill->id)->first();
             $saved = DB::table('purchase_invoices')->where('id', $bill->id)->first();
-            $this->assertSame('5714.286', $line->quantity);
-            $this->assertSame('2.100', $line->unit_price);
-            $this->assertSame('12000.001', $line->gross_amount);
-            $this->assertSame('12000.001', $saved->subtotal);
-            $this->assertSame('-0.001', $saved->round_off);
+            $this->assertSame('10000.000', $line->quantity);
+            $this->assertSame('1.200', $line->unit_price);
+            $this->assertSame('12000.000', $line->gross_amount);
+            $this->assertSame('12000.000', $saved->subtotal);
+            $this->assertSame('0.000', $saved->round_off);
             $this->assertSame('12000.000', $saved->total_amount);
             $this->assertSame('0.000', DB::table('purchase_invoices')->where('id', $order->id)->value('total_amount'));
+        } finally {
+            while ($db->transactionLevel() > 0) $db->rollBack();
+        }
+    }
+
+    public function test_native_scaled_price_rounding_keeps_three_decimal_amounts_on_both_bills(): void
+    {
+        $db = DB::connection();
+        $db->setTransactionManager(new DatabaseTransactionsManager([$db->getName()]));
+        $db->beginTransaction();
+        try {
+            $user = User::create(['name' => 'Accounts', 'email' => 'scaled-price-mysql@example.test', 'password' => 'fixture', 'role' => 'admin', 'access_profile' => 'full']);
+            $vendor = Vendor::create(['vendor_number' => 'MYSQL-SCALED-PRICE', 'vendor_name' => 'Supplier']);
+            $this->actingAs($user)->post(route('purchase-invoices.store'), [
+                'invoice_number' => 'MYSQL-SCALED-PRICE-PO', 'invoice_type' => 'order', 'status' => 'approved',
+                'vendor_id' => $vendor->id, 'currency' => 'INR', 'gst_type' => 'export', 'terms_conditions' => null,
+                'items' => [['product_name' => 'Paid', 'quantity' => 1000, 'unit_price' => '1', 'gst_percent' => 0],
+                    ['product_name' => 'Free', 'quantity' => 1000, 'unit_price' => '0', 'gst_percent' => 0]],
+            ])->assertRedirect()->assertSessionHasNoErrors();
+            $order = PurchaseInvoice::where('invoice_number', 'MYSQL-SCALED-PRICE-PO')->firstOrFail();
+            $this->post(route('purchase-invoices.convert-partial', $order), ['kind' => 'cash', 'mode' => 'amount', 'value' => '333.333'])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $this->post(route('purchase-invoices.convert-partial', $order), ['kind' => 'bill', 'mode' => 'amount', 'value' => '666.667'])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $bills = $order->partialConversions()->get();
+            $this->assertCount(2, $bills);
+            foreach ([['0.333', '333.000', '0.333', '333.333'], ['0.667', '667.000', '-0.333', '666.667']] as $i => [$price, $gross, $roundOff, $total]) {
+                $lines = DB::table('purchase_invoice_items')->where('purchase_invoice_id', $bills[$i]->id)->orderBy('sort_order')->get();
+                $this->assertCount(2, $lines);
+                $this->assertSame('1000.000', $lines[0]->quantity);
+                $this->assertSame($price, $lines[0]->unit_price);
+                $this->assertSame($gross, $lines[0]->gross_amount);
+                $this->assertSame('1000.000', $lines[1]->quantity);
+                $this->assertSame('0.000', $lines[1]->unit_price);
+                $saved = DB::table('purchase_invoices')->where('id', $bills[$i]->id)->first();
+                $this->assertSame($roundOff, $saved->round_off);
+                $this->assertSame($total, $saved->total_amount);
+            }
+            $this->assertSame('0.000', DB::table('purchase_invoices')->where('id', $order->id)->value('total_amount'));
+
+            // Native DECIMAL must also retain a legitimately saved PHP-float
+            // half-way gross, without confusing it with a malformed source.
+            $this->post(route('purchase-invoices.store'), [
+                'invoice_number' => 'MYSQL-SCALED-HALFWAY-PO', 'invoice_type' => 'order', 'status' => 'approved',
+                'vendor_id' => $vendor->id, 'currency' => 'INR', 'gst_type' => 'export', 'terms_conditions' => null,
+                'items' => [['product_name' => 'Halfway', 'quantity' => '0.29', 'unit_price' => '0.05', 'gst_percent' => 0]],
+            ])->assertRedirect()->assertSessionHasNoErrors();
+            $halfway = PurchaseInvoice::where('invoice_number', 'MYSQL-SCALED-HALFWAY-PO')->firstOrFail();
+            $this->assertSame('0.014', DB::table('purchase_invoice_items')->where('purchase_invoice_id', $halfway->id)->value('gross_amount'));
+            $this->post(route('purchase-invoices.convert-partial', $halfway), ['kind' => 'cash', 'mode' => 'amount', 'value' => '0.007'])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $halfwayBill = $halfway->partialConversions()->firstOrFail();
+            $halfwayLine = DB::table('purchase_invoice_items')->where('purchase_invoice_id', $halfwayBill->id)->first();
+            $this->assertSame('0.290', $halfwayLine->quantity);
+            $this->assertSame('0.025', $halfwayLine->unit_price);
+            $this->assertSame('0.007', DB::table('purchase_invoices')->where('id', $halfwayBill->id)->value('total_amount'));
+            $this->assertSame('0.007', DB::table('purchase_invoices')->where('id', $halfway->id)->value('total_amount'));
         } finally {
             while ($db->transactionLevel() > 0) $db->rollBack();
         }
