@@ -322,8 +322,10 @@
                                         </button>
                                         <div class="master-dropdown-menu">
                                             <a href="{{ route('purchase-invoices.show', $invoice) }}"><i class="fas fa-eye"></i> View</a>
-                                            <a href="{{ route('purchase-invoices.edit', $invoice) }}"><i class="fas fa-pen"></i> Edit</a>
-                                            @if ($invoice->isBill() && $invoice->status === 'draft')
+                                            @unless ($invoice->hasPartialConversions() || $invoice->isPartialConversion())
+                                                <a href="{{ route('purchase-invoices.edit', $invoice) }}"><i class="fas fa-pen"></i> Edit</a>
+                                            @endunless
+                                            @if ($invoice->isBill() && $invoice->status === 'draft' && ! $invoice->isPartialConversion())
                                                 <form method="POST" action="{{ route('purchase-invoices.status', $invoice) }}"
                                                     data-confirm="Mark {{ $invoice->invoice_number }} as received?"
                                                     data-confirm-title="Mark bill received"
@@ -350,21 +352,16 @@
                                             @endif
                                             <a href="{{ route('purchase-invoices.print', $invoice) }}" target="_blank"><i class="fas fa-print"></i> Print</a>
                                             @if ($invoice->canConvert())
-                                                <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
-                                                    data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?"
-                                                    data-confirm-title="Convert to bill"
-                                                    data-confirm-text="Convert to bill"
-                                                    data-confirm-danger="false">
-                                                    @csrf
-                                                    <button type="submit"><i class="fas fa-file-invoice"></i> Convert to bill</button>
-                                                </form>
+                                                <a href="{{ route('purchase-invoices.show', $invoice) }}#purchasePartialConversion"><i class="fas fa-file-invoice"></i> Create linked bill</a>
                                             @endif
-                                            <form method="POST" action="{{ route('purchase-invoices.destroy', $invoice) }}"
-                                                data-confirm="Delete {{ $invoice->invoice_number }}?">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="danger"><i class="fas fa-trash"></i> Delete</button>
-                                            </form>
+                                            @unless ($invoice->hasPartialConversions())
+                                                <form method="POST" action="{{ route('purchase-invoices.destroy', $invoice) }}"
+                                                    data-confirm="{{ $invoice->isPartialConversion() ? 'Reverse the latest conversion and return its payments to the PO?' : 'Delete '.$invoice->invoice_number.'?' }}">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="danger"><i class="fas fa-trash"></i> {{ $invoice->isPartialConversion() ? 'Reverse conversion' : 'Delete' }}</button>
+                                                </form>
+                                            @endunless
                                         </div>
                                     </div>
                                 </div>

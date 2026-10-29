@@ -60,6 +60,16 @@ class PurchaseInvoice extends Model
         .' + (select coalesce(sum(foreign_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\' and (vendor_payment_entries.status is null or vendor_payment_entries.status <> \'cancelled\'))'
         .' + (select coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.purchase_invoice_id = purchase_invoices.id))';
 
+    /** SQL paid figure including the document slices of unsplit ledger payments. */
+    public static function paidSql(): string
+    {
+        if (! Schema::hasTable('purchase_payment_splits')) return self::PAID_SQL;
+        return '('.self::PAID_SQL.' + (select coalesce(sum(purchase_payment_splits.amount), 0)'
+            .' from purchase_payment_splits join vendor_payment_entries on vendor_payment_entries.id = purchase_payment_splits.vendor_payment_entry_id'
+            ." where purchase_payment_splits.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = 'debit'"
+            ." and (vendor_payment_entries.status is null or vendor_payment_entries.status <> 'cancelled')))";
+    }
+
     /** The supplier's own bill number, falling back to our document number. */
     public function referenceNumber(): string
     {
@@ -69,6 +79,7 @@ class PurchaseInvoice extends Model
     protected $fillable = [
         'invoice_number', 'invoice_type', 'status', 'public_token',
         'vendor_id', 'project_id', 'purchase_order_id', 'converted_invoice_id',
+        'original_total_amount', 'converted_amount', 'conversion_amount', 'conversion_kind',
         'invoice_date', 'due_date', 'valid_until', 'expected_date',
         'currency', 'exchange_rate', 'gst_type', 'place_of_supply',
         'vendor_bill_number', 'vendor_bill_date', 'our_reference',
@@ -92,6 +103,9 @@ class PurchaseInvoice extends Model
         'expected_date' => 'date',
         'vendor_bill_date' => 'date',
         'exchange_rate' => 'decimal:6',
+        'original_total_amount' => \App\Casts\DecimalUpToThree::class,
+        'converted_amount' => \App\Casts\DecimalUpToThree::class,
+        'conversion_amount' => \App\Casts\DecimalUpToThree::class,
         'subtotal' => \App\Casts\DecimalUpToThree::class,
         'discount_value' => \App\Casts\DecimalUpToThree::class,
         'discount_amount' => \App\Casts\DecimalUpToThree::class,
@@ -175,6 +189,32 @@ class PurchaseInvoice extends Model
         return $this->hasMany(CashflowAllocation::class, 'purchase_invoice_id')->orderBy('id');
     }
 
+    /** A partial conversion is distinguished from a legacy bill linked to an order. */
+    public function partialConversions()
+    {
+        return $this->hasMany(self::class, 'purchase_order_id')->whereNotNull('conversion_kind')->orderBy('id');
+    }
+
+    public function paymentSplits()
+    {
+        return $this->hasMany(PurchasePaymentSplit::class, 'purchase_invoice_id')->orderBy('id');
+    }
+
+    public function hasPartialConversions(): bool
+    {
+        return $this->isOrder() && (float) ($this->converted_amount ?? 0) > 0;
+    }
+
+    public function isPartialConversion(): bool
+    {
+        return $this->isBill() && in_array($this->conversion_kind, ['cash', 'bill'], true);
+    }
+
+    public function isCashConversion(): bool
+    {
+        return $this->isPartialConversion() && $this->conversion_kind === 'cash';
+    }
+
     /* ------------------------------------------------------------------
        What the document is
        ------------------------------------------------------------------ */
@@ -211,7 +251,8 @@ class PurchaseInvoice extends Model
     {
         return $this->isOrder()
             && ! $this->isSuperseded()
-            && $this->status === 'approved';
+            && $this->status === 'approved'
+            && (float) $this->total_amount >= 0.001;
     }
 
     /**
@@ -231,7 +272,8 @@ class PurchaseInvoice extends Model
 
         return $this->isOrder()
             && $this->status === 'approved'
-            && ! $this->isSuperseded();
+            && ! $this->isSuperseded()
+            && (! $this->hasPartialConversions() || (float) $this->total_amount >= 0.001);
     }
 
     /** What the office must do before this document can take an advance or payment. */
@@ -243,6 +285,10 @@ class PurchaseInvoice extends Model
 
         if ($this->isOrder() && $this->isSuperseded()) {
             return 'This order has already become a bill. Record the payment on the bill.';
+        }
+
+        if ($this->hasPartialConversions() && (float) $this->total_amount < 0.001) {
+            return 'This order has been fully converted. Record any new payment on the appropriate linked bill.';
         }
 
         if ($this->isOrder() && $this->status === 'draft') {
@@ -294,7 +340,8 @@ class PurchaseInvoice extends Model
 
     public function typeLabel(): string
     {
-        return self::DOC_LABELS[$this->invoice_type] ?? Str::headline((string) $this->invoice_type);
+        return $this->isCashConversion() ? 'Cash Purchase Bill'
+            : (self::DOC_LABELS[$this->invoice_type] ?? Str::headline((string) $this->invoice_type));
     }
 
     /**
@@ -353,7 +400,17 @@ class PurchaseInvoice extends Model
                 ->first()?->total ?? 0);
         }
 
-        return round($vendorLedger + $allocated, 3);
+        $splits = array_key_exists('split_paid', $this->attributes) ? (float) $this->attributes['split_paid'] : 0.0;
+        if (! array_key_exists('split_paid', $this->attributes) && $this->exists && Schema::hasTable('purchase_payment_splits')) {
+            $splits = (float) PurchasePaymentSplit::query()
+                ->join('vendor_payment_entries', 'vendor_payment_entries.id', '=', 'purchase_payment_splits.vendor_payment_entry_id')
+                ->where('purchase_payment_splits.purchase_invoice_id', $this->id)
+                ->where('vendor_payment_entries.transaction_type', 'debit')
+                ->where(fn ($query) => $query->whereNull('vendor_payment_entries.status')->orWhere('vendor_payment_entries.status', '!=', 'cancelled'))
+                ->sum('purchase_payment_splits.amount');
+        }
+
+        return round($vendorLedger + $allocated + $splits, 3);
     }
 
     public function paidAmount(): float
@@ -406,6 +463,10 @@ class PurchaseInvoice extends Model
     {
         if (! $this->isOrder()) {
             return round((float) $this->total_amount, 3);
+        }
+
+        if ($this->hasPartialConversions()) {
+            return round((float) $this->converted_amount, 3);
         }
 
         return round((float) ($this->convertedInvoice?->total_amount ?? 0), 3);
@@ -524,6 +585,21 @@ class PurchaseInvoice extends Model
                 ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
                 ->whereColumn('cashflow_allocations.purchase_invoice_id', 'purchase_invoices.id')
                 ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0)")]);
+        }
+
+        if (Schema::hasTable('purchase_payment_splits')) {
+            if ($query->getQuery()->columns === null) $query->select('purchase_invoices.*');
+            $query->addSelect(['split_paid' => PurchasePaymentSplit::query()
+                ->join('vendor_payment_entries', 'vendor_payment_entries.id', '=', 'purchase_payment_splits.vendor_payment_entry_id')
+                ->whereColumn('purchase_payment_splits.purchase_invoice_id', 'purchase_invoices.id')
+                ->where('vendor_payment_entries.transaction_type', 'debit')
+                ->where(fn ($q) => $q->whereNull('vendor_payment_entries.status')->orWhere('vendor_payment_entries.status', '!=', 'cancelled'))
+                ->selectRaw('coalesce(sum(purchase_payment_splits.amount), 0)')]);
+        } else {
+            // Lightweight/older schemas still need an eager zero, otherwise
+            // rendering a picker probes the schema once per document.
+            if ($query->getQuery()->columns === null) $query->select('purchase_invoices.*');
+            $query->selectRaw('0 as split_paid');
         }
 
         return $query;

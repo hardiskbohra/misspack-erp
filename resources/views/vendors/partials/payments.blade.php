@@ -56,6 +56,7 @@
                 </thead>
                 <tbody>
                     @forelse($vendorPaymentEntries->sortByDesc('transaction_date') as $entry)
+                        @php($conversionProtected = $entry->protectedByPurchaseConversion())
                         <tr>
                             <td data-label="Date">
                                 {{ $entry->transaction_date?->format('d M Y') ?: '—' }}
@@ -75,6 +76,16 @@
                             <td data-label="Entry">
                                 <strong>{{ $entry->invoice_number ?: 'No invoice' }}</strong>
                                 <span class="master-sub">{{ $entry->categoryLabel() }}</span>
+                                @if ($conversionProtected && $entry->relationLoaded('purchaseInvoice') && $entry->purchaseInvoice?->isPartialConversion())
+                                    <a class="master-sub" href="{{ route('purchase-invoices.show', $entry->purchaseInvoice) }}">{{ $entry->purchaseInvoice->invoice_number }}</a>
+                                @endif
+                                @if ($entry->relationLoaded('purchaseSplits'))
+                                    @foreach ($entry->purchaseSplits as $split)
+                                        @if ($split->purchaseInvoice)
+                                            <a class="master-sub" href="{{ route('purchase-invoices.show', $split->purchaseInvoice) }}">{{ $split->purchaseInvoice->invoice_number }} · {{ $money($split->amount, $entry->foreign_currency ?: $vendorCurrency) }}</a>
+                                        @endif
+                                    @endforeach
+                                @endif
                             </td>
                             <td data-label="Particular">
                                 <strong>{{ $entry->particular }}</strong>
@@ -100,6 +111,7 @@
                                 @if ($entry->isFromCashflow())
                                     <span class="vendor-meta-chip vendor-source-chip">From cashflow</span>
                                 @endif
+                                @if ($conversionProtected)<span class="vendor-meta-chip">Linked conversion · reverse first to change</span>@endif
                                 @if ($entry->cashflow_entry_id)
                                     @if (\Illuminate\Support\Facades\Route::has('cashflows.show'))
                                         <a class="vendor-sync-link" href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}"
@@ -124,7 +136,11 @@
                                             <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
                                         </button>
                                         <div class="master-dropdown-menu">
-                                            @if ($entry->isFromCashflow())
+                                            @if ($conversionProtected)
+                                                @if ($entry->cashflow_entry_id && \Illuminate\Support\Facades\Route::has('cashflows.show'))
+                                                    <a href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Open cashflow row</a>
+                                                @endif
+                                            @elseif ($entry->isFromCashflow())
                                                 {{-- The bank row owns this payment; the ledger only mirrors it. --}}
                                                 @if ($entry->cashflow_entry_id && \Illuminate\Support\Facades\Route::has('cashflows.show'))
                                                     <a href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}">
@@ -146,7 +162,7 @@
                                                     <i class="fa-solid fa-paperclip" aria-hidden="true"></i> {{ $attachment->original_name ?: 'Proof' }}
                                                 </a>
                                             @endforeach
-                                            @unless ($entry->isFromCashflow())
+                                            @unless ($entry->isFromCashflow() || $conversionProtected)
                                                 @if (\Illuminate\Support\Facades\Route::has('vendors.payments.destroy'))
                                                     <form method="POST" action="{{ route('vendors.payments.destroy', $entry) }}"
                                                         data-confirm="Delete this vendor payment entry?">

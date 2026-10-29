@@ -340,30 +340,52 @@ class PurchaseInvoiceController extends Controller
         $this->assertDocType(request(), $purchaseInvoice);
 
         $purchaseInvoice->load(['vendor', 'project', 'items', 'convertedInvoice', 'purchaseOrder']);
+        if (Schema::hasColumn('purchase_invoices', 'conversion_kind')) $purchaseInvoice->load('partialConversions');
+        if (Schema::hasTable('purchase_payment_splits')) $purchaseInvoice->load('paymentSplits.payment.paidAccount');
         if (Schema::hasTable('cashflow_allocations')) {
-            $purchaseInvoice->load('cashflowAllocations.cashflowEntry');
+            $purchaseInvoice->load('cashflowAllocations.cashflowEntry.account');
         }
-        $ledger = $this->ledgerAvailable() ? $purchaseInvoice->ledgerEntries()->get() : collect();
+        $ledger = $this->ledgerAvailable() ? $purchaseInvoice->ledgerEntries()->with('paidAccount')->get() : collect();
+        $directPayments = $ledger->where('transaction_type', 'debit')->reject(fn ($payment) => $payment->status === 'cancelled')->values();
+        $splitPayments = $purchaseInvoice->relationLoaded('paymentSplits')
+            ? $purchaseInvoice->paymentSplits->filter(fn ($split) => $split->payment && $split->payment->transaction_type === 'debit' && $split->payment->status !== 'cancelled')
+                ->map(function ($split) use ($purchaseInvoice) {
+                    $payment = $split->payment;
+                    return (object) ['id' => $split->id, 'source_key' => 'splits', 'ledger_payment_id' => $payment->id, 'transaction_date' => $payment->transaction_date,
+                        'payment_mode' => $payment->payment_mode, 'particular' => $payment->particular,
+                        'foreign_amount' => (float) $split->amount, 'foreign_currency' => $payment->foreign_currency ?: $purchaseInvoice->currency,
+                        'cashflow_entry_id' => $payment->cashflow_entry_id, 'account_name' => $payment->paidAccount?->account_name];
+                })->values()
+            : collect();
         $allocatedPayments = $purchaseInvoice->relationLoaded('cashflowAllocations')
             ? $purchaseInvoice->cashflowAllocations->map(function ($allocation) use ($purchaseInvoice) {
                 $entry = $allocation->cashflowEntry;
                 if (! $entry) return null;
                 return (object) [
+                    'id' => $allocation->id, 'source_key' => 'allocations', 'ledger_payment_id' => null,
                     'transaction_date' => $entry->entry_date,
                     'payment_mode' => $entry->payment_mode,
                     'particular' => $allocation->note ?: $entry->particular,
                     'foreign_amount' => $allocation->documentAmount(),
                     'foreign_currency' => $allocation->document_currency ?: $purchaseInvoice->currency,
-                    'cashflow_entry_id' => $entry->id,
+                    'cashflow_entry_id' => $entry->id, 'account_name' => $entry->account?->account_name,
                 ];
             })->filter()
             : collect();
+
+        $conversionPayments = $directPayments->map(fn ($payment) => (object) [
+            'id' => $payment->id, 'source_key' => 'payments', 'ledger_payment_id' => $payment->id, 'transaction_date' => $payment->transaction_date,
+            'payment_mode' => $payment->payment_mode, 'particular' => $payment->particular,
+            'foreign_amount' => (float) $payment->foreign_amount, 'foreign_currency' => $payment->foreign_currency,
+            'cashflow_entry_id' => $payment->cashflow_entry_id, 'account_name' => $payment->paidAccount?->account_name,
+        ])->concat($splitPayments)->concat($allocatedPayments)->sortBy('transaction_date')->values();
 
         return view('purchase_invoices.show', array_merge($this->sharedData($purchaseInvoice->invoice_type), [
             'docType' => $purchaseInvoice->invoice_type,
             'invoice' => $purchaseInvoice,
             'ledgerEntries' => $ledger,
-            'payments' => $ledger->where('transaction_type', 'debit')->reject(fn ($payment) => $payment->status === 'cancelled')->values()->concat($allocatedPayments)->sortByDesc('transaction_date')->values(),
+            'conversionPayments' => $conversionPayments,
+            'payments' => $conversionPayments->sortByDesc('transaction_date')->values(),
             'billBalance' => $purchaseInvoice->balanceDue(),
         ]));
     }
@@ -385,55 +407,64 @@ class PurchaseInvoiceController extends Controller
     {
         $this->assertDocType($request, $purchaseInvoice);
 
-        $data = $this->prepareInvoiceData($request, $purchaseInvoice->invoice_type, $this->validatedData($request, $purchaseInvoice));
-
-        DB::transaction(function () use ($data, $purchaseInvoice, $request) {
+        return DB::transaction(function () use ($purchaseInvoice, $request) {
+            $invoice = PurchaseInvoice::whereKey($purchaseInvoice->id)->lockForUpdate()->firstOrFail();
+            if ($invoice->hasPartialConversions() || $invoice->isPartialConversion()) {
+                return back()->with('error', 'Financial edits are locked while this purchase is split. Review or reverse the linked conversion first.');
+            }
+            $data = $this->prepareInvoiceData($request, $invoice->invoice_type, $this->validatedData($request, $invoice));
             unset($data['items']);
-            $purchaseInvoice->update($data);
-            $this->syncItemsAndTotals($purchaseInvoice, (array) $request->input('items', []));
+            $invoice->update($data);
+            $this->syncItemsAndTotals($invoice, (array) $request->input('items', []));
+            $this->afterSave($invoice->fresh(['items']));
+            return redirect()->route($invoice->routePrefix().'.show', $invoice)
+                ->with('success', $invoice->invoice_number.' updated.');
         });
-
-        $this->afterSave($purchaseInvoice->fresh(['items']));
-
-        return redirect()->route($purchaseInvoice->routePrefix().'.show', $purchaseInvoice)
-            ->with('success', $purchaseInvoice->invoice_number.' updated.');
     }
 
     public function destroy(PurchaseInvoice $purchaseInvoice): RedirectResponse
     {
         $this->assertDocType(request(), $purchaseInvoice);
 
-        if ((float) $purchaseInvoice->ledgerPaid() >= 0.001) {
-            return back()->with('error', $purchaseInvoice->invoice_number
-                .' has payments or cashflow allocations filed against it. Remove those links first, then delete the document.');
+        if ($purchaseInvoice->isPartialConversion()) {
+            try {
+                $order = app(\App\Services\PurchasePartialConversion::class)->reverse($purchaseInvoice);
+                return redirect()->route('purchase-invoices.show', $order)->with('success',
+                    'Conversion reversed. Its value and payments returned to '.$order->invoice_number.'; bank balances are unchanged.');
+            } catch (\Illuminate\Validation\ValidationException $error) {
+                return back()->with('error', $error->getMessage());
+            }
         }
 
-        if ($purchaseInvoice->isSuperseded()) {
-            return back()->with('error', $purchaseInvoice->invoice_number
-                .' has become '.$purchaseInvoice->convertedInvoice?->invoice_number
-                .'. Delete that bill first if the whole purchase was a mistake.');
-        }
+        return DB::transaction(function () use ($purchaseInvoice) {
+            // Re-read under the same lock taken by conversions, not the route's
+            // potentially stale model, before checking destructive actions.
+            $invoice = PurchaseInvoice::whereKey($purchaseInvoice->id)->lockForUpdate()->firstOrFail();
+            if ($invoice->hasPartialConversions() || $invoice->isPartialConversion()) {
+                return back()->with('error', 'This purchase has linked partial conversions. Reverse the linked bills before deleting it.');
+            }
+            if ((float) $invoice->ledgerPaid() >= 0.001) {
+                return back()->with('error', $invoice->invoice_number
+                    .' has payments or cashflow allocations filed against it. Remove those links first, then delete the document.');
+            }
+            if ($invoice->isSuperseded()) {
+                return back()->with('error', $invoice->invoice_number
+                    .' has become '.$invoice->convertedInvoice?->invoice_number
+                    .'. Delete that bill first if the whole purchase was a mistake.');
+            }
 
-        $type = $purchaseInvoice->invoice_type;
-        $number = $purchaseInvoice->invoice_number;
-        $order = PurchaseInvoice::query()->where('converted_invoice_id', $purchaseInvoice->id)->first();
-
-        DB::transaction(function () use ($purchaseInvoice, $order) {
-            (new PurchaseBillLedger())->remove($purchaseInvoice);
-            $purchaseInvoice->items()->delete();
-            $purchaseInvoice->delete();
-
-            /* The order the bill came from goes back to being an order: the
-               link is what made it history, and the bill is gone. */
+            $number = $invoice->invoice_number;
+            $order = PurchaseInvoice::query()->where('converted_invoice_id', $invoice->id)->lockForUpdate()->first();
+            app(PurchaseBillLedger::class)->remove($invoice);
+            $invoice->items()->delete();
+            $invoice->delete();
             if ($order) {
                 $order->converted_invoice_id = null;
                 $order->status = 'approved';
                 $order->save();
             }
-        });
-
-        return redirect()->route('purchase-invoices.index')
-            ->with('success', $number.' deleted.');
+            return redirect()->route('purchase-invoices.index')->with('success', $number.' deleted.');
+        }, 3);
     }
 
     /**
@@ -466,6 +497,10 @@ class PurchaseInvoiceController extends Controller
                 .' before converting it to a purchase bill.');
         }
 
+        if ($purchaseInvoice->hasPartialConversions()) {
+            return back()->with('error', 'This PO has partial conversions. Create another bill from its remaining balance using the conversion section.');
+        }
+
         if ($already = $purchaseInvoice->convertedInvoice) {
             return back()->with('error', $purchaseInvoice->invoice_number.' has already become '
                 .$already->invoice_number.'. A purchase order becomes one bill — edit that one, or duplicate '
@@ -475,7 +510,7 @@ class PurchaseInvoiceController extends Controller
         $bill = DB::transaction(function () use ($purchaseInvoice) {
             $order = PurchaseInvoice::query()->whereKey($purchaseInvoice->getKey())->lockForUpdate()->first();
 
-            if (! $order || ! $order->isOrder() || $order->converted_invoice_id) {
+            if (! $order || ! $order->isOrder() || $order->converted_invoice_id || $order->hasPartialConversions() || $order->status !== 'approved') {
                 return null;
             }
 
@@ -518,6 +553,40 @@ class PurchaseInvoiceController extends Controller
         return redirect()->route('purchase-invoices.edit', $bill)
             ->with('success', $bill->invoice_number.' created from '.$purchaseInvoice->invoice_number
                 .'. Fill in the vendor\'s bill number and date, check the quantities received, then save.');
+    }
+
+    /** Create one cash or tax purchase bill from a user-selected portion and payment sources. */
+    public function convertPartial(Request $request, PurchaseInvoice $purchaseInvoice, \App\Services\PurchasePartialConversion $conversion): RedirectResponse
+    {
+        $data = $request->validate([
+            'kind' => ['required', Rule::in(['cash', 'bill'])],
+            'mode' => ['required', Rule::in(['amount', 'percent'])],
+            'value' => ['required', 'numeric', 'decimal:0,3', 'gt:0'],
+            'invoice_date' => ['nullable', 'date'],
+            'vendor_bill_number' => ['nullable', 'string', 'max:255'],
+            'vendor_bill_date' => ['nullable', 'date'],
+            'opening' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+            'payments' => ['nullable', 'array'], 'payments.*' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+            'splits' => ['nullable', 'array'], 'splits.*' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+            'allocations' => ['nullable', 'array'], 'allocations.*' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
+        ]);
+        $bill = $conversion->convert($purchaseInvoice, $data, fn () => $this->makeInvoiceNumber(PurchaseInvoice::TYPE_BILL));
+        return redirect()->route('purchase-invoices.show', $bill)->with('success',
+            $bill->typeLabel().' created. Only the selected payments were allocated; no new payment was recorded.');
+    }
+
+    /** Supplier references may be corrected without rewriting the conversion's money. */
+    public function updateConversionReference(Request $request, PurchaseInvoice $purchaseInvoice): RedirectResponse
+    {
+        $data = $request->validate(['vendor_bill_number' => ['nullable', 'string', 'max:255'], 'vendor_bill_date' => ['nullable', 'date']]);
+        return DB::transaction(function () use ($purchaseInvoice, $data) {
+            $bill = PurchaseInvoice::whereKey($purchaseInvoice->id)->lockForUpdate()->firstOrFail();
+            if (! $bill->isPartialConversion()) return back()->with('error', 'This is not a linked partial bill.');
+            app(\App\Services\PurchasePartialConversion::class)->assertBillPostingIntact($bill);
+            $bill->update($data);
+            app(PurchaseBillLedger::class)->sync($bill);
+            return back()->with('success', 'Supplier reference saved.');
+        });
     }
 
     /**
@@ -567,91 +636,91 @@ class PurchaseInvoiceController extends Controller
             return back()->with('error', 'Enter the amount paid in the vendor\'s currency.');
         }
 
-        $currency = strtoupper((string) ($data['foreign_currency'] ?? $purchaseInvoice->currency ?: 'INR'));
-        $rate = $currency === 'INR'
-            ? 1.0
-            : (float) ($data['exchange_rate'] ?? $purchaseInvoice->exchange_rate ?: 0);
-        $rupees = (float) ($data['amount_in_inr'] ?? 0);
-        if ($rupees <= 0) {
-            $rupees = $rate > 0 ? round($amount * $rate, 3) : 0.0;
-        }
-        if ($rate <= 0 && $rupees > 0 && $amount > 0) {
-            $rate = round($rupees / $amount, 6);
-        }
+        return DB::transaction(function () use ($purchaseInvoice, $data, $amount, $request) {
+            $purchaseInvoice = PurchaseInvoice::whereKey($purchaseInvoice->id)->lockForUpdate()->firstOrFail();
+            if (! $purchaseInvoice->canReceiveMoney()) {
+                return back()->with('error', $purchaseInvoice->moneyGateMessage()
+                    ?: 'An approved purchase order or a raised bill is required before money can go to this vendor.');
+            }
+            $currency = strtoupper((string) ($data['foreign_currency'] ?? $purchaseInvoice->currency ?: 'INR'));
+            $rate = $currency === 'INR'
+                ? 1.0
+                : (float) ($data['exchange_rate'] ?? $purchaseInvoice->exchange_rate ?: 0);
+            $rupees = (float) ($data['amount_in_inr'] ?? 0);
+            if ($rupees <= 0) {
+                $rupees = $rate > 0 ? round($amount * $rate, 3) : 0.0;
+            }
+            if ($rate <= 0 && $rupees > 0 && $amount > 0) {
+                $rate = round($rupees / $amount, 6);
+            }
 
-        $syncCashflow = $request->boolean('record_cashflow') || $request->boolean('also_create_cashflow');
-        if ($syncCashflow && $rupees <= 0) {
-            return back()->with('error', 'Enter the exchange rate (or the INR amount) so the cashflow entry can be created.');
-        }
+            $syncCashflow = $request->boolean('record_cashflow') || $request->boolean('also_create_cashflow');
+            if ($syncCashflow && $rupees <= 0) {
+                return back()->with('error', 'Enter the exchange rate (or the INR amount) so the cashflow entry can be created.');
+            }
 
-        $entry = VendorPaymentEntry::create([
-            'vendor_id' => $purchaseInvoice->vendor_id,
-            'purchase_invoice_id' => $purchaseInvoice->id,
-            'project_id' => $data['project_id'] ?? $purchaseInvoice->project_id,
-            'transaction_date' => $data['transaction_date'] ?? now()->toDateString(),
-            'invoice_number' => $purchaseInvoice->referenceNumber(),
-            'foreign_currency' => $currency,
-            'foreign_amount' => $amount,
-            'exchange_rate' => $rate ?: null,
-            'transaction_type' => 'debit',
-            'entry_category' => 'payment',
-            'particular' => filled($data['particular'] ?? null)
-                ? $data['particular']
-                : ($purchaseInvoice->isOrder()
-                    ? 'Advance against purchase order '.$purchaseInvoice->invoice_number
-                    : 'Payment against purchase bill '.$purchaseInvoice->invoice_number),
-            'status' => $data['status'] ?? 'booked',
-            'paid_account_id' => $data['paid_account_id'] ?? null,
-            'payment_mode' => $data['payment_mode'] ?? null,
-            'bank_reference_number' => $data['bank_reference_number'] ?? null,
-            'amount_in_inr' => round($rupees, 3),
-            'remarks' => $data['remarks'] ?? null,
-            'created_by' => Auth::id(),
-        ]);
+            $entry = VendorPaymentEntry::create([
+                'vendor_id' => $purchaseInvoice->vendor_id,
+                'purchase_invoice_id' => $purchaseInvoice->id,
+                'project_id' => $data['project_id'] ?? $purchaseInvoice->project_id,
+                'transaction_date' => $data['transaction_date'] ?? now()->toDateString(),
+                'invoice_number' => $purchaseInvoice->referenceNumber(),
+                'foreign_currency' => $currency,
+                'foreign_amount' => $amount,
+                'exchange_rate' => $rate ?: null,
+                'transaction_type' => 'debit',
+                'entry_category' => 'payment',
+                'particular' => filled($data['particular'] ?? null)
+                    ? $data['particular']
+                    : ($purchaseInvoice->isOrder()
+                        ? 'Advance against purchase order '.$purchaseInvoice->invoice_number
+                        : 'Payment against purchase bill '.$purchaseInvoice->invoice_number),
+                'status' => $data['status'] ?? 'booked',
+                'paid_account_id' => $data['paid_account_id'] ?? null,
+                'payment_mode' => $data['payment_mode'] ?? null,
+                'bank_reference_number' => $data['bank_reference_number'] ?? null,
+                'amount_in_inr' => round($rupees, 3),
+                'remarks' => $data['remarks'] ?? null,
+                'created_by' => Auth::id(),
+            ]);
 
-        $this->storePaymentAttachments($request, $entry);
-        (new VendorPaymentCashflowSync())->sync($entry, $syncCashflow);
-        $entry->refresh();
+            $this->storePaymentAttachments($request, $entry);
+            (new VendorPaymentCashflowSync())->sync($entry, $syncCashflow);
+            $entry->refresh();
 
-        $this->refreshInvoiceMoney($purchaseInvoice->fresh());
+            $this->refreshInvoiceMoney($purchaseInvoice->fresh());
 
-        return back()->with('success', 'Payment of '.\App\Helpers\CommonHelper::amount($amount, $purchaseInvoice->currency)
-            .' filed against '.$purchaseInvoice->invoice_number.'.');
+            return back()->with('success', 'Payment of '.\App\Helpers\CommonHelper::amount($amount, $purchaseInvoice->currency)
+                .' filed against '.$purchaseInvoice->invoice_number.'.');
+        }, 3);
     }
 
     public function updateStatus(Request $request, PurchaseInvoice $purchaseInvoice): RedirectResponse
     {
         $this->assertDocType($request, $purchaseInvoice);
-
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(PurchaseInvoice::statusOptions()))],
         ]);
 
-        $target = $data['status'];
-        $allowed = PurchaseInvoice::STATUS_FLOW[$purchaseInvoice->invoice_type][$purchaseInvoice->status] ?? [];
-
-        if (! in_array($target, $allowed, true)) {
-            return back()->with('error', 'A '.$purchaseInvoice->typeLabel().' cannot go from '
-                .$purchaseInvoice->statusLabel().' to '.PurchaseInvoice::statusOptions()[$target].'.');
-        }
-
-        $purchaseInvoice->status = $target;
-
-        foreach ([
-            'sent' => 'sent_at',
-            'approved' => 'approved_at',
-            'received' => 'received_at',
-            'cancelled' => 'cancelled_at',
-        ] as $status => $column) {
-            if ($target === $status && ! $purchaseInvoice->{$column}) {
-                $purchaseInvoice->{$column} = now();
+        return DB::transaction(function () use ($purchaseInvoice, $data) {
+            $invoice = PurchaseInvoice::whereKey($purchaseInvoice->id)->lockForUpdate()->firstOrFail();
+            if ($invoice->hasPartialConversions() || $invoice->isPartialConversion()) {
+                return back()->with('error', 'Status changes are locked while this purchase is split. Review the linked conversions first.');
             }
-        }
-
-        $purchaseInvoice->save();
-        $this->afterSave($purchaseInvoice->fresh(['items']));
-
-        return back()->with('success', $purchaseInvoice->invoice_number.' marked '.$purchaseInvoice->statusLabel().'.');
+            $target = $data['status'];
+            $allowed = PurchaseInvoice::STATUS_FLOW[$invoice->invoice_type][$invoice->status] ?? [];
+            if (! in_array($target, $allowed, true)) {
+                return back()->with('error', 'A '.$invoice->typeLabel().' cannot go from '
+                    .$invoice->statusLabel().' to '.PurchaseInvoice::statusOptions()[$target].'.');
+            }
+            $invoice->status = $target;
+            foreach (['sent' => 'sent_at', 'approved' => 'approved_at', 'received' => 'received_at', 'cancelled' => 'cancelled_at'] as $status => $column) {
+                if ($target === $status && ! $invoice->{$column}) $invoice->{$column} = now();
+            }
+            $invoice->save();
+            $this->afterSave($invoice->fresh(['items']));
+            return back()->with('success', $invoice->invoice_number.' marked '.$invoice->statusLabel().'.');
+        }, 3);
     }
 
     /**
@@ -679,6 +748,11 @@ class PurchaseInvoiceController extends Controller
 
         DB::transaction(function () use ($data, $invoices, $statusMap, &$done, &$skipped) {
             foreach ($invoices as $invoice) {
+                $invoice = PurchaseInvoice::whereKey($invoice->id)->lockForUpdate()->first();
+                if (! $invoice || $invoice->hasPartialConversions() || $invoice->isPartialConversion()) {
+                    $skipped++;
+                    continue;
+                }
                 if ($data['action'] === 'delete_drafts') {
                     if ($invoice->status !== 'draft') {
                         $skipped++;
@@ -781,7 +855,13 @@ class PurchaseInvoiceController extends Controller
     private function validatedData(Request $request, ?PurchaseInvoice $invoice = null): array
     {
         return $request->validate([
-            'invoice_number' => ['nullable', 'string', 'max:255', 'unique:purchase_invoices,invoice_number,'.($invoice ? $invoice->id : 'NULL')],
+            'invoice_number' => ['bail', 'nullable', 'string', 'max:255', 'unique:purchase_invoices,invoice_number,'.($invoice ? $invoice->id : 'NULL'),
+                function ($attribute, $value, $fail) {
+                    if (\App\Services\PurchasePartialConversion::numberWasReversed($value)) {
+                        $fail('This number is reserved in the purchase reversal audit history. Choose a new document number.');
+                    }
+                },
+            ],
             'invoice_type' => ['nullable', Rule::in(array_keys(PurchaseInvoice::DOC_LABELS))],
             'status' => ['nullable', Rule::in(array_keys(PurchaseInvoice::statusOptionsFor(PurchaseInvoice::TYPE_BILL)
                 + PurchaseInvoice::statusOptionsFor(PurchaseInvoice::TYPE_ORDER)))],
@@ -1150,7 +1230,8 @@ class PurchaseInvoiceController extends Controller
         $next = $last ? ((int) last(explode('/', $last))) + 1 : 1;
         $number = $prefix.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
 
-        while (PurchaseInvoice::query()->where('invoice_number', $number)->exists()) {
+        while (PurchaseInvoice::query()->where('invoice_number', $number)->exists()
+            || \App\Services\PurchasePartialConversion::numberWasReversed($number)) {
             $number = $prefix.str_pad((string) (++$next), 3, '0', STR_PAD_LEFT);
         }
 
@@ -1342,7 +1423,7 @@ class PurchaseInvoiceController extends Controller
     private function paidSql(): string
     {
         return $this->ledgerAvailable()
-            ? PurchaseInvoice::PAID_SQL
+            ? PurchaseInvoice::paidSql()
             : 'coalesce(purchase_invoices.amount_paid, 0)';
     }
 

@@ -61,7 +61,12 @@ class UnallocatedCashflows
             $query->whereNotIn('cashflow_entries.id', \App\Models\VendorPaymentEntry::query()
                 ->select('cashflow_entry_id')
                 ->whereNotNull('cashflow_entry_id')
-                ->whereNotNull('purchase_invoice_id'));
+                ->where(function ($payment) {
+                    $payment->whereNotNull('purchase_invoice_id');
+                    if (Schema::hasTable('purchase_payment_splits')) {
+                        $payment->orWhereHas('purchaseSplits');
+                    }
+                }));
         }
 
         $entries = $query->get()

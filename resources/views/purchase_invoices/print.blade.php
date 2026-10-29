@@ -100,7 +100,7 @@
 
     $received = $invoice->paidAmount();
     $receivedDisplay = $received > 0 ? '-'.$money($received) : $money($received);
-    $balanceDue = $invoice->balanceDue();
+    $balanceDue = $invoice->isOrder() ? $invoice->openAmount() : $invoice->balanceDue();
     $secondaryDate = $invoice->invoice_type === 'bill'
         ? ($invoice->due_date ?: $invoice->expected_date)
         : ($invoice->expected_date ?: $invoice->valid_until);
@@ -334,7 +334,7 @@
             <div class="invoice-right">
                 <section class="summary">
                     <div class="summary-heading">
-                        <h2>Invoice summary</h2>
+                        <h2>{{ $invoice->hasPartialConversions() ? 'Original PO components' : 'Invoice summary' }}</h2>
                         <span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }}</span>
                     </div>
                     <table>
@@ -382,8 +382,12 @@
                             @if (abs((float) $invoice->round_off) >= 0.001)
                                 <tr><td>Round off</td><td>{{ $money($invoice->round_off) }}</td></tr>
                             @endif
+                            @if ($invoice->hasPartialConversions())
+                                <tr><td>Original PO total</td><td>{{ $money($invoice->original_total_amount) }}</td></tr>
+                                <tr><td>Less linked bills</td><td>-{{ $money($invoice->converted_amount) }}</td></tr>
+                            @endif
                             <tr class="grand-total">
-                                <td>Grand total</td>
+                                <td>{{ $invoice->hasPartialConversions() ? 'Remaining PO total' : 'Grand total' }}</td>
                                 <td>{{ $money($invoice->total_amount) }}</td>
                             </tr>
                             <tr class="settlement-row">

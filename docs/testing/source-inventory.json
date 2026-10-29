@@ -34,6 +34,14 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlPurchasePartialConversionTest.php",
+      "methods": [
+        "test_native_money_slices_and_lossy_rollback_guard",
+        "test_cross_order_bill_number_collision_retries_without_losing_either_conversion",
+        "test_two_overlapping_conversions_serialize_and_cannot_consume_the_same_remainder"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlReportingTest.php",
       "methods": [
         "test_real_database_aggregation_honours_custom_bounds",
@@ -613,6 +621,27 @@
       ]
     },
     {
+      "file": "tests/Integration/PurchasePartialConversionsTest.php",
+      "methods": [
+        "test_user_example_preserves_payment_provenance_in_all_three_currencies",
+        "test_multiple_partial_bills_and_cash_reduce_the_gross_and_apportion_gst",
+        "test_foreign_or_excess_payment_selections_fail_atomically_and_unselected_advance_stays",
+        "test_latest_conversion_reversal_restores_claim_payments_and_bank_without_duplication",
+        "test_opening_and_fx_allocation_split_and_reverse_without_changing_the_bank_entry",
+        "test_split_payment_is_not_unallocated_and_closure_retains_its_provenance",
+        "test_unrepresentable_item_and_fx_splits_are_atomic",
+        "test_repeated_manual_splits_and_full_transferred_payment_are_protected",
+        "test_stale_controller_models_cannot_cancel_or_delete_a_newly_split_order",
+        "test_fully_converted_order_cannot_receive_a_new_advance",
+        "test_stale_order_cannot_record_a_payment_after_full_conversion",
+        "test_reversed_bill_number_is_reserved_against_automatic_and_manual_reuse",
+        "test_reversal_refuses_downstream_packaging_and_manual_credits",
+        "test_reversal_refuses_vendor_collaboration_and_share_links",
+        "test_purchase_reader_and_guest_cannot_create_or_change_conversions",
+        "test_linked_documents_and_split_payment_cannot_be_mutated_or_deleted_out_of_band"
+      ]
+    },
+    {
       "file": "tests/Integration/RouteBoundaryInventoryTest.php",
       "methods": [
         "test_every_office_route_also_requires_authentication",
@@ -1151,6 +1180,7 @@
     "app/Services/PublicShareLinks.php",
     "app/Services/PurchaseBillLedger.php",
     "app/Services/PurchaseInvoiceMoney.php",
+    "app/Services/PurchasePartialConversion.php",
     "app/Services/RecurrenceFigures.php",
     "app/Services/RecurrenceFilters.php",
     "app/Services/RecurrenceIntake.php",
@@ -1246,6 +1276,7 @@
     "app/Models/ProjectWorkflowStep.php",
     "app/Models/PurchaseInvoice.php",
     "app/Models/PurchaseInvoiceItem.php",
+    "app/Models/PurchasePaymentSplit.php",
     "app/Models/SalesInvoice.php",
     "app/Models/SalesInvoiceAttachment.php",
     "app/Models/SalesInvoiceEInvoice.php",
@@ -1315,6 +1346,7 @@
     "tools/checks/project-workflow-ux-check.cjs",
     "tools/checks/projects-check.cjs",
     "tools/checks/public-short-links-browser.cjs",
+    "tools/checks/purchase-conversions-browser.cjs",
     "tools/checks/recurring-check.cjs",
     "tools/checks/report-check.cjs",
     "tools/checks/responsive-check.cjs",

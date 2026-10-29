@@ -138,7 +138,9 @@
       "sources": [
         "app/Services/PurchaseBillLedger.php",
         "app/Services/PurchaseInvoiceMoney.php",
-        "app/Http/Controllers/PurchaseInvoiceController.php"
+        "app/Http/Controllers/PurchaseInvoiceController.php",
+        "app/Services/PurchasePartialConversion.php",
+        "app/Models/PurchasePaymentSplit.php"
       ],
       "fixture": "F-MONEY; V1 bill100000; active payments25000; cancelled payment10000"
     },
@@ -5681,6 +5683,109 @@
       "automation": [
         "tests/Integration/ThreeDecimalPrecisionTest.php#test_fractional_cash_conversion_of_a_paise_pi_preserves_the_exact_claim",
         "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_fractional_cash_conversion_of_a_paise_claim_keeps_the_exact_remainder_on_mysql"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-005",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Partial purchase example preserves independent advance provenance",
+      "test_data": "INR, RMB and USD; PO 10000, advances 2000 and 1000; bill 2500",
+      "steps": [
+        "Create advances and choose 2000 cash plus 500 bank",
+        "Create cash purchase bill and compare PO, bill, vendor and bank"
+      ],
+      "expected": "PO 7500, paid 500, open 7000; bill paid 2500; one unchanged movement per payment.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_user_example_preserves_payment_provenance_in_all_three_currencies"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-006",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Multiple partial purchase bills apportion original GST",
+      "test_data": "GST-inclusive PO and multiple cash and purchase bills",
+      "steps": [
+        "Convert gross slices",
+        "Compare item rates, tax components and remaining claim"
+      ],
+      "expected": "Cash carries no GST; multiple bills and remainder reconcile to original gross.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_multiple_partial_bills_and_cash_reduce_the_gross_and_apportion_gst",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_unrepresentable_item_and_fx_splits_are_atomic"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-007",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Manual source selection preserves FX and opening advances",
+      "test_data": "Opening advance; individual vendor payment slices; foreign-currency cashflow allocation",
+      "steps": [
+        "Select source amounts including a partial split",
+        "Repeat on the remaining source; reverse and try an impossible FX split"
+      ],
+      "expected": "Only selected amounts move; source/native/document currencies, balances and bank entries are conserved.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_opening_and_fx_allocation_split_and_reverse_without_changing_the_bank_entry",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_repeated_manual_splits_and_full_transferred_payment_are_protected",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_foreign_or_excess_payment_selections_fail_atomically_and_unselected_advance_stays"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-008",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Linked purchase reversal and reporting preserve accounting history",
+      "test_data": "Linked bills, cashflow and vendor ledger, project, downstream packaging",
+      "steps": [
+        "Try out-of-band mutations and reverse in last-in-first-out order",
+        "Review project, vendor provenance and document number reuse"
+      ],
+      "expected": "Unsafe changes are blocked; reversal restores payments and PO without bank movement; numbers remain reserved.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_latest_conversion_reversal_restores_claim_payments_and_bank_without_duplication",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_reversal_refuses_downstream_packaging_and_manual_credits",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_split_payment_is_not_unallocated_and_closure_retains_its_provenance",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_reversed_bill_number_is_reserved_against_automatic_and_manual_reuse",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_linked_documents_and_split_payment_cannot_be_mutated_or_deleted_out_of_band",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_reversal_refuses_vendor_collaboration_and_share_links"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-009",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "preconditions": "Full disposable migrated schema; authorised office user, approved PO and separate advances",
+      "title": "Purchase conversion permissions, stale state and native concurrency",
+      "test_data": "Guest, purchase reader, stale PO model and two native MySQL connections",
+      "steps": [
+        "Attempt unauthorized and stale mutations",
+        "Run overlapping conversions and guarded migration rollback"
+      ],
+      "expected": "Unauthorized or stale actions cannot mutate claims; overlapping conversions cannot consume the same remainder.",
+      "automation": [
+        "tests/Integration/PurchasePartialConversionsTest.php#test_purchase_reader_and_guest_cannot_create_or_change_conversions",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_stale_controller_models_cannot_cancel_or_delete_a_newly_split_order",
+        "tests/Integration/PurchasePartialConversionsTest.php#test_stale_order_cannot_record_a_payment_after_full_conversion",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_native_money_slices_and_lossy_rollback_guard",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_two_overlapping_conversions_serialize_and_cannot_consume_the_same_remainder",
+        "tests/Database/MySqlPurchasePartialConversionTest.php#test_cross_order_bill_number_collision_retries_without_losing_either_conversion"
       ]
     }
   ]

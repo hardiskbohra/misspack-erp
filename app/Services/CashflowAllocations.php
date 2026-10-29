@@ -164,6 +164,24 @@ class CashflowAllocations
             return;
         }
 
+        // A converted allocation is evidence for a linked bill. Rebuilding the
+        // cashflow's rows would silently destroy that split, so serialize with
+        // conversion and require reversal before editing or deleting it.
+        $entry = CashflowEntry::query()->whereKey($entry->id)->lockForUpdate()->firstOrFail();
+        if (Schema::hasColumn('purchase_invoices', 'conversion_kind')
+            && $entry->allocations()->whereHas('purchaseInvoice', fn ($query) => $query->whereNotNull('conversion_kind'))->exists()) {
+            throw ValidationException::withMessages(['allocations' => 'This cashflow is allocated to a linked purchase conversion. Reverse the conversion before changing its allocations.']);
+        }
+
+        // Serialize new and existing purchase links with reversal/deletion.
+        // The allocation table has no foreign key to a purchase document.
+        $purchaseIds = array_merge(
+            $entry->allocations()->whereNotNull('purchase_invoice_id')->pluck('purchase_invoice_id')->all(),
+            array_filter(array_column($rows, 'purchase_invoice_id'))
+        );
+        if ($purchaseIds) {
+            PurchaseInvoice::whereIn('id', array_unique($purchaseIds))->orderBy('id')->lockForUpdate()->get();
+        }
         $prepared = $this->prepare($entry, $rows);
         $oldSales = $entry->allocations()->whereNotNull('sales_invoice_id')->pluck('sales_invoice_id')->all();
         if ($entry->sales_invoice_id) $oldSales[] = (int) $entry->sales_invoice_id;

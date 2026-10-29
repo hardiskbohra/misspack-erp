@@ -59,6 +59,30 @@ class VendorPaymentEntry extends Model
         return $this->hasMany(VendorPaymentAttachment::class)->latest('id');
     }
 
+    public function purchaseSplits()
+    {
+        return $this->hasMany(PurchasePaymentSplit::class, 'vendor_payment_entry_id');
+    }
+
+    public function purchaseInvoice()
+    {
+        return $this->belongsTo(PurchaseInvoice::class, 'purchase_invoice_id');
+    }
+
+    /** Payments used by a partial conversion are immutable until it is reversed. */
+    public function protectedByPurchaseConversion(): bool
+    {
+        if ($this->relationLoaded('purchaseSplits')) {
+            if ($this->purchaseSplits->isNotEmpty()) return true;
+        } elseif (\Illuminate\Support\Facades\Schema::hasTable('purchase_payment_splits') && $this->purchaseSplits()->exists()) {
+            return true;
+        }
+        if (! $this->purchase_invoice_id) return false;
+        if ($this->relationLoaded('purchaseInvoice')) return (bool) $this->purchaseInvoice?->conversion_kind;
+        return \Illuminate\Support\Facades\Schema::hasColumn('purchase_invoices', 'conversion_kind')
+            && PurchaseInvoice::whereKey($this->purchase_invoice_id)->whereNotNull('conversion_kind')->exists();
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

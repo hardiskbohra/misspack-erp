@@ -532,7 +532,7 @@ Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDele
 
 ## Purchase documents and vendor settlement (`PURCHASE`)
 
-Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMoney.php`, `app/Http/Controllers/PurchaseInvoiceController.php`.
+Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMoney.php`, `app/Http/Controllers/PurchaseInvoiceController.php`, `app/Services/PurchasePartialConversion.php`, `app/Models/PurchasePaymentSplit.php`.
 
 ### UT-PURCHASE-001 — Active payments determine bill balance
 

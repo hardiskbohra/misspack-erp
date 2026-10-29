@@ -582,7 +582,9 @@ class VendorController extends Controller
 
         $this->assertCashflowMirrorPossible($data, $syncCashflow);
 
-        DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
+        $updated = DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
+            $entry = VendorPaymentEntry::whereKey($entry->id)->lockForUpdate()->firstOrFail();
+            if ($entry->protectedByPurchaseConversion()) return false;
             $oldPurchaseId = $entry->purchase_invoice_id;
             $entry->update($data);
             $this->attachPurchaseDocument($entry);
@@ -590,8 +592,10 @@ class VendorController extends Controller
             $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
             app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$oldPurchaseId, $entry->purchase_invoice_id]);
+            return true;
         });
-    
+
+        if (! $updated) return $this->backToTab($vendor, 'money', 'This payment is linked to a partial purchase conversion. Reverse the conversions before changing it.', 'error');
         return $this->backToTab($vendor, 'money', $this->paymentSavedMessage($entry, 'updated'));
     }
 
@@ -611,7 +615,9 @@ class VendorController extends Controller
 
         $hadCashflow = (bool) $entry->cashflow_entry_id;
 
-        DB::transaction(function () use ($entry) {
+        $deleted = DB::transaction(function () use ($entry) {
+            $entry = VendorPaymentEntry::whereKey($entry->id)->lockForUpdate()->firstOrFail();
+            if ($entry->protectedByPurchaseConversion()) return false;
             // Remove the INR mirror too — one entry, both ledgers.
             $this->cashflowSync()->remove($entry);
 
@@ -623,8 +629,10 @@ class VendorController extends Controller
 
             $entry->delete();
             app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$entry->purchase_invoice_id]);
+            return true;
         });
 
+        if (! $deleted) return $this->backToTab($entry->vendor, 'money', 'This payment is linked to a partial purchase conversion. Reverse the conversions before deleting it.', 'error');
         $vendor = $entry->vendor;
 
         if (! $vendor) {
@@ -750,8 +758,10 @@ class VendorController extends Controller
             return;
         }
 
+        // Serialize a new/reassigned payment with conversion, reversal and
+        // deletion of the document it is about to settle.
         $document = $entry->purchase_invoice_id
-            ? PurchaseInvoice::query()->find($entry->purchase_invoice_id)
+            ? PurchaseInvoice::query()->whereKey($entry->purchase_invoice_id)->lockForUpdate()->first()
             : null;
 
         if ($document && $document->canReceiveMoney()) {
@@ -1499,6 +1509,12 @@ class VendorController extends Controller
         }
         if (class_exists(\App\Models\CashflowEntry::class) && Schema::hasTable('cashflow_entries')) {
             $relations[] = 'cashflowEntry';
+        }
+        if (Schema::hasTable('purchase_invoices')) {
+            $relations[] = 'purchaseInvoice';
+        }
+        if (Schema::hasTable('purchase_payment_splits')) {
+            $relations[] = 'purchaseSplits.purchaseInvoice';
         }
 
         $entries = VendorPaymentEntry::query()

@@ -3787,12 +3787,38 @@
             ]
         },
         {
+            "name": "purchase-invoices.conversion-reference",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "purchase-invoices/{purchaseInvoice}/conversion-reference",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@updateConversionReference",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "purchase-invoices.convert",
             "methods": [
                 "POST"
             ],
             "uri": "purchase-invoices/{purchaseInvoice}/convert",
             "action": "App\\Http\\Controllers\\PurchaseInvoiceController@convert",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.convert-partial",
+            "methods": [
+                "POST"
+            ],
+            "uri": "purchase-invoices/{purchaseInvoice}/partial-conversions",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@convertPartial",
             "middleware": [
                 "web",
                 "auth",

@@ -474,6 +474,12 @@ class CashflowController extends Controller
         $oldAccountId = $cashflow->account_id;
 
         DB::transaction(function () use ($cashflow, $data, $allocationRows, $oldAccountId) {
+            if (Schema::hasTable('purchase_payment_splits')) {
+                $payment = \App\Models\VendorPaymentEntry::where('cashflow_entry_id', $cashflow->id)->lockForUpdate()->first();
+                if ($payment && $payment->protectedByPurchaseConversion()) {
+                    throw ValidationException::withMessages(['entry' => 'This cashflow mirrors a payment linked to a partial purchase conversion. Reverse those conversions before changing it.']);
+                }
+            }
             $cashflow->update($data);
             app(CashflowAllocations::class)->sync($cashflow, $allocationRows);
             app(CashflowVendorPaymentSync::class)->sync($cashflow);

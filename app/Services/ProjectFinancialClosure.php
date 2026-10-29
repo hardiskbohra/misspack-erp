@@ -24,6 +24,10 @@ class ProjectFinancialClosure
             'bills.payments', 'bills.cashflowAllocations.cashflowEntry',
         ]);
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('purchase_payment_splits')) {
+            $project->loadMissing('bills.paymentSplits.payment');
+        }
+
         $sales = $project->taxInvoices->concat($project->proformaInvoices)
             ->filter(fn ($invoice) => $invoice->countsTowardsProject())
             ->sortBy('id')->values();
@@ -72,7 +76,19 @@ class ProjectFinancialClosure
                 'date' => $entry->transaction_date?->format('Y-m-d'), 'amount' => round((float) $entry->foreign_amount, 3),
                 'currency' => strtoupper((string) ($entry->foreign_currency ?: $bill->currency ?: 'INR')),
                 'status' => $entry->status, 'updated_at' => $entry->updated_at?->toISOString(),
-            ])->concat($bill->cashflowAllocations->map(fn ($allocation) => [
+            ])->concat(($bill->relationLoaded('paymentSplits') ? $bill->paymentSplits : collect())
+                ->filter(fn ($split) => $split->payment && $split->payment->transaction_type === 'debit' && $split->payment->status !== 'cancelled')
+                ->map(fn ($split) => [
+                    'source' => 'vendor_payment_split', 'id' => $split->id,
+                    'vendor_payment_entry_id' => $split->vendor_payment_entry_id,
+                    'cashflow_entry_id' => $split->payment->cashflow_entry_id,
+                    'date' => $split->payment->transaction_date?->format('Y-m-d'),
+                    'amount' => round((float) $split->amount, 3),
+                    'currency' => strtoupper((string) ($split->payment->foreign_currency ?: $bill->currency ?: 'INR')),
+                    'status' => $split->payment->status,
+                    'updated_at' => $split->updated_at?->toISOString(),
+                    'payment_updated_at' => $split->payment->updated_at?->toISOString(),
+                ]))->concat($bill->cashflowAllocations->map(fn ($allocation) => [
                 'source' => 'cashflow_allocation', 'id' => $allocation->id, 'cashflow_entry_id' => $allocation->cashflow_entry_id,
                 'amount' => round((float) $allocation->amount, 3), 'document_amount' => round($allocation->documentAmount(), 3),
                 'currency' => strtoupper((string) ($allocation->currency ?: 'INR')), 'document_currency' => strtoupper((string) ($allocation->document_currency ?: $bill->currency ?: 'INR')),

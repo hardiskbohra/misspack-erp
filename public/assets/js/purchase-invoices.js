@@ -908,6 +908,47 @@
         sync();
     });
 
+    /* Purchase conversions never select an advance automatically. Preview the
+       gross slice and only the source amounts the operator actually entered. */
+    onReady(function () {
+        var card = document.getElementById('purchasePartialConversion');
+        var form = document.getElementById('purchasePartialForm');
+        if (!card || !form) return;
+        var mode = document.getElementById('purchaseConversionMode');
+        var value = document.getElementById('purchaseConversionValue');
+        var summary = document.getElementById('purchaseConversionSummary');
+        var transfers = Array.from(form.querySelectorAll('[data-purchase-transfer]'));
+        var remaining = Number(card.getAttribute('data-remaining')) || 0;
+        var currency = card.getAttribute('data-currency') || 'INR';
+        var previousMode = mode.value;
+        var round3 = function (number) { return Math.round((number + Number.EPSILON) * 1000) / 1000; };
+        var money = function (number) {
+            return currency + ' ' + Number(number || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        };
+        function refresh() {
+            value.max = mode.value === 'percent' ? '100' : String(remaining);
+            var input = Math.max(Number(value.value) || 0, 0);
+            var amount = round3(mode.value === 'percent' ? remaining * input / 100 : input);
+            var selected = round3(transfers.reduce(function (sum, field) { return sum + Math.max(Number(field.value) || 0, 0); }, 0));
+            var excess = selected > amount + 0.0005;
+            value.setCustomValidity(excess ? 'Selected advances cannot exceed the new bill amount.' : '');
+            summary.textContent = 'Bill ' + money(amount) + ' · Selected advances ' + money(selected)
+                + ' · Remaining PO ' + money(Math.max(round3(remaining - amount), 0))
+                + (excess ? ' — selected advances exceed the bill amount.' : '.');
+        }
+        mode.addEventListener('change', function () {
+            var current = Number(value.value) || 0;
+            if (previousMode !== mode.value && remaining > 0 && current > 0) {
+                value.value = String(round3(mode.value === 'percent' ? current / remaining * 100 : current * remaining / 100));
+            }
+            previousMode = mode.value;
+            refresh();
+        });
+        value.addEventListener('input', refresh);
+        transfers.forEach(function (field) { field.addEventListener('input', refresh); });
+        refresh();
+    });
+
     /* A failed save comes back with the input kept and the errors on the bag:
        the marker names the dialog it came from, so it reopens with the office's
        typing still in it. */
