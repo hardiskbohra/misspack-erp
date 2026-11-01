@@ -19,6 +19,8 @@ class ProjectApprovals
     {
         return DB::transaction(function () use ($workflow, $productId, $type, $title, $instructions, $dueAt, $attachment, $contentHash, $userId) {
             Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $this->assertSalesItem((int) $workflow->project_id, $productId);
+            app(ProjectWorkflowExecution::class)->sync($workflow);
             $existing = $workflow->approvals()->where('project_product_id', $productId)->where('approval_type', $type)->whereNotIn('status', ['revoked'])->first();
             if ($existing) {
                 throw ValidationException::withMessages(['approval_type' => 'This product already has an approval request of this type. Add a new version to that request.']);
@@ -44,6 +46,7 @@ class ProjectApprovals
         return DB::transaction(function () use ($approval, $attachment, $contentHash, $notes, $dueAt, $userId) {
             Project::query()->whereKey($approval->project_id)->lockForUpdate()->firstOrFail();
             $approval = ProjectApprovalRequest::query()->whereKey($approval->id)->lockForUpdate()->firstOrFail();
+            $this->assertSalesItem((int) $approval->project_id, (int) $approval->project_product_id);
             $approval->versions()->where('status', '!=', 'superseded')->update(['status' => 'superseded']);
             $next = $approval->versions()->max('version_number') + 1;
             $approval->versions()->create([
@@ -65,6 +68,8 @@ class ProjectApprovals
         DB::transaction(function () use ($approval, $decision, $comment, $portalUser) {
             Project::query()->whereKey($approval->project_id)->lockForUpdate()->firstOrFail();
             $approval = ProjectApprovalRequest::query()->whereKey($approval->id)->lockForUpdate()->firstOrFail();
+            $this->assertSalesItem((int) $approval->project_id, (int) $approval->project_product_id);
+            app(ProjectWorkflowExecution::class)->sync($approval->workflow);
             $version = $approval->versions()->where('version_number', $approval->current_version_number)->lockForUpdate()->first();
             if ($approval->status !== 'open' || ! $version || $version->status !== 'pending') {
                 throw ValidationException::withMessages(['decision' => 'This approval version is no longer awaiting a decision.']);
@@ -91,6 +96,9 @@ class ProjectApprovals
         DB::transaction(function () use ($approval, $reason, $userId, $expectedVersion) {
             Project::query()->whereKey($approval->project_id)->lockForUpdate()->firstOrFail();
             $approval = ProjectApprovalRequest::query()->whereKey($approval->id)->lockForUpdate()->firstOrFail();
+            $this->assertSalesItem((int) $approval->project_id, (int) $approval->project_product_id);
+            app(ProjectWorkflowExecution::class)->sync($approval->workflow);
+            $approval->refresh();
             if ($approval->current_version_number !== $expectedVersion) {
                 throw ValidationException::withMessages(['override_reason' => 'The approval file changed. Review the current version before overriding it.']);
             }
@@ -125,10 +133,20 @@ class ProjectApprovals
         });
     }
 
+    private function assertSalesItem(int $projectId, int $productId): void
+    {
+        if (! app(ProjectWorkflowSalesScope::class)->contains($projectId, $productId, true)) {
+            throw ValidationException::withMessages(['project_product_id' => 'Approvals are available only for current sales-invoice items.']);
+        }
+    }
+
     public function syncStep(ProjectApprovalRequest $approval): void
     {
         $stepKey = $approval->approval_type === ProjectApprovalRequest::TYPE_ARTWORK ? 'artwork_approved' : 'pps_approved';
-        $step = $approval->workflow->steps()->where('project_product_id', $approval->project_product_id)->where('step_key', $stepKey)->first();
+        $current = DB::transactionLevel() > 0;
+        $step = app(ProjectWorkflowSalesScope::class)->steps($approval->workflow->allSteps(), $current)
+            ->where('project_product_id', $approval->project_product_id)->where('step_key', $stepKey)
+            ->when($current, fn ($query) => $query->lockForUpdate())->first();
         if (! $step) return;
         // A missing-request bypass cannot stand in for a subsequently submitted
         // client file. The new request and every later version decide afresh.

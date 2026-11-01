@@ -11,7 +11,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-PRODUCT | Products and price calculator | 3 | 3 | 0 |
 | REQ-LEAD | Leads and sales follow-up | 3 | 3 | 0 |
 | REQ-PROJECT | Project master and product lanes | 3 | 6 | 3 |
-| REQ-WORKFLOW | Execution, approvals, gates and financial closure | 3 | 8 | 8 |
+| REQ-WORKFLOW | Execution, approvals, gates and financial closure | 3 | 10 | 10 |
 | REQ-QC | Quality inspection and sampling | 3 | 3 | 0 |
 | REQ-PACK | Packaging lists, verification and print labels | 3 | 5 | 4 |
 | REQ-SHIP | Shipments, dispatch and delivery | 4 | 10 | 9 |

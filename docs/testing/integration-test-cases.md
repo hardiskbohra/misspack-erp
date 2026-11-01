@@ -589,7 +589,7 @@ Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProd
 
 ## Execution, approvals, gates and financial closure (`WORKFLOW`)
 
-Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`, `app/Services/ProjectWorkflowBypass.php`, `app/Services/ProjectApprovals.php`.
+Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`, `app/Services/ProjectWorkflowBypass.php`, `app/Services/ProjectApprovals.php`, `app/Services/ProjectWorkflowSalesScope.php`.
 
 ### IT-WORKFLOW-001 — Starting workflow twice is idempotent
 
@@ -698,6 +698,41 @@ Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkf
 **Expected:** Every bypass is individually authorized and auditable, newer facts supersede old decisions, linked actions honor current evidence and unrelated validation remains intact.
 
 **Evidence:** `tests/Integration/ProjectAdminControlsTest.php#test_each_project_step_can_be_individually_bypassed_and_source_data_is_not_falsified`; `tests/Integration/ProjectAdminControlsTest.php#test_a_stale_missing_request_or_approval_version_cannot_authorize_or_revoke_a_newer_client_file`; `tests/Integration/ProjectAdminControlsTest.php#test_advance_bypass_enables_the_linked_production_action_only_until_source_facts_change`; `tests/Integration/ProjectAdminControlsTest.php#test_individual_dispatch_bypasses_enable_only_the_linked_shipment_with_matching_evidence`; `tests/Integration/ProjectAdminControlsTest.php#test_bypass_creation_and_revocation_are_atomic_when_a_later_write_fails`; `tests/Integration/ProjectAdminControlsTest.php#test_direct_versioned_approval_override_and_revocation_roll_back_when_step_updates_fail`; `tests/Integration/ProjectAdminControlsTest.php#test_direct_approval_override_service_requires_admin_permission_for_recording_and_revoking`
+
+### IT-WORKFLOW-009 — Grouped rule history keeps every sales-product check and historical duplicate independent
+
+**Priority:** P0 · **Requirement:** REQ-WORKFLOW · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full project workflow with 12 sales-linked products; native disposable strict MySQL for race cases
+- **Data:** Equal product names, individually bypassed artwork checks, pre-existing exact duplicates and stale transaction snapshots
+1. Render stage, rule and product groups with honest counts and stable product IDs
+2. Bypass one product and verify all others retain their own state
+3. Show a duplicate warning without deleting evidence
+4. Serialize concurrent sync and read current committed source and step rows
+
+**Expected:** Sixteen distinct open rules represent 104 independent checks, duplicate evidence remains visible, and concurrent sync does not create duplicate step identities.
+
+**Note:** Guarded Chromium interaction separately checks 1440, 390 and 320 px; preserve existing exact duplicates for review.
+
+**Evidence:** `tests/Integration/ProjectAdminControlsTest.php#test_history_groups_product_checks_by_rule_without_merging_individual_decisions`; `tests/Integration/ProjectAdminControlsTest.php#test_each_history_gate_shows_its_rule_and_product_and_labels_project_gates`; `tests/Integration/ProjectAdminControlsTest.php#test_every_readiness_gate_displays_its_own_product_name_and_id`; `tests/Integration/ProjectAdminControlsTest.php#test_current_product_actions_identify_the_product_without_confusing_equal_names`; `tests/Integration/ProjectAdminControlsTest.php#test_history_warns_about_existing_exact_duplicates_without_erasing_evidence`; `tests/Integration/ProjectWorkflowExecutionTest.php#test_sync_reloads_products_instead_of_reusing_a_stale_loaded_relation`; `tests/Database/MySqlProjectAdminControlsTest.php#test_scope_sync_uses_current_linked_sales_rows_after_waiting_on_a_stale_snapshot`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_a_duplicate_completed_approval_does_not_hide_an_unfinished_sales_check`; `tests/Database/MySqlProjectAdminControlsTest.php#test_start_uses_the_workflow_created_while_a_stale_transaction_waited`
+
+### IT-WORKFLOW-010 — Sales invoice items alone drive product workflow; purchase-only shipments retain physical safeguards
+
+**Priority:** P0 · **Requirement:** REQ-WORKFLOW · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema with sales, purchase, project workflow, shipment and historical evidence
+- **Data:** Same-project explicit and legacy links, foreign or ambiguous links, edited, cancelled, removed and reinstated invoices, purchase-only and sales shipment items
+1. Scope lanes, product actions, counts, approvals and exceptions to non-cancelled sales items
+2. Review ambiguous or cross-project sales lines without modifying them
+3. Edit, cancel, reassign, delete and restore sources; retire obsolete bypasses
+4. Check real packing, quantity, QC and documents on purchase-only shipment and separate sales approvals
+5. Exercise native MySQL stale snapshots for links, legacy matching, cancellation and reentry
+
+**Expected:** Purchase-only evidence is preserved but excluded from sales workflow; valid sales lanes and independent approvals remain, unmatched items are warned and physical shipment safeguards never weaken.
+
+**Note:** Cash conversions use a synthetic monetary line and take product identity from their source PI; project-wide financial obligations remain separate.
+
+**Evidence:** `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_only_sales_items_create_active_product_rules_and_purchase_history_remains_intact`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_unlinked_legacy_sales_items_match_only_an_unambiguous_same_project_product`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_legacy_cross_project_link_is_never_matched_by_name_and_is_reported`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_legacy_catalogue_id_must_match_one_same_project_product`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_saving_an_invoice_does_not_assign_ambiguous_sales_lines_to_arbitrary_products`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_saving_an_unchanged_project_preserves_an_unresolved_foreign_product_link`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_reassigning_an_invoice_requires_an_unambiguous_target_product`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_edit_removal_cancellation_reassignment_and_deletion_refresh_old_and_new_projects`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_first_sales_link_records_old_unmarked_purchase_scope_and_retires_its_bypass`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_reentry_revokes_approval_override_and_restores_real_client_decision`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_purchase_only_direct_actions_are_guarded_and_production_is_not_blocked_by_sales_advance`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_purchase_only_shipment_can_pass_only_with_real_packing_quantity_qc_and_documents`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_out_of_scope_historical_client_approval_cannot_be_revised_overridden_or_decided`; `tests/Database/MySqlProjectAdminControlsTest.php#test_scope_sync_uses_current_legacy_sales_rows_after_waiting_on_a_stale_snapshot`; `tests/Database/MySqlProjectAdminControlsTest.php#test_scope_sync_does_not_reactivate_a_cancelled_source_from_a_stale_snapshot`; `tests/Database/MySqlProjectAdminControlsTest.php#test_stale_readiness_cannot_reapply_a_bypass_retired_during_sales_reentry`; `tests/Database/MySqlProjectAdminControlsTest.php#test_sales_materialization_does_not_pick_a_legacy_name_that_became_ambiguous_while_waiting`; `tests/Database/MySqlProjectAdminControlsTest.php#test_purchase_product_materialization_waits_for_the_workflow_project_lock_before_writing`; `tests/Database/MySqlProjectAdminControlsTest.php#test_purchase_refresh_finds_a_workflow_started_while_its_snapshot_waited`; `tests/Integration/ProjectWorkflowSalesScopeTest.php#test_calculated_progress_excludes_purchase_only_history_and_reincludes_sales_items`
 
 ## Quality inspection and sampling (`QC`)
 

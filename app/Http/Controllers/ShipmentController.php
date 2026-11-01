@@ -298,6 +298,7 @@ class ShipmentController extends Controller
         $oldStatus = $shipment->status;
 
         DB::transaction(function () use ($request, $shipment, $data, $items, $replaceItems, $oldStatus, $dispatchTransition, $workflow, $evaluation) {
+            if ($dispatchTransition && $workflow) \App\Models\Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
             $data['show_client_portal'] = $request->boolean('show_client_portal');
             $shipment->update($data);
             if ($oldStatus === Shipment::STATUS_PLANNING && $replaceItems) {
@@ -422,6 +423,7 @@ class ShipmentController extends Controller
         $notify = $request->boolean('notify_client', true);
 
         DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation) {
+            if ($dispatchTransition && $workflow) \App\Models\Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
             if ($dispatchTransition && $workflow && $dispatchEvaluation) {
                 $authorization = app(ShipmentDispatchAuthorization::class);
                 $candidate = clone $shipment; $candidate->status = $data['status'];

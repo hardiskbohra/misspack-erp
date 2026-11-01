@@ -8,6 +8,7 @@ use App\Models\ProjectProduct;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -37,9 +38,16 @@ class ProjectProductController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        if ($data['status'] === 'in_production' && $projectProduct->status !== 'in_production') {
-            $workflow = $projectProduct->project?->workflow;
-            if ($workflow) {
+        DB::transaction(function () use ($projectProduct, $data) {
+            $project = Project::query()->whereKey($projectProduct->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = $project->workflow;
+            if ($workflow) app(\App\Services\ProjectWorkflowExecution::class)->sync($workflow);
+            $projectProduct = ProjectProduct::query()->whereKey($projectProduct->id)->lockForUpdate()->firstOrFail();
+            if ((int) $projectProduct->project_id !== (int) $project->id || (float) $data['production_completed_quantity'] > (float) $projectProduct->quantity) {
+                throw ValidationException::withMessages(['production_completed_quantity' => 'The product or quantity changed. Reload before saving.']);
+            }
+            if ($data['status'] === 'in_production' && $projectProduct->status !== 'in_production'
+                && $workflow && app(\App\Services\ProjectWorkflowSalesScope::class)->contains((int) $project->id, (int) $projectProduct->id, true)) {
                 $evaluations = app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
                 $advanceGate = collect($evaluations)->firstWhere('gate_key', \App\Services\ProjectWorkflowGates::GATE_ADVANCE);
                 $advanceGate?->loadMissing('activeOverride');
@@ -49,19 +57,17 @@ class ProjectProductController extends Controller
                     ]);
                 }
             }
-        }
 
-        $old = $projectProduct->toArray();
-        if ((float) $projectProduct->production_completed_quantity !== (float) $data['production_completed_quantity']
-            || (string) $projectProduct->production_evidence !== (string) ($data['production_evidence'] ?? '')) {
-            $data['production_recorded_by'] = Auth::id();
-            $data['production_recorded_at'] = now();
-        }
-        $projectProduct->update($data);
-        $this->writeLog($projectProduct->project, 'product_updated', 'Product updated', $projectProduct->product_name.' details were updated.', ['old' => $old, 'new' => $projectProduct->fresh()->toArray()], $projectProduct->id);
-        if ($workflow = $projectProduct->project?->workflow) {
-            app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
-        }
+            $old = $projectProduct->toArray();
+            if ((float) $projectProduct->production_completed_quantity !== (float) $data['production_completed_quantity']
+                || (string) $projectProduct->production_evidence !== (string) ($data['production_evidence'] ?? '')) {
+                $data['production_recorded_by'] = Auth::id();
+                $data['production_recorded_at'] = now();
+            }
+            $projectProduct->update($data);
+            $this->writeLog($project, 'product_updated', 'Product updated', $projectProduct->product_name.' details were updated.', ['old' => $old, 'new' => $projectProduct->fresh()->toArray()], $projectProduct->id);
+            if ($workflow) app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
+        });
 
         return back()->with('success', 'Project product updated successfully.');
     }

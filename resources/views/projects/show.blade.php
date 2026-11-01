@@ -94,7 +94,7 @@
                 <span class="project-attention-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
                 <div class="project-attention-copy">
                     <strong>Target date passed {{ $daysLate }} {{ \Illuminate\Support\Str::plural('day', $daysLate) }} ago</strong>
-                    <span>{{ $workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0 }} workflow controls remain · {{ $money($totals['outstanding']) }} outstanding</span>
+                    <span>{{ $workflowOpenRuleCount }} open rules · {{ $workflowOpenCheckCount }} open checks · {{ $money($totals['outstanding']) }} outstanding</span>
                 </div>
                 <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('workflow') }}#workflow-actions">
                     <i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Open workflow
@@ -151,7 +151,7 @@
                         href="{{ $recordUrl($key) }}">
                         {{ $label }}
                         @if (($tabCounts[$key] ?? 0) > 0)
-                            <span class="master-tab-count">{{ number_format($tabCounts[$key]) }}</span>
+                            <span class="master-tab-count" @if($key === 'workflow') title="{{ $workflowOpenRuleCount }} open rules · {{ $workflowOpenCheckCount }} open checks · {{ $projectExceptions->count() }} exceptions" aria-label="{{ $workflowOpenRuleCount }} open rules, {{ $workflowOpenCheckCount }} open checks, {{ $projectExceptions->count() }} exceptions" @endif>{{ number_format($tabCounts[$key]) }}</span>
                         @endif
                     </a>
                 @endforeach

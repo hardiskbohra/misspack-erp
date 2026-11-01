@@ -27,6 +27,7 @@ class ShipmentDispatchAuthorization
     {
         return DB::transaction(function () use ($shipment, $workflow, $rows, $userId) {
             Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            app(ProjectWorkflowExecution::class)->sync($workflow);
             $details = $this->inspect($shipment, $workflow, $rows);
             $passed = $details['issues'] === [];
             $summary = $passed
@@ -92,6 +93,9 @@ class ShipmentDispatchAuthorization
             ];
         }
 
+        $currentScope = DB::transactionLevel() > 0;
+        $salesProductIds = app(ProjectWorkflowSalesScope::class)->products($workflow->project_id, $currentScope)
+            ->when($currentScope, fn ($query) => $query->lockForUpdate())->pluck('id')->map(fn ($id) => (int) $id)->all();
         $productEvidence = [];
         foreach ($productQuantities as $productId => $currentQuantity) {
             $linkedPackedQuantity = round((float) $validPackingItems->where('project_product_id', $productId)->sum('total_quantity'), 3);
@@ -107,12 +111,19 @@ class ShipmentDispatchAuthorization
             $reservedElsewhere = round((float) ShipmentItem::query()->where('project_product_id', $productId)
                 ->whereHas('shipment', fn ($query) => $query->where('status', '!=', Shipment::STATUS_CANCELLED)->when($shipment->exists, fn ($nested) => $nested->where('id', '!=', $shipment->id)))
                 ->sum('quantity'), 3);
-            $steps = ProjectWorkflowStep::query()->where('project_workflow_id', $workflow->id)->where('project_product_id', $productId)->whereIn('step_key', ['artwork_approved','pps_approved'])->get()->keyBy('step_key');
-            $approvalsReady = collect(['artwork_approved','pps_approved'])->every(fn ($key) => in_array($steps->get($key)?->status, ['completed','skipped'], true));
+            $salesItem = in_array((int) $productId, $salesProductIds, true);
+            $steps = $salesItem ? app(ProjectWorkflowSalesScope::class)->steps($workflow->allSteps(), $currentScope)
+                ->where('project_product_id', $productId)->whereIn('step_key', ['artwork_approved','pps_approved'])
+                ->when($currentScope, fn ($query) => $query->lockForUpdate())->get()->groupBy('step_key') : collect();
+            // Never select an arbitrary duplicate as the sole approval evidence.
+            $approvalsReady = $salesItem ? collect(['artwork_approved','pps_approved'])->every(function ($key) use ($steps) {
+                $checks = $steps->get($key, collect());
+                return $checks->isNotEmpty() && $checks->every(fn ($step) => in_array($step->status, ['completed','skipped'], true));
+            }) : null;
             if ($reservedElsewhere + $currentQuantity > $qcAuthorized + 0.0001) $issues[] = 'A current passing QC sample inspection is required for this shipment product.';
-            if (! $approvalsReady) $issues[] = 'Artwork and PPS approvals are not complete for a shipment product.';
+            if ($salesItem && ! $approvalsReady) $issues[] = 'Artwork and PPS approvals are not complete for a shipment product.';
             $productEvidence[] = [
-                'project_product_id'=>$productId, 'current_shipment_quantity'=>$currentQuantity,
+                'project_product_id'=>$productId, 'workflow_sales_item'=>$salesItem, 'current_shipment_quantity'=>$currentQuantity,
                 'reserved_elsewhere'=>$reservedElsewhere, 'qc_passed_quantity'=>$passedQc,
                 'qc_sample_inspected_quantity'=>(float) ($latestQc?->inspected_quantity ?: 0),
                 'qc_latest_result'=>$latestQc?->result, 'qc_authorized_quantity'=>$qcAuthorized,

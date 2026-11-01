@@ -119,4 +119,363 @@ class MySqlProjectAdminControlsTest extends TestCase
             $actor->delete();
         }
     }
+    public function test_scope_sync_uses_current_linked_sales_rows_after_waiting_on_a_stale_snapshot(): void
+    {
+        $this->assertScopeSyncUsesCurrentRows(false);
+    }
+
+    public function test_scope_sync_uses_current_legacy_sales_rows_after_waiting_on_a_stale_snapshot(): void
+    {
+        $this->assertScopeSyncUsesCurrentRows(true);
+    }
+
+    private function assertScopeSyncUsesCurrentRows(bool $legacy): void
+    {
+        $suffix = bin2hex(random_bytes(4));
+        $client = Client::create(['client_number' => 'SCOPE-RACE-'.$suffix, 'company_name' => 'Fictional race client']);
+        $project = Project::forceCreate(['project_number' => 'SCOPE-RACE-'.$suffix, 'client_id' => $client->id,
+            'name' => 'Sales scope race', 'status' => 'planned', 'stage' => 'setup', 'currency' => 'INR']);
+        $process = null;
+        $pipes = [];
+        try {
+            $workflow = app(ProjectWorkflowExecution::class)->start($project);
+            DB::beginTransaction();
+            Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $product = ProjectProduct::create(['project_id' => $project->id, 'product_name' => 'Racing carton', 'quantity' => 2]);
+            $invoice = SalesInvoice::create(['invoice_number' => 'SCOPE-RACE-INV-'.$suffix, 'invoice_type' => 'proforma', 'status' => 'draft',
+                'project_id' => $project->id, 'client_id' => $client->id, 'client_company_name' => 'Fictional race client', 'currency' => 'INR']);
+            $invoice->items()->create(['project_product_id' => $legacy ? null : $product->id, 'product_name' => 'Racing carton', 'quantity' => 2]);
+            $php = getenv('TEST_PHP_BINARY') ?: PHP_BINARY;
+            if (! $php) throw new \LogicException('Set TEST_PHP_BINARY for the workflow scope concurrency worker.');
+            $process = proc_open([$php, base_path('tests/Support/ProjectWorkflowScopeConcurrencyWorker.php'), (string) $workflow->id],
+                [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path());
+            if (! is_resource($process)) throw new \RuntimeException('Could not start the scope concurrency worker.');
+            fclose($pipes[0]);
+            stream_set_timeout($pipes[1], 15);
+            $this->assertSame("READY\n", fgets($pipes[1]));
+            usleep(300000);
+            $this->assertTrue(proc_get_status($process)['running'], 'Sync must wait for the project lock.');
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            DB::commit();
+            $output = stream_get_contents($pipes[1]);
+            $error = stream_get_contents($pipes[2]);
+            fclose($pipes[1]); fclose($pipes[2]);
+            $exit = proc_close($process); $process = null;
+            $this->assertSame(0, $exit, $error);
+            $this->assertStringContainsString('SYNCED', $output);
+            $steps = $workflow->fresh()->steps()->where('project_product_id', $product->id)->get();
+            $this->assertCount(8, $steps);
+            $this->assertSame(8, $steps->pluck('step_key')->unique()->count());
+            foreach ($steps as $step) {
+                $this->assertTrue(data_get($step->metadata, 'sales_workflow_scope.active'), 'A stale snapshot marked a current sales item out of scope.');
+            }
+        } finally {
+            while (DB::transactionLevel() > 0) DB::rollBack();
+            if (is_resource($process)) {
+                proc_terminate($process);
+                foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
+                proc_close($process);
+            }
+            DB::table('projects')->where('id', $project->id)->delete();
+            $client->delete();
+        }
+    }
+
+    public function test_scope_sync_does_not_reactivate_a_cancelled_source_from_a_stale_snapshot(): void
+    {
+        $suffix = bin2hex(random_bytes(4));
+        $client = Client::create(['client_number' => 'SCOPE-CANCEL-'.$suffix, 'company_name' => 'Fictional client']);
+        $project = Project::forceCreate(['project_number' => 'SCOPE-CANCEL-'.$suffix, 'client_id' => $client->id,
+            'name' => 'Cancellation race', 'status' => 'planned', 'stage' => 'setup', 'currency' => 'INR']);
+        $process = null; $pipes = [];
+        try {
+            $product = ProjectProduct::create(['project_id' => $project->id, 'product_name' => 'Racing carton', 'quantity' => 2]);
+            $invoice = SalesInvoice::create(['invoice_number' => 'SCOPE-CANCEL-INV-'.$suffix, 'invoice_type' => 'proforma', 'status' => 'draft',
+                'project_id' => $project->id, 'client_id' => $client->id, 'client_company_name' => 'Fictional client', 'currency' => 'INR']);
+            $invoice->items()->create(['project_product_id' => $product->id, 'product_name' => 'Racing carton', 'quantity' => 2]);
+            $workflow = app(ProjectWorkflowExecution::class)->start($project);
+            DB::beginTransaction();
+            Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $invoice->update(['status' => 'cancelled']);
+            $php = getenv('TEST_PHP_BINARY') ?: PHP_BINARY;
+            if (! $php) throw new \LogicException('Set TEST_PHP_BINARY for the workflow scope concurrency worker.');
+            $process = proc_open([$php, base_path('tests/Support/ProjectWorkflowScopeConcurrencyWorker.php'), (string) $workflow->id],
+                [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path());
+            if (! is_resource($process)) throw new \RuntimeException('Could not start the scope concurrency worker.');
+            fclose($pipes[0]); stream_set_timeout($pipes[1], 15);
+            $this->assertSame("READY\n", fgets($pipes[1]));
+            usleep(300000);
+            $this->assertTrue(proc_get_status($process)['running']);
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            DB::commit();
+            $output = stream_get_contents($pipes[1]); $error = stream_get_contents($pipes[2]);
+            fclose($pipes[1]); fclose($pipes[2]);
+            $exit = proc_close($process); $process = null;
+            $this->assertSame(0, $exit, $error);
+            $this->assertStringContainsString('SYNCED', $output);
+            $this->assertSame(0, $workflow->fresh()->steps()->where('project_product_id', $product->id)->count());
+            $historical = $workflow->allSteps()->where('project_product_id', $product->id)->get();
+            $this->assertCount(8, $historical);
+            foreach ($historical as $step) $this->assertFalse(data_get($step->metadata, 'sales_workflow_scope.active'));
+            $this->assertSame(0, $project->logs()->where('event_type', 'workflow_sales_scope_reentered')->count());
+        } finally {
+            while (DB::transactionLevel() > 0) DB::rollBack();
+            if (is_resource($process)) {
+                proc_terminate($process);
+                foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
+                proc_close($process);
+            }
+            DB::table('projects')->where('id', $project->id)->delete();
+            $client->delete();
+        }
+    }
+
+    public function test_stale_readiness_cannot_reapply_a_bypass_retired_during_sales_reentry(): void
+    {
+        $suffix = bin2hex(random_bytes(4));
+        $actor = User::create(['name' => 'Race administrator', 'email' => 'scope-reentry-'.$suffix.'@example.test',
+            'password' => 'fixture', 'role' => 'admin', 'access_profile' => 'full']);
+        $client = Client::create(['client_number' => 'SCOPE-REENTRY-'.$suffix, 'company_name' => 'Fictional client']);
+        $project = Project::forceCreate(['project_number' => 'SCOPE-REENTRY-'.$suffix, 'client_id' => $client->id,
+            'name' => 'Reentry race', 'status' => 'planned', 'stage' => 'setup', 'currency' => 'INR']);
+        $process = null; $pipes = [];
+        try {
+            $product = ProjectProduct::create(['project_id' => $project->id, 'product_name' => 'Racing carton', 'quantity' => 2]);
+            $invoice = SalesInvoice::create(['invoice_number' => 'SCOPE-REENTRY-INV-'.$suffix, 'invoice_type' => 'proforma', 'status' => 'draft',
+                'project_id' => $project->id, 'client_id' => $client->id, 'client_company_name' => 'Fictional client', 'currency' => 'INR']);
+            $invoice->items()->create(['project_product_id' => $product->id, 'product_name' => 'Racing carton', 'quantity' => 2]);
+            $workflow = app(ProjectWorkflowExecution::class)->start($project);
+            app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, $actor->id);
+            $step = $workflow->steps()->where('project_product_id', $product->id)->where('step_key', 'production_complete')->firstOrFail();
+            app(ProjectWorkflowBypass::class)->bypass($project, $step, $actor, 'Administrator accepted the original production risk.');
+            $override = $workflow->evaluations()->where('project_product_id', $product->id)->where('gate_key', 'production_complete')->latest('id')->firstOrFail()->activeOverride;
+            $this->assertSame('skipped', $step->fresh()->status);
+            $this->assertNotNull($override);
+            DB::beginTransaction();
+            Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $php = getenv('TEST_PHP_BINARY') ?: PHP_BINARY;
+            if (! $php) throw new \LogicException('Set TEST_PHP_BINARY for the scope concurrency worker.');
+            $process = proc_open([$php, base_path('tests/Support/ProjectWorkflowScopeConcurrencyWorker.php'), (string) $workflow->id, 'readiness'],
+                [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path());
+            if (! is_resource($process)) throw new \RuntimeException('Could not start the scope concurrency worker.');
+            fclose($pipes[0]); stream_set_timeout($pipes[1], 15);
+            $this->assertSame("READY\n", fgets($pipes[1])); usleep(300000);
+            $this->assertTrue(proc_get_status($process)['running']);
+            $invoice->update(['status' => 'cancelled']);
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            $invoice->update(['status' => 'draft']);
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            DB::commit();
+            $output = stream_get_contents($pipes[1]); $error = stream_get_contents($pipes[2]);
+            fclose($pipes[1]); fclose($pipes[2]); $exit = proc_close($process); $process = null;
+            $this->assertSame(0, $exit, $error);
+            $this->assertStringContainsString('SYNCED', $output);
+            $this->assertNotNull($override->fresh()->revoked_at);
+            $this->assertSame('blocked', $step->fresh()->status, 'The retired bypass must not be applied again from an old snapshot.');
+        } finally {
+            while (DB::transactionLevel() > 0) DB::rollBack();
+            if (is_resource($process)) {
+                proc_terminate($process);
+                foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
+                proc_close($process);
+            }
+            DB::table('projects')->where('id', $project->id)->delete();
+            $client->delete(); $actor->delete();
+        }
+    }
+
+    public function test_sales_materialization_does_not_pick_a_legacy_name_that_became_ambiguous_while_waiting(): void
+    {
+        $suffix = bin2hex(random_bytes(4));
+        $client = Client::create(['client_number' => 'AMBIGUOUS-RACE-'.$suffix, 'company_name' => 'Fictional client']);
+        $project = Project::forceCreate(['project_number' => 'AMBIGUOUS-RACE-'.$suffix, 'client_id' => $client->id,
+            'name' => 'Concurrent legacy item', 'status' => 'planned', 'stage' => 'setup', 'currency' => 'INR']);
+        $invoice = null; $process = null; $pipes = [];
+        try {
+            $first = ProjectProduct::create(['project_id' => $project->id, 'product_name' => 'Legacy carton', 'quantity' => 2]);
+            $invoice = SalesInvoice::create(['invoice_number' => 'AMBIGUOUS-RACE-SALE-'.$suffix, 'invoice_type' => 'proforma', 'status' => 'draft',
+                'project_id' => $project->id, 'client_id' => $client->id, 'client_company_name' => 'Fictional client', 'currency' => 'INR']);
+            $line = $invoice->items()->create(['product_name' => 'Legacy carton', 'quantity' => 8]);
+            $workflow = app(ProjectWorkflowExecution::class)->start($project);
+            $this->assertSame(8, $workflow->steps()->where('project_product_id', $first->id)->count());
+            DB::beginTransaction();
+            Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $second = ProjectProduct::create(['project_id' => $project->id, 'product_name' => ' LEGACY CARTON ', 'quantity' => 3]);
+            $php = getenv('TEST_PHP_BINARY') ?: PHP_BINARY;
+            if (! $php) throw new \LogicException('Set TEST_PHP_BINARY for the scope concurrency worker.');
+            $process = proc_open([$php, base_path('tests/Support/ProjectWorkflowScopeConcurrencyWorker.php'), (string) $invoice->id, 'sales'],
+                [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path());
+            if (! is_resource($process)) throw new \RuntimeException('Could not start the sales concurrency worker.');
+            fclose($pipes[0]); stream_set_timeout($pipes[1], 15);
+            $this->assertSame("READY\n", fgets($pipes[1]));
+            $read = [$pipes[1]]; $write = null; $except = null;
+            $this->assertSame(0, stream_select($read, $write, $except, 1));
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            DB::commit();
+            $output = stream_get_contents($pipes[1]); $error = stream_get_contents($pipes[2]);
+            fclose($pipes[1]); fclose($pipes[2]); $exit = proc_close($process); $process = null;
+            $this->assertSame(0, $exit, $error);
+            $this->assertStringContainsString('MATERIALIZED', $output);
+            $this->assertNull($line->fresh()->project_product_id);
+            $this->assertEquals(2, $first->fresh()->quantity);
+            $this->assertEquals(3, $second->fresh()->quantity);
+            $this->assertSame(0, $workflow->fresh()->steps()->whereIn('project_product_id', [$first->id, $second->id])->count());
+            $this->assertContains($line->id, app(\App\Services\ProjectWorkflowSalesScope::class)->unmatched($project->id)->pluck('id')->all());
+        } finally {
+            while (DB::transactionLevel() > 0) DB::rollBack();
+            if (is_resource($process)) {
+                proc_terminate($process);
+                foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
+                proc_close($process);
+            }
+            if ($invoice) DB::table('sales_invoices')->where('id', $invoice->id)->delete();
+            DB::table('projects')->where('id', $project->id)->delete();
+            $client->delete();
+        }
+    }
+
+    public function test_purchase_product_materialization_waits_for_the_workflow_project_lock_before_writing(): void
+    {
+        $suffix = bin2hex(random_bytes(4));
+        $client = Client::create(['client_number' => 'PURCHASE-LOCK-'.$suffix, 'company_name' => 'Fictional client']);
+        $project = Project::forceCreate(['project_number' => 'PURCHASE-LOCK-'.$suffix, 'client_id' => $client->id,
+            'name' => 'Concurrent purchase', 'status' => 'planned', 'stage' => 'setup', 'currency' => 'INR']);
+        $purchase = null; $invoice = null; $process = null; $pipes = [];
+        try {
+            $product = ProjectProduct::create(['project_id' => $project->id, 'product_name' => 'Shared carton', 'quantity' => 2]);
+            $invoice = SalesInvoice::create(['invoice_number' => 'PURCHASE-LOCK-SALE-'.$suffix, 'invoice_type' => 'proforma', 'status' => 'draft',
+                'project_id' => $project->id, 'client_id' => $client->id, 'client_company_name' => 'Fictional client', 'currency' => 'INR']);
+            $invoice->items()->create(['project_product_id' => $product->id, 'product_name' => 'Shared carton', 'quantity' => 2]);
+            $purchase = \App\Models\PurchaseInvoice::create(['invoice_number' => 'PURCHASE-LOCK-PO-'.$suffix, 'invoice_type' => 'order', 'status' => 'approved',
+                'public_token' => 'purchase-lock-'.$suffix, 'project_id' => $project->id, 'vendor_company_name' => 'Fictional vendor',
+                'vendor_bill_number' => 'SUPPLIER-'.$suffix, 'currency' => 'INR']);
+            $purchase->items()->create(['project_product_id' => $product->id, 'product_name' => 'Shared carton', 'quantity' => 2]);
+            $workflow = app(ProjectWorkflowExecution::class)->start($project);
+
+            DB::beginTransaction();
+            Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $php = getenv('TEST_PHP_BINARY') ?: PHP_BINARY;
+            if (! $php) throw new \LogicException('Set TEST_PHP_BINARY for the scope concurrency worker.');
+            $process = proc_open([$php, base_path('tests/Support/ProjectWorkflowScopeConcurrencyWorker.php'), (string) $purchase->id, 'purchase'],
+                [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path());
+            if (! is_resource($process)) throw new \RuntimeException('Could not start the purchase concurrency worker.');
+            fclose($pipes[0]); stream_set_timeout($pipes[1], 15);
+            $this->assertSame("READY\n", fgets($pipes[1]));
+            $read = [$pipes[1]]; $write = null; $except = null;
+            $this->assertSame(0, stream_select($read, $write, $except, 1),
+                'Purchase materialization must wait on the project lock, not lock a product before requesting it.');
+            $this->assertTrue(proc_get_status($process)['running']);
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            DB::commit();
+            $output = stream_get_contents($pipes[1]); $error = stream_get_contents($pipes[2]);
+            fclose($pipes[1]); fclose($pipes[2]); $exit = proc_close($process); $process = null;
+            $this->assertSame(0, $exit, $error);
+            $this->assertStringContainsString('PRODUCT_UPDATED', $output);
+            $this->assertStringContainsString('MATERIALIZED', $output);
+            $this->assertSame('SUPPLIER-'.$suffix, $product->fresh()->vendor_invoice_number);
+            $this->assertSame(8, $workflow->fresh()->steps()->where('project_product_id', $product->id)->count());
+        } finally {
+            while (DB::transactionLevel() > 0) DB::rollBack();
+            if (is_resource($process)) {
+                proc_terminate($process);
+                foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
+                proc_close($process);
+            }
+            if ($purchase) DB::table('purchase_invoices')->where('id', $purchase->id)->delete();
+            if ($invoice) DB::table('sales_invoices')->where('id', $invoice->id)->delete();
+            DB::table('projects')->where('id', $project->id)->delete();
+            $client->delete();
+        }
+    }
+
+    public function test_purchase_refresh_finds_a_workflow_started_while_its_snapshot_waited(): void
+    {
+        $suffix = bin2hex(random_bytes(4));
+        $client = Client::create(['client_number' => 'PURCHASE-START-'.$suffix, 'company_name' => 'Fictional client']);
+        $project = Project::forceCreate(['project_number' => 'PURCHASE-START-'.$suffix, 'client_id' => $client->id,
+            'name' => 'Purchase and workflow start', 'status' => 'planned', 'stage' => 'setup', 'currency' => 'INR']);
+        $purchase = null; $invoice = null; $process = null; $pipes = [];
+        try {
+            $product = ProjectProduct::create(['project_id' => $project->id, 'product_name' => 'Shared board', 'quantity' => 2]);
+            $invoice = SalesInvoice::create(['invoice_number' => 'PURCHASE-START-SALE-'.$suffix, 'invoice_type' => 'proforma', 'status' => 'draft',
+                'project_id' => $project->id, 'client_id' => $client->id, 'client_company_name' => 'Fictional client', 'currency' => 'INR']);
+            $invoice->items()->create(['project_product_id' => $product->id, 'product_name' => 'Shared board', 'quantity' => 2]);
+            $purchase = \App\Models\PurchaseInvoice::create(['invoice_number' => 'PURCHASE-START-PO-'.$suffix, 'invoice_type' => 'order', 'status' => 'approved',
+                'public_token' => 'purchase-start-'.$suffix, 'project_id' => $project->id, 'vendor_company_name' => 'Fictional vendor',
+                'vendor_bill_number' => 'SUPPLIER-'.$suffix, 'currency' => 'INR']);
+            $purchase->items()->create(['project_product_id' => $product->id, 'product_name' => 'Shared board', 'quantity' => 2]);
+
+            DB::beginTransaction();
+            Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $php = getenv('TEST_PHP_BINARY') ?: PHP_BINARY;
+            if (! $php) throw new \LogicException('Set TEST_PHP_BINARY for the scope concurrency worker.');
+            $process = proc_open([$php, base_path('tests/Support/ProjectWorkflowScopeConcurrencyWorker.php'), (string) $purchase->id, 'purchase'],
+                [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path());
+            if (! is_resource($process)) throw new \RuntimeException('Could not start the purchase concurrency worker.');
+            fclose($pipes[0]); stream_set_timeout($pipes[1], 15);
+            $this->assertSame("READY\n", fgets($pipes[1]));
+            $read = [$pipes[1]]; $write = null; $except = null;
+            $this->assertSame(0, stream_select($read, $write, $except, 1));
+            $workflow = app(ProjectWorkflowExecution::class)->start($project);
+            $this->assertSame(0, $workflow->evaluations()->count(), 'The purchase refresh must be the operation that evaluates readiness.');
+            DB::commit();
+            $output = stream_get_contents($pipes[1]); $error = stream_get_contents($pipes[2]);
+            fclose($pipes[1]); fclose($pipes[2]); $exit = proc_close($process); $process = null;
+            $this->assertSame(0, $exit, $error);
+            $this->assertStringContainsString('MATERIALIZED', $output);
+            $this->assertSame('SUPPLIER-'.$suffix, $product->fresh()->vendor_invoice_number);
+            $this->assertGreaterThan(0, $workflow->fresh()->evaluations()->where('project_product_id', $product->id)->count(),
+                'The new workflow must be refreshed even though the purchase transaction began with an older snapshot.');
+        } finally {
+            while (DB::transactionLevel() > 0) DB::rollBack();
+            if (is_resource($process)) {
+                proc_terminate($process);
+                foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
+                proc_close($process);
+            }
+            if ($purchase) DB::table('purchase_invoices')->where('id', $purchase->id)->delete();
+            if ($invoice) DB::table('sales_invoices')->where('id', $invoice->id)->delete();
+            DB::table('projects')->where('id', $project->id)->delete();
+            $client->delete();
+        }
+    }
+
+    public function test_start_uses_the_workflow_created_while_a_stale_transaction_waited(): void
+    {
+        $suffix = bin2hex(random_bytes(4));
+        $client = Client::create(['client_number' => 'START-RACE-'.$suffix, 'company_name' => 'Fictional client']);
+        $project = Project::forceCreate(['project_number' => 'START-RACE-'.$suffix, 'client_id' => $client->id,
+            'name' => 'Workflow start race', 'status' => 'planned', 'stage' => 'setup', 'currency' => 'INR']);
+        $process = null; $pipes = [];
+        try {
+            DB::beginTransaction();
+            Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $php = getenv('TEST_PHP_BINARY') ?: PHP_BINARY;
+            if (! $php) throw new \LogicException('Set TEST_PHP_BINARY for the scope concurrency worker.');
+            $process = proc_open([$php, base_path('tests/Support/ProjectWorkflowScopeConcurrencyWorker.php'), (string) $project->id, 'start'],
+                [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path());
+            if (! is_resource($process)) throw new \RuntimeException('Could not start the scope concurrency worker.');
+            fclose($pipes[0]); stream_set_timeout($pipes[1], 15);
+            $this->assertSame("READY\n", fgets($pipes[1])); usleep(300000);
+            $this->assertTrue(proc_get_status($process)['running']);
+            $workflow = app(ProjectWorkflowExecution::class)->start($project);
+            DB::commit();
+            $output = stream_get_contents($pipes[1]); $error = stream_get_contents($pipes[2]);
+            fclose($pipes[1]); fclose($pipes[2]); $exit = proc_close($process); $process = null;
+            $this->assertSame(0, $exit, $error);
+            $this->assertStringContainsString('STARTED '.$workflow->id, $output);
+            $this->assertSame(1, $project->workflow()->count());
+            $this->assertSame(8, $workflow->steps()->count());
+        } finally {
+            while (DB::transactionLevel() > 0) DB::rollBack();
+            if (is_resource($process)) {
+                proc_terminate($process);
+                foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
+                proc_close($process);
+            }
+            DB::table('projects')->where('id', $project->id)->delete();
+            $client->delete();
+        }
+    }
+
 }

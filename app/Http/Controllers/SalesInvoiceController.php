@@ -341,6 +341,12 @@ class SalesInvoiceController extends Controller
     public function duplicate(SalesInvoice $salesInvoice): RedirectResponse
     {
         $copy = DB::transaction(function () use ($salesInvoice) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
+            $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $salesInvoice->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before copying.']);
+            }
             $auto = $this->eligibleForAutoRounding($salesInvoice->invoice_type, $salesInvoice->currency);
             $copy = $this->copyInvoice($salesInvoice, [
                 'invoice_number' => $this->makeInvoiceNumber($salesInvoice->invoice_type),
@@ -402,7 +408,12 @@ class SalesInvoiceController extends Controller
            two clicks apart at worst, and the lock is what stops the second one
            from raising a second tax invoice from the same proforma. */
         $tax = DB::transaction(function () use ($salesInvoice) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
             $proforma = SalesInvoice::query()->whereKey($salesInvoice->getKey())->lockForUpdate()->first();
+            if ($proforma && (int) $proforma->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before converting.']);
+            }
 
             if (! $proforma || $proforma->invoice_type !== 'proforma' || $proforma->converted_invoice_id
                 || $proforma->status === 'cancelled' || $proforma->cashConvertibleRemaining() <= 0) {
@@ -477,7 +488,12 @@ class SalesInvoiceController extends Controller
             'transfer_received' => ['required', 'numeric', 'min:0', 'decimal:0,3'],
         ]);
         $cash = DB::transaction(function () use ($salesInvoice, $data, $conversion) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
             $pi = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $pi->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before converting.']);
+            }
             $plan = $conversion->plan($pi, $data['conversion_mode'], (float) $data['conversion_value']);
             $cash = $pi->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'cash_converted_base_amount', 'cash_converted_total_amount']);
             $cash->fill(['invoice_type' => 'cash', 'invoice_number' => $this->makeInvoiceNumber('cash'),
@@ -843,6 +859,7 @@ class SalesInvoiceController extends Controller
         $data['created_by'] = Auth::id();
 
         $invoice = DB::transaction(function () use ($request, $data, $items) {
+            app(ProjectProducts::class)->prepareSalesChange([$data['project_id'] ?? null]);
             $invoice = SalesInvoice::create($data);
             $this->syncItemsAndTotals($invoice, $items);
             $this->storeAttachments($request, $invoice);
@@ -925,8 +942,14 @@ class SalesInvoiceController extends Controller
         $data = $this->prepareInvoiceData($request, $data);
 
         DB::transaction(function () use ($request, $salesInvoice, $data, $items) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId, $data['project_id'] ?? null]);
             $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $salesInvoice->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['project_id' => 'The invoice project changed. Reload before saving.']);
+            }
             $this->assertEditable($salesInvoice);
+            $previousProjectId = (int) $salesInvoice->project_id;
             $eligible = $this->eligibleForAutoRounding($data['invoice_type'], $data['currency']);
             if (! $request->has('round_off')) {
                 // A computed INR adjustment is not a manual foreign/cash one.
@@ -939,7 +962,22 @@ class SalesInvoiceController extends Controller
                may only move through credit/debit notes, never an edit. */
             app(SalesInvoiceAdjustment::class)->assertMoneyFieldsUnchanged($salesInvoice, $data, $items);
             $salesInvoice->update($data);
+            if ($previousProjectId > 0 && $previousProjectId !== (int) $salesInvoice->project_id && Schema::hasTable('project_products')) {
+                // A deliberately moved invoice may still post hidden product IDs
+                // from its old project. Clear only those old-project links; the
+                // new project can match unambiguously or surface them for review.
+                $previousLinks = DB::table('project_products')->where('project_id', $previousProjectId)
+                    ->whereIn('id', collect($items)->pluck('project_product_id')->filter()->all())
+                    ->lockForUpdate()->pluck('id')->map(fn ($id) => (int) $id)->all();
+                foreach ($items as &$item) {
+                    if (in_array((int) ($item['project_product_id'] ?? 0), $previousLinks, true)) $item['project_product_id'] = null;
+                }
+                unset($item);
+            }
             $this->syncItemsAndTotals($salesInvoice, $items);
+            if ($previousProjectId !== (int) $salesInvoice->project_id) {
+                app(ProjectProducts::class)->refreshWorkflow($previousProjectId);
+            }
             $this->storeAttachments($request, $salesInvoice);
         });
 
@@ -957,9 +995,15 @@ class SalesInvoiceController extends Controller
         $this->assertEditable($salesInvoice);
         app(SalesInvoiceAdjustment::class)->assertDeletable($salesInvoice);
         DB::transaction(function () use ($salesInvoice) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
             $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $salesInvoice->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before deleting.']);
+            }
             $this->assertEditable($salesInvoice);
             app(SalesInvoiceAdjustment::class)->assertDeletable($salesInvoice);
+            $previousProjectId = (int) $salesInvoice->project_id;
             foreach ($salesInvoice->attachments as $attachment) {
                 if ($attachment->file_path) {
                     Storage::disk('public')->delete($attachment->file_path);
@@ -969,6 +1013,7 @@ class SalesInvoiceController extends Controller
                 DB::table('cashflow_allocations')->where('sales_invoice_id', $salesInvoice->id)->update(['sales_invoice_id' => null]);
             }
             $salesInvoice->delete();
+            app(ProjectProducts::class)->refreshWorkflow($previousProjectId);
         });
 
         return redirect()->route('sales-invoices.index')->with('success', 'Sales invoice deleted successfully.');
@@ -1005,7 +1050,16 @@ class SalesInvoiceController extends Controller
 
     public function markSent(SalesInvoice $salesInvoice): RedirectResponse
     {
-        $salesInvoice->update(['status' => 'sent', 'sent_at' => now(), 'show_client_portal' => true]);
+        DB::transaction(function () use ($salesInvoice) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
+            $invoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $invoice->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before marking it sent.']);
+            }
+            $invoice->update(['status' => 'sent', 'sent_at' => now(), 'show_client_portal' => true]);
+            app(ProjectProducts::class)->refreshWorkflow($expectedProjectId);
+        });
         return back()->with('success', 'Invoice marked as sent and visible to client portal.');
     }
 
@@ -1625,9 +1679,13 @@ class SalesInvoiceController extends Controller
         $skipped = 0;
 
         DB::transaction(function () use ($data, $invoices, &$done, &$skipped) {
+            $expectedProjects = $invoices->mapWithKeys(fn ($invoice) => [$invoice->id => (int) $invoice->project_id]);
+            $changedProjects = [];
+            if ($data['action'] === 'delete_drafts') app(ProjectProducts::class)->prepareSalesChange($expectedProjects->values()->all());
             foreach ($invoices as $invoice) {
                 $invoice = SalesInvoice::whereKey($invoice->id)->lockForUpdate()->first();
                 if (! $invoice) { $skipped++; continue; }
+                if ($data['action'] === 'delete_drafts' && (int) $invoice->project_id !== $expectedProjects[$invoice->id]) { $skipped++; continue; }
                 switch ($data['action']) {
                     case 'mark_sent':
                         /* a cancelled document was withdrawn on purpose: it is not
@@ -1661,6 +1719,7 @@ class SalesInvoiceController extends Controller
                     case 'delete_drafts':
                         // only what never left the desk
                         if ($invoice->status === 'draft' && ! $invoice->hasMonetaryConversions()) {
+                            $changedProjects[] = (int) $invoice->project_id;
                             $invoice->delete();
                             $done++;
                         } else {
@@ -1669,6 +1728,7 @@ class SalesInvoiceController extends Controller
                         break;
                 }
             }
+            foreach (array_unique($changedProjects) as $projectId) app(ProjectProducts::class)->refreshWorkflow($projectId);
         });
 
         $message = $done.' '.Str::plural('invoice', $done).' — '

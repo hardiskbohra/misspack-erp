@@ -19,7 +19,7 @@ class ProjectApprovalController extends Controller
         $workflow = $project->workflow;
         abort_unless($workflow, 422, 'Start the project workflow before requesting approval.');
         $data = $request->validate($this->rules());
-        abort_unless($project->products()->whereKey($data['project_product_id'])->exists(), 422, 'Product does not belong to this project.');
+        abort_unless(app(\App\Services\ProjectWorkflowSalesScope::class)->contains($project->id, (int) $data['project_product_id']), 422, 'Approvals are available only for this project’s current sales-invoice items.');
         [$attachment, $hash] = $this->storeAttachment($request, $project, $data['project_product_id'], $data['approval_type']);
         $approval = $approvals->create($workflow, (int) $data['project_product_id'], $data['approval_type'], $data['title'], $data['instructions'] ?? null, $data['response_due_at'] ?? null, $attachment, $hash, Auth::id());
         $this->notifyClient($project, $approval);
@@ -30,6 +30,7 @@ class ProjectApprovalController extends Controller
     public function addVersion(Request $request, Project $project, ProjectApprovalRequest $approval, ProjectApprovals $approvals): RedirectResponse
     {
         $this->assertBelongs($project, $approval);
+        abort_unless(app(\App\Services\ProjectWorkflowSalesScope::class)->contains($project->id, (int) $approval->project_product_id), 422, 'This approval is no longer for a current sales-invoice item.');
         $data = $request->validate([
             'submission_notes' => ['nullable', 'string', 'max:2000'],
             'response_due_at' => ['nullable', 'date'],

@@ -16,7 +16,7 @@ class ProjectFinancialClosure
     public const GATE = 'commercial_closure';
     public const CONTROLLED_STEPS = [self::GATE];
 
-    public function snapshot(Project $project): array
+    public function snapshot(Project $project, bool $current = false): array
     {
         $project->loadMissing([
             'taxInvoices.payments', 'taxInvoices.cashflowAllocations.cashflowEntry',
@@ -127,11 +127,21 @@ class ProjectFinancialClosure
             'unallocated_client_cash' => $this->totals(array_values(array_filter($unallocated, fn ($row) => $row['transaction_type'] === 'credit')), 'unallocated'),
             'unallocated_vendor_cash' => $this->totals(array_values(array_filter($unallocated, fn ($row) => $row['transaction_type'] === 'debit')), 'unallocated'),
         ];
-        $openSteps = $project->workflow?->steps
+        $workflow = $project->workflow;
+        $steps = $workflow
+            ? app(ProjectWorkflowSalesScope::class)->steps($workflow->allSteps(), $current)
+                ->when($current, fn ($query) => $query->lockForUpdate())->get()
+            : collect();
+        $openSteps = $steps
             ->reject(fn ($step) => in_array($step->step_key, [self::GATE, ProjectFeedbackClosure::GATE], true))
             ->whereNotIn('status', ['completed', 'skipped', 'cancelled'])
             ->map(fn ($step) => ['step_key' => $step->step_key, 'title' => $step->title, 'status' => $step->status])
-            ->values()->all() ?? [];
+            ->values()->all();
+        // An unmatched sales line cannot silently disappear from closure simply
+        // because no safe product lane could be created for it.
+        if ($workflow && app(ProjectWorkflowSalesScope::class)->unmatched($project->id, $current)->isNotEmpty()) {
+            $openSteps[] = ['step_key' => 'unmatched_sales_items', 'title' => 'Review unmatched sales invoice items', 'status' => 'blocked'];
+        }
 
         $snapshot = [
             'schema_version' => 1,
@@ -154,9 +164,11 @@ class ProjectFinancialClosure
     {
         return DB::transaction(function () use ($workflow, $userId) {
             Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
-            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->firstOrFail();
-            $workflow->load('project', 'steps');
-            $snapshot = $this->snapshot($workflow->project);
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->lockForUpdate()->firstOrFail();
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            $workflow->load('project');
+            $workflow->project->setRelation('workflow', $workflow);
+            $snapshot = $this->snapshot($workflow->project, true);
             $passed = $snapshot['operationally_ready'] && ! $snapshot['has_outstanding_financials'];
             $summary = ! $snapshot['operationally_ready']
                 ? count($snapshot['open_operational_steps']).' operational workflow step(s) remain open.'
@@ -303,8 +315,10 @@ class ProjectFinancialClosure
             if (! in_array($locked->status, Project::closureStatuses(), true)) {
                 throw ValidationException::withMessages(['closure' => 'Only a closed project can be reopened.']);
             }
-            $workflow = $locked->workflow()->with('steps')->firstOrFail();
-            $snapshot = $this->snapshot($locked);
+            $workflow = $locked->workflow()->lockForUpdate()->firstOrFail();
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            $locked->setRelation('workflow', $workflow);
+            $snapshot = $this->snapshot($locked, true);
             $closure = Closure::query()->create([
                 'project_id' => $locked->id,
                 'project_workflow_id' => $workflow->id,

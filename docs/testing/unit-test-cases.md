@@ -347,7 +347,7 @@ Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProd
 
 ## Execution, approvals, gates and financial closure (`WORKFLOW`)
 
-Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`, `app/Services/ProjectWorkflowBypass.php`, `app/Services/ProjectApprovals.php`.
+Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`, `app/Services/ProjectWorkflowBypass.php`, `app/Services/ProjectApprovals.php`, `app/Services/ProjectWorkflowSalesScope.php`.
 
 ### UT-WORKFLOW-001 — Only one standard execution vocabulary exists
 

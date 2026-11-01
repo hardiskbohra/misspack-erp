@@ -75,6 +75,7 @@ trait ErpReliabilityScenarios
         $invoice = SalesInvoice::create(['invoice_number' => 'RELIABILITY-PI', 'invoice_type' => 'proforma', 'status' => 'sent',
             'public_token' => 'reliability-invoice-token', 'client_id' => $client->id, 'project_id' => $project->id,
             'currency' => 'INR', 'total_amount' => 100, 'amount_paid' => 100, 'balance_before_dispatch' => true]);
+        $invoice->items()->create(['project_product_id' => $product->id, 'product_name' => 'Carton', 'quantity' => 2]);
         $workflow = app(ProjectWorkflowExecution::class)->start($project, $user->id);
         $workflow->update(['commercial_sales_invoice_id' => $invoice->id]);
         $shipment = $this->editableShipment(['shipment_number' => str_repeat('S', 160), 'client_id' => $client->id, 'project_id' => $project->id]);
@@ -359,6 +360,7 @@ trait ErpReliabilityScenarios
         $invoice = SalesInvoice::create(['invoice_number' => 'RELIABILITY-PI', 'invoice_type' => 'proforma', 'status' => 'sent',
             'public_token' => 'reliability-invoice-token', 'client_id' => $client->id, 'project_id' => $project->id,
             'currency' => 'INR', 'total_amount' => 100, 'amount_paid' => 100, 'balance_before_dispatch' => true]);
+        $invoice->items()->create(['project_product_id' => $product->id, 'product_name' => 'Carton', 'quantity' => 2]);
         $workflow = app(ProjectWorkflowExecution::class)->start($project, $user->id);
         $workflow->update(['commercial_sales_invoice_id' => $invoice->id]);
         $shipment = $this->editableShipment(['shipment_number' => str_repeat('S', 160), 'client_id' => $client->id, 'project_id' => $project->id]);

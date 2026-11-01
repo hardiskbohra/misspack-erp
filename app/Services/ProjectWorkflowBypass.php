@@ -31,6 +31,11 @@ class ProjectWorkflowBypass
             $step = ProjectWorkflowStep::query()->whereKey($step->id)->lockForUpdate()->firstOrFail();
             $workflow = $step->workflow;
             abort_unless($workflow && (int) $workflow->project_id === (int) $project->id, 404);
+            app(ProjectWorkflowExecution::class)->sync($workflow, $project);
+            $step->refresh();
+            if ($step->project_product_id !== null && ! app(ProjectWorkflowSalesScope::class)->contains($project->id, $step->project_product_id, true)) {
+                throw ValidationException::withMessages(['reason' => 'This historical control is not for a current sales-invoice item.']);
+            }
             if ($step->step_key === ProjectFinancialClosure::GATE) {
                 throw ValidationException::withMessages(['closure' => 'Use manual project closure to record the financial snapshot and accepted risk.']);
             }
@@ -77,7 +82,8 @@ class ProjectWorkflowBypass
             if ($evaluation->gate_key === ProjectFinancialClosure::GATE) {
                 throw ValidationException::withMessages(['closure' => 'Use the financial closure action to record the closure decision and snapshot.']);
             }
-            $step = ProjectWorkflowStep::query()->where('project_workflow_id', $evaluation->project_workflow_id)
+            app(ProjectWorkflowExecution::class)->sync($evaluation->workflow, $project);
+            $step = app(ProjectWorkflowSalesScope::class)->steps($evaluation->workflow->allSteps(), true)
                 ->where('project_product_id', $evaluation->project_product_id)->where('step_key', $evaluation->gate_key)
                 ->lockForUpdate()->firstOrFail();
             if (self::isSynthetic($evaluation)) {
@@ -147,9 +153,18 @@ class ProjectWorkflowBypass
 
     public static function currentEvaluation(ProjectWorkflowStep $step): ?ProjectGateEvaluation
     {
-        return $step->workflow->evaluations()->where('gate_key', $step->step_key)
-            ->where('project_product_id', $step->project_product_id)->with('activeOverride.approver')
+        $current = DB::transactionLevel() > 0;
+        $evaluation = $step->workflow->evaluations()->where('gate_key', $step->step_key)
+            ->where('project_product_id', $step->project_product_id)
+            ->when(! $current, fn ($query) => $query->with('activeOverride.approver'))
+            ->when($current, fn ($query) => $query->lockForUpdate())
             ->latest('evaluated_at')->latest('id')->first();
+        if ($evaluation && $current) {
+            $override = $evaluation->overrides()->whereNull('revoked_at')->latest('id')->lockForUpdate()->first();
+            $override?->load('approver');
+            $evaluation->setRelation('activeOverride', $override);
+        }
+        return $evaluation;
     }
 
     public static function isSynthetic(?ProjectGateEvaluation $evaluation): bool

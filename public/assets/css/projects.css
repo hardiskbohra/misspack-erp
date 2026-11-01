@@ -2492,3 +2492,24 @@
     .project-admin-state-form > .master-btn, .project-admin-closure > summary,
     .project-admin-closure form > .master-btn { width: 100%; justify-content: center; }
 }
+
+/* One rule heading, with independently actionable product checks underneath. */
+.project-workflow-rule{min-width:0;border-top:1px solid var(--mc-border)}
+.project-workflow-rule:first-child{border-top:0}
+.project-workflow-rule>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:10px 14px;cursor:pointer;list-style:none;background:var(--mc-card-soft)}
+.project-workflow-rule>summary::-webkit-details-marker{display:none}
+.project-workflow-rule>summary>span{display:grid;gap:3px;min-width:0}
+.project-workflow-rule>summary strong{color:var(--mc-text);font-size:12px;overflow-wrap:anywhere}
+.project-workflow-rule>summary small{color:var(--mc-text-2);font-size:10.5px}
+.project-workflow-rule>summary>i{flex:none;color:var(--mc-text-3);font-size:10px;transition:transform .18s}
+.project-workflow-rule[open]>summary>i{transform:rotate(180deg)}
+.project-workflow-instance{min-width:0;border-top:1px solid var(--mc-border)}
+.project-workflow-instance .project-workflow-step{border-top:0}
+.project-workflow-instance .project-workflow-step-copy{min-width:0}
+.project-workflow-instance .project-workflow-step-copy strong{overflow-wrap:anywhere}
+.project-workflow-rule>summary:focus-visible{outline:2px solid var(--master-primary);outline-offset:-2px}
+
+/* Keep gate ownership visible, including equal or long product names. */
+.project-workflow-step-copy .project-workflow-product{color:var(--mc-text);font-weight:700;overflow-wrap:anywhere}
+.project-gate-copy .workflow-gate-product{color:var(--mc-text);font-weight:700;overflow-wrap:anywhere}
+.workflow-action-card-head>div>span{overflow:visible;white-space:normal;overflow-wrap:anywhere;line-height:1.4}

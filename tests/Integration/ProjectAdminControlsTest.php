@@ -34,6 +34,7 @@ class ProjectAdminControlsTest extends TestCase
     private User $admin;
     private Project $project;
     private ProjectProduct $product;
+    private SalesInvoice $scopeInvoice;
 
     protected function setUp(): void
     {
@@ -49,6 +50,9 @@ class ProjectAdminControlsTest extends TestCase
         $this->project = Project::forceCreate(['project_number' => 'ADMIN-PROJECT', 'client_id' => $client->id,
             'name' => 'Fictional project', 'status' => 'planned', 'stage' => 'setup', 'currency' => 'INR']);
         $this->product = ProjectProduct::create(['project_id' => $this->project->id, 'product_name' => 'Carton', 'quantity' => 10]);
+        $this->scopeInvoice = SalesInvoice::create(['invoice_number' => 'ADMIN-SCOPE-PI', 'invoice_type' => 'proforma', 'status' => 'draft',
+            'project_id' => $this->project->id, 'client_id' => $client->id, 'client_company_name' => 'Fictional client', 'currency' => 'INR', 'total_amount' => 0]);
+        $this->scopeInvoice->items()->create(['project_product_id' => $this->product->id, 'product_name' => 'Carton', 'quantity' => 10]);
         app(ProjectWorkflowExecution::class)->start($this->project, $this->admin->id);
         $this->actingAs($this->admin);
     }
@@ -614,6 +618,124 @@ class ProjectAdminControlsTest extends TestCase
             $this->assertSame(403, $error->getStatusCode());
         }
         $this->assertNull($override->fresh()->revoked_at);
+    }
+
+    public function test_history_groups_product_checks_by_rule_without_merging_individual_decisions(): void
+    {
+        $products = collect([$this->product]);
+        for ($i = 2; $i <= 12; $i++) {
+            // Equal names must still be distinguishable by their project-product IDs.
+            $products->push(ProjectProduct::create(['project_id' => $this->project->id,
+                'product_name' => $i === 2 ? 'Carton' : 'Carton & Board '.$i, 'quantity' => 10]));
+            $this->scopeInvoice->items()->create(['project_product_id' => $products->last()->id, 'product_name' => $products->last()->product_name, 'quantity' => 10]);
+        }
+        $execution = app(ProjectWorkflowExecution::class);
+        $workflow = $execution->start($this->project->fresh(), $this->admin->id);
+        $this->assertSame(104, $workflow->steps()->count()); // 8 project controls + 8 per product
+        $response = $this->get('/projects/'.$this->project->id.'?tab=workflow')->assertOk();
+        $this->assertSame(16, $response->viewData('tabCounts')['workflow']);
+        $this->assertSame(104, $response->viewData('workflowOpenCheckCount'));
+        $response->assertSee('16 open rules')->assertSee('104 open checks')
+            ->assertSee('Product #'.$products[0]->id)->assertSee('Product #'.$products[1]->id)
+            ->assertSee('Carton &amp; Board 3', false);
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+        $groups = $xpath->query('//*[@id="workflow-history"]//*[@data-workflow-rule="artwork_approved"]');
+        $this->assertCount(1, $groups, 'The stage should have one artwork rule heading, not twelve identical headings.');
+        $group = $groups->item(0);
+        $this->assertCount(12, $xpath->query('.//*[@data-workflow-step-id]', $group));
+        $this->assertCount(12, $xpath->query('.//form[contains(@action, "/bypass")]', $group));
+        foreach ($products as $product) {
+            $this->assertCount(1, $xpath->query('.//*[@data-workflow-product-id="'.$product->id.'"]', $group));
+        }
+
+        $first = $workflow->steps()->where('step_key', 'artwork_approved')->where('project_product_id', $products[0]->id)->firstOrFail();
+        $second = $workflow->steps()->where('step_key', 'artwork_approved')->where('project_product_id', $products[1]->id)->firstOrFail();
+        $this->bypass($first)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('skipped', $first->fresh()->status);
+        $this->assertSame('not_started', $second->fresh()->status);
+        $response = $this->get('/projects/'.$this->project->id.'?tab=workflow')->assertOk();
+        $this->assertSame(16, $response->viewData('tabCounts')['workflow']);
+        $this->assertSame(103, $response->viewData('workflowOpenCheckCount'));
+    }
+
+    public function test_each_history_gate_shows_its_rule_and_product_and_labels_project_gates(): void
+    {
+        $other = ProjectProduct::create(['project_id' => $this->project->id, 'product_name' => 'Carton & <Board>', 'quantity' => 10]);
+        $this->scopeInvoice->items()->create(['project_product_id' => $other->id, 'product_name' => $other->product_name, 'quantity' => 10]);
+        app(ProjectWorkflowExecution::class)->start($this->project->fresh(), $this->admin->id);
+        $response = $this->get('/projects/'.$this->project->id.'?tab=workflow')->assertOk();
+        $response->assertSee('Carton &amp; &lt;Board&gt;', false);
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+        foreach ([$this->product, $other] as $product) {
+            $rows = $xpath->query('//*[@id="workflow-history"]//*[@data-workflow-rule="shipment_dispatched"]//*[@data-workflow-product-id="'.$product->id.'"]');
+            $this->assertCount(1, $rows);
+            $this->assertStringContainsString('Required quantity dispatched', $rows->item(0)->textContent);
+            $this->assertStringContainsString($product->product_name, $rows->item(0)->textContent);
+            $this->assertStringContainsString('Product #'.$product->id, $rows->item(0)->textContent);
+        }
+        $projectGate = $xpath->query('//*[@id="workflow-history"]//*[@data-workflow-rule="dispatch_balance"]//*[@data-workflow-step-id]');
+        $this->assertCount(1, $projectGate);
+        $this->assertStringContainsString('Complete pre-dispatch balance received', $projectGate->item(0)->textContent);
+        $this->assertStringContainsString('Project-level control', $projectGate->item(0)->textContent);
+        $this->assertStringNotContainsString('Carton', $projectGate->item(0)->textContent);
+    }
+
+    public function test_every_readiness_gate_displays_its_own_product_name_and_id(): void
+    {
+        $other = ProjectProduct::create(['project_id' => $this->project->id, 'product_name' => 'Carton & <Board>', 'quantity' => 10]);
+        $this->scopeInvoice->items()->create(['project_product_id' => $other->id, 'product_name' => $other->product_name, 'quantity' => 10]);
+        app(ProjectWorkflowExecution::class)->start($this->project->fresh(), $this->admin->id);
+        $response = $this->get('/projects/'.$this->project->id.'?tab=workflow')->assertOk();
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+        $disclosures = $xpath->query('//*[@data-workflow-view="products"]//details[contains(concat(" ",normalize-space(@class)," ")," workflow-product-disclosure ")]');
+        $this->assertCount(2, $disclosures);
+        foreach ([$this->product, $other] as $index => $product) {
+            $cards = $xpath->query('./div[contains(concat(" ",normalize-space(@class)," ")," project-gate-list ")]/article', $disclosures->item($index));
+            $this->assertCount(6, $cards);
+            foreach ($cards as $card) {
+                $this->assertStringContainsString('Product: '.$product->product_name, $card->textContent);
+                $this->assertStringContainsString('Product #'.$product->id, $card->textContent);
+            }
+        }
+    }
+
+    public function test_current_product_actions_identify_the_product_without_confusing_equal_names(): void
+    {
+        $other = ProjectProduct::create(['project_id' => $this->project->id, 'product_name' => 'Carton', 'quantity' => 10]);
+        $this->scopeInvoice->items()->create(['project_product_id' => $other->id, 'product_name' => 'Carton', 'quantity' => 10]);
+        $workflow = app(ProjectWorkflowExecution::class)->start($this->project->fresh(), $this->admin->id);
+        $workflow->steps()->whereNull('project_product_id')->whereIn('step_key', ['project_setup', 'commercial_baseline', 'advance_received'])->update(['status' => 'completed']);
+        $response = $this->get('/projects/'.$this->project->id.'?tab=workflow')->assertOk();
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+        $cards = $xpath->query('//*[@id="workflow-actions"]//article[contains(concat(" ",normalize-space(@class)," ")," workflow-action-card ")]');
+        $this->assertCount(2, $cards);
+        foreach ([$this->product, $other] as $index => $product) {
+            $this->assertStringContainsString('Carton', $cards->item($index)->textContent);
+            $this->assertStringContainsString('Product #'.$product->id, $cards->item($index)->textContent);
+        }
+    }
+
+    public function test_history_warns_about_existing_exact_duplicates_without_erasing_evidence(): void
+    {
+        $original = $this->project->workflow->steps()->where('project_product_id', $this->product->id)
+            ->where('step_key', 'artwork_approved')->firstOrFail();
+        $copy = $original->replicate();
+        $copy->notes = 'Historical duplicate evidence must survive.';
+        $copy->save();
+        $this->get('/projects/'.$this->project->id.'?tab=workflow')->assertOk()
+            ->assertSee('Potential duplicate workflow records')
+            ->assertSee('Step #'.$original->id)->assertSee('Step #'.$copy->id);
+        $this->assertSame('Historical duplicate evidence must survive.', $copy->fresh()->notes);
+        $this->assertSame(2, $this->project->workflow->steps()->where('project_product_id', $this->product->id)
+            ->where('step_key', 'artwork_approved')->count());
     }
 
 }

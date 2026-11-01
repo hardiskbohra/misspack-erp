@@ -31,7 +31,15 @@
       "file": "tests/Database/MySqlProjectAdminControlsTest.php",
       "methods": [
         "test_native_manual_state_bypass_and_closure_preserve_financial_snapshot",
-        "test_workflow_recalculation_waits_for_a_project_terminal_decision_and_does_not_overwrite_it"
+        "test_workflow_recalculation_waits_for_a_project_terminal_decision_and_does_not_overwrite_it",
+        "test_scope_sync_uses_current_linked_sales_rows_after_waiting_on_a_stale_snapshot",
+        "test_scope_sync_uses_current_legacy_sales_rows_after_waiting_on_a_stale_snapshot",
+        "test_scope_sync_does_not_reactivate_a_cancelled_source_from_a_stale_snapshot",
+        "test_stale_readiness_cannot_reapply_a_bypass_retired_during_sales_reentry",
+        "test_sales_materialization_does_not_pick_a_legacy_name_that_became_ambiguous_while_waiting",
+        "test_purchase_product_materialization_waits_for_the_workflow_project_lock_before_writing",
+        "test_purchase_refresh_finds_a_workflow_started_while_its_snapshot_waited",
+        "test_start_uses_the_workflow_created_while_a_stale_transaction_waited"
       ]
     },
     {
@@ -633,7 +641,12 @@
         "test_manual_state_service_rejects_invalid_values_even_when_called_without_the_http_validator",
         "test_client_portal_shows_published_progress_without_revealing_private_reasons_or_requiring_a_catalogue_product",
         "test_manual_state_is_preserved_across_closure_and_reopening_until_explicitly_cleared",
-        "test_direct_approval_override_service_requires_admin_permission_for_recording_and_revoking"
+        "test_direct_approval_override_service_requires_admin_permission_for_recording_and_revoking",
+        "test_history_groups_product_checks_by_rule_without_merging_individual_decisions",
+        "test_each_history_gate_shows_its_rule_and_product_and_labels_project_gates",
+        "test_every_readiness_gate_displays_its_own_product_name_and_id",
+        "test_current_product_actions_identify_the_product_without_confusing_equal_names",
+        "test_history_warns_about_existing_exact_duplicates_without_erasing_evidence"
       ]
     },
     {
@@ -642,7 +655,34 @@
         "test_start_is_idempotent_and_cancelled_products_do_not_get_new_lanes",
         "test_product_lanes_are_independent_and_repeated_sync_preserves_completed_work",
         "test_financial_terminal_decision_is_not_overwritten_by_workflow_recalculation",
-        "test_regular_mass_assignment_cannot_change_workflow_owned_progress_fields"
+        "test_regular_mass_assignment_cannot_change_workflow_owned_progress_fields",
+        "test_sync_reloads_products_instead_of_reusing_a_stale_loaded_relation"
+      ]
+    },
+    {
+      "file": "tests/Integration/ProjectWorkflowSalesScopeTest.php",
+      "methods": [
+        "test_only_sales_items_create_active_product_rules_and_purchase_history_remains_intact",
+        "test_unlinked_legacy_sales_items_match_only_an_unambiguous_same_project_product",
+        "test_saving_an_invoice_does_not_assign_ambiguous_sales_lines_to_arbitrary_products",
+        "test_saving_an_unchanged_project_preserves_an_unresolved_foreign_product_link",
+        "test_reassigning_an_invoice_requires_an_unambiguous_target_product",
+        "test_sales_source_removal_excludes_checks_and_reentry_requires_a_fresh_bypass",
+        "test_purchase_only_shipment_keeps_physical_safeguards_but_not_sales_approval_rules",
+        "test_edit_removal_cancellation_reassignment_and_deletion_refresh_old_and_new_projects",
+        "test_purchase_only_direct_actions_are_guarded_and_production_is_not_blocked_by_sales_advance",
+        "test_unmatched_sales_lines_block_delivery_reconciliation_but_purchase_only_products_do_not",
+        "test_converted_cash_amount_lines_are_not_mistaken_for_unmatched_products",
+        "test_legacy_cross_project_link_is_never_matched_by_name_and_is_reported",
+        "test_first_sales_link_records_old_unmarked_purchase_scope_and_retires_its_bypass",
+        "test_reentry_revokes_approval_override_and_restores_real_client_decision",
+        "test_purchase_only_shipment_can_pass_only_with_real_packing_quantity_qc_and_documents",
+        "test_purchase_only_override_is_not_an_active_exception_or_scheduled_notification",
+        "test_a_duplicate_completed_approval_does_not_hide_an_unfinished_sales_check",
+        "test_bulk_draft_deletion_removes_only_the_deleted_sales_scope",
+        "test_legacy_catalogue_id_must_match_one_same_project_product",
+        "test_out_of_scope_historical_client_approval_cannot_be_revised_overridden_or_decided",
+        "test_calculated_progress_excludes_purchase_only_history_and_reincludes_sales_items"
       ]
     },
     {
@@ -1316,6 +1356,7 @@
     "app/Services/ProjectWorkflowMatrix.php",
     "app/Services/ProjectWorkflowNotifications.php",
     "app/Services/ProjectWorkflowReturn.php",
+    "app/Services/ProjectWorkflowSalesScope.php",
     "app/Services/PublicShareLinks.php",
     "app/Services/PurchaseBillLedger.php",
     "app/Services/PurchaseInvoiceMoney.php",
@@ -1485,6 +1526,7 @@
     "tools/checks/project-feedback-closure-check.cjs",
     "tools/checks/project-simplification-check.cjs",
     "tools/checks/project-workflow-check.cjs",
+    "tools/checks/project-workflow-grouping-browser.cjs",
     "tools/checks/project-workflow-ux-check.cjs",
     "tools/checks/projects-check.cjs",
     "tools/checks/public-short-links-browser.cjs",

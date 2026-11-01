@@ -28,7 +28,12 @@ class CashInvoiceDeletion
     public function delete(SalesInvoice $invoice): SalesInvoice
     {
         return DB::transaction(function () use ($invoice) {
+            $expectedProjectId = (int) $invoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
             $current = SalesInvoice::findOrFail($invoice->id);
+            if ((int) $current->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before reversing.']);
+            }
             if (! $current->isConvertedCash()) {
                 throw ValidationException::withMessages(['invoice' => 'Only a converted Cash Invoice can use this reversal.']);
             }
@@ -125,6 +130,7 @@ class CashInvoiceDeletion
             foreach ($workflows->unique('id') as $workflow) {
                 app(ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
             }
+            app(ProjectProducts::class)->refreshWorkflow((int) $pi->project_id);
 
             return $pi;
         });
