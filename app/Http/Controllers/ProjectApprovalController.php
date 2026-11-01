@@ -44,21 +44,27 @@ class ProjectApprovalController extends Controller
 
     public function override(Request $request, Project $project, ProjectApprovalRequest $approval, ProjectApprovals $approvals): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
         $this->assertBelongs($project, $approval);
-        $data = $request->validate(['override_reason' => ['required', 'string', 'min:10', 'max:2000']]);
-        $approvals->override($approval, $data['override_reason'], Auth::id());
+        $data = $request->validate([
+            'override_reason' => ['required', 'string', 'min:10', 'max:2000'],
+            'approval_version' => ['required', 'integer', 'min:1'],
+        ]);
+        $approvals->override($approval, $data['override_reason'], Auth::id(), (int) $data['approval_version']);
 
         return back()->with('warning', 'Manager override recorded. The missing client approval remains visible.');
     }
 
     public function revokeOverride(Request $request, Project $project, ProjectApprovalRequest $approval, ProjectApprovals $approvals): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
         $this->assertBelongs($project, $approval);
         abort_unless($approval->hasActiveOverride(), 422, 'This approval has no active override.');
-        $data = $request->validate(['override_revocation_reason' => ['required', 'string', 'min:5', 'max:2000']]);
-        $approvals->revokeOverride($approval, $data['override_revocation_reason'], Auth::id());
+        $data = $request->validate([
+            'override_revocation_reason' => ['required', 'string', 'min:5', 'max:2000'],
+            'override_id' => ['required', 'integer', 'min:1'],
+        ]);
+        $approvals->revokeOverride($approval, $data['override_revocation_reason'], Auth::id(), (int) $data['override_id']);
 
         return back()->with('success', 'Approval override revoked. The product approval step is blocked again.');
     }

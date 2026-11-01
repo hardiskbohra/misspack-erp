@@ -55,63 +55,35 @@ class ProjectWorkflowController extends Controller
         return back()->with('success', 'Financial, product and final-feedback gates evaluated against current source records.');
     }
 
-    public function override(Request $request, Project $project, ProjectGateEvaluation $evaluation, ProjectWorkflowGates $gates, ProjectWorkflowExecution $execution): RedirectResponse
+    public function override(Request $request, Project $project, ProjectGateEvaluation $evaluation, \App\Services\ProjectWorkflowBypass $bypass): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
-        abort_unless($evaluation->workflow?->project_id === $project->id && $evaluation->result === 'blocked', 404);
-        abort_if($evaluation->gate_key === \App\Services\ProjectFinancialClosure::GATE, 422, 'Use the financial closure manager-exception action so the closure decision and risk snapshot are recorded together.');
-        abort_unless($this->isLatestEvaluation($evaluation), 422, 'Only the current gate evaluation can be overridden.');
-        abort_if($evaluation->activeOverride()->exists(), 422, 'This gate already has an active override.');
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
+        abort_unless($evaluation->workflow?->project_id === $project->id, 404);
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:10', 'max:2000'],
             'expected_resolution_date' => ['nullable', 'date'],
         ]);
-        $override = $evaluation->overrides()->create($data + [
-            'risk_snapshot' => $evaluation->details,
-            'approved_by' => Auth::id(),
-            'approved_at' => now(),
-        ]);
-        $evaluation->setRelation('activeOverride', $override);
-        if (in_array($evaluation->gate_key, ProjectOperationalReadiness::CONTROLLED_STEPS, true)) {
-            app(ProjectOperationalReadiness::class)->applyToStep($evaluation);
-            app(ProjectOperationalReadiness::class)->evaluateAll($evaluation->workflow->fresh(), Auth::id());
-        } elseif ($evaluation->gate_key === ProjectFeedbackClosure::GATE) {
-            app(ProjectFeedbackClosure::class)->applyToStep($evaluation);
-            $execution->recalculate($evaluation->workflow);
-        } else {
-            $gates->applyToStep($evaluation);
-            $execution->recalculate($evaluation->workflow);
-        }
+        $bypass->overrideEvaluation($project, $evaluation, Auth::user(), trim($data['reason']), $data['expected_resolution_date'] ?? null);
 
-        return back()->with('warning', 'Manager override recorded. The failed condition remains visible and auditable.');
+        return back()->with('warning', 'Administrator bypass recorded. The failed condition remains visible and auditable.');
     }
 
-    public function revokeOverride(Request $request, Project $project, ProjectGateOverride $override, ProjectWorkflowGates $gates, ProjectWorkflowExecution $execution): RedirectResponse
+    public function revokeOverride(Request $request, Project $project, ProjectGateOverride $override, \App\Services\ProjectWorkflowBypass $bypass): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
-        $evaluation = $override->evaluation;
-        abort_unless($evaluation?->workflow?->project_id === $project->id && ! $override->revoked_at, 404);
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
+        abort_unless($override->evaluation?->workflow?->project_id === $project->id && ! $override->revoked_at, 404);
         $data = $request->validate(['revocation_reason' => ['required', 'string', 'min:5', 'max:2000']]);
-        $override->update($data + ['revoked_by' => Auth::id(), 'revoked_at' => now()]);
-        $evaluation->unsetRelation('activeOverride');
-        if (in_array($evaluation->gate_key, ProjectOperationalReadiness::CONTROLLED_STEPS, true)) {
-            app(ProjectOperationalReadiness::class)->applyToStep($evaluation);
-            app(ProjectOperationalReadiness::class)->evaluateAll($evaluation->workflow->fresh(), Auth::id());
-        } elseif ($evaluation->gate_key === ProjectFeedbackClosure::GATE) {
-            app(ProjectFeedbackClosure::class)->applyToStep($evaluation);
-            app(ProjectFeedbackClosure::class)->sync($evaluation->workflow->fresh(), Auth::id(), false);
-        } else {
-            $gates->applyToStep($evaluation);
-            $execution->recalculate($evaluation->workflow);
-        }
+        $bypass->revoke($project, $override, Auth::user(), trim($data['revocation_reason']));
 
-        return back()->with('success', 'Manager override revoked; the gate is blocked again.');
+        return back()->with('success', 'Administrator bypass revoked. Current source evaluations remain authoritative.');
     }
 
     public function updateStep(Request $request, Project $project, ProjectWorkflowStep $step, ProjectWorkflowExecution $execution): RedirectResponse
     {
         abort_unless($step->workflow?->project_id === $project->id, 404);
         abort_if(in_array($step->step_key, array_merge(ProjectWorkflowGates::AUTOMATED_GATES, ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS, ProjectFeedbackClosure::CONTROLLED_STEPS), true), 422, 'This step is controlled by its current source records or client approval.');
+        $current = \App\Services\ProjectWorkflowBypass::currentEvaluation($step);
+        abort_if(\App\Services\ProjectWorkflowBypass::isSynthetic($current) && $current?->activeOverride, 422, 'Ask an administrator to revoke the active bypass before changing this control.');
         $data = $request->validate([
             'status' => ['required', Rule::in(array_values(array_diff(array_keys(ProjectWorkflowStep::statusOptions()), ['skipped', 'cancelled'])))],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -122,11 +94,4 @@ class ProjectWorkflowController extends Controller
         return back()->with('success', 'Workflow step updated.');
     }
 
-    private function isLatestEvaluation(ProjectGateEvaluation $evaluation): bool
-    {
-        return (int) $evaluation->workflow->evaluations()
-            ->where('gate_key', $evaluation->gate_key)
-            ->where('project_product_id', $evaluation->project_product_id)
-            ->latest('evaluated_at')->latest('id')->value('id') === $evaluation->id;
-    }
 }

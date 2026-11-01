@@ -5,6 +5,7 @@
 --}}
 <section class="master-tab-panel" id="project-panel-overview" role="tabpanel" aria-labelledby="project-tab-overview">
     <div class="project-blocks">
+        @include('projects.partials.admin-controls')
         <div class="project-detail-grid">
             <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-snapshot-heading">
                 <div class="master-section-head">
@@ -39,7 +40,7 @@
                 <div class="master-section-head">
                     <div>
                         <h2 class="master-section-title" id="project-progress-heading">Progress</h2>
-                        <p class="master-sub">Calculated by the Workflow Control Center</p>
+                        <p class="master-sub">{{ $project->manual_progress_percent !== null ? 'Administrator-set progress' : 'Calculated by the Workflow Control Center' }}</p>
                     </div>
                     <div class="master-section-meta"><a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('workflow') }}"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Open workflow</a></div>
                 </div>
@@ -50,7 +51,11 @@
                         </span>
                         <strong>{{ $progress }}%</strong>
                     </div>
-                    <p class="project-fact-note">Only completed or manager-overridden workflow controls contribute to progress.</p>
+                    @if ($project->manual_progress_percent !== null)
+                        <p class="project-fact-note">Administrator-set. Calculated workflow: {{ $workflow?->calculated_progress ?? 0 }}%. Steps and source records are unchanged.</p>
+                    @else
+                        <p class="project-fact-note">Only completed or administrator-overridden workflow controls contribute to calculated progress.</p>
+                    @endif
                 </div>
                 <div class="master-facts">
                     <div class="master-info"><span>Products</span><strong>{{ number_format($project->products->count()) }}</strong></div>

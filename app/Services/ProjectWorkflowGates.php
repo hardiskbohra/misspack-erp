@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Project;
 use App\Models\ProjectGateEvaluation;
 use App\Models\ProjectWorkflow;
 use App\Models\ProjectWorkflowStep;
@@ -19,6 +20,8 @@ class ProjectWorkflowGates
     public function evaluateAll(ProjectWorkflow $workflow, ?int $userId = null): array
     {
         return DB::transaction(function () use ($workflow, $userId) {
+            Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->firstOrFail();
             $workflow->load('commercialInvoice.convertedInvoice');
             $baseline = $workflow->commercialInvoice;
             $invoice = $baseline?->isSuperseded() ? $baseline->convertedInvoice : $baseline;
@@ -116,7 +119,7 @@ class ProjectWorkflowGates
             'notes' => $overridden ? 'Gate continued under manager override #'.$evaluation->activeOverride->id.'.' : $evaluation->summary,
             'actual_started_at' => $step->actual_started_at ?: now(),
             'completed_at' => $passed || $overridden ? now() : null,
-            'completed_by' => $passed || $overridden ? ($evaluation->evaluated_by ?: Auth::id()) : null,
+            'completed_by' => $overridden ? $evaluation->activeOverride->approved_by : ($passed ? ($evaluation->evaluated_by ?: Auth::id()) : null),
         ]);
     }
 

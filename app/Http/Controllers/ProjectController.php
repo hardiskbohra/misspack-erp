@@ -88,7 +88,8 @@ class ProjectController extends Controller
             'total' => (int) $statusCounts->sum(),
             'in_progress' => (int) ($statusCounts['in_progress'] ?? 0),
             'waiting' => (int) ($statusCounts['waiting_client'] ?? 0) + (int) ($statusCounts['waiting_vendor'] ?? 0),
-            'completed' => (int) ($statusCounts['completed'] ?? 0) + (int) ($statusCounts['closed'] ?? 0) + (int) ($statusCounts['closed_with_outstanding_financials'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0) + (int) ($statusCounts['closed'] ?? 0)
+                + (int) ($statusCounts['closed_with_outstanding_financials'] ?? 0) + (int) ($statusCounts['manually_closed'] ?? 0),
         ];
 
         return view('projects.index', array_merge($this->sharedData(), compact(
@@ -334,7 +335,7 @@ class ProjectController extends Controller
         DB::transaction(function () use ($project, $data) {
             $old = $project->only(['name', 'priority', 'health', 'target_date']);
             $project->update($data);
-            $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated. Status, stage and progress remain workflow-controlled.', $old, $project->fresh()->toArray(), false);
+            $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated. Execution state is managed through workflow and administrator controls.', $old, $project->fresh()->toArray(), false);
         });
 
         return redirect()->route('projects.show', $project)->with('success', 'Project updated successfully.');

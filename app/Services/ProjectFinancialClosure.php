@@ -152,42 +152,48 @@ class ProjectFinancialClosure
 
     public function evaluate(ProjectWorkflow $workflow, ?int $userId = null): ProjectGateEvaluation
     {
-        $workflow->loadMissing('project', 'steps');
-        $snapshot = $this->snapshot($workflow->project);
-        $passed = $snapshot['operationally_ready'] && ! $snapshot['has_outstanding_financials'];
-        $summary = ! $snapshot['operationally_ready']
-            ? count($snapshot['open_operational_steps']).' operational workflow step(s) remain open.'
-            : ($snapshot['has_outstanding_financials']
-                ? 'Financial obligations or unapplied project cash remain. Manager exception is required to close.'
-                : 'Operational work and all financial categories are reconciled.');
+        return DB::transaction(function () use ($workflow, $userId) {
+            Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->firstOrFail();
+            $workflow->load('project', 'steps');
+            $snapshot = $this->snapshot($workflow->project);
+            $passed = $snapshot['operationally_ready'] && ! $snapshot['has_outstanding_financials'];
+            $summary = ! $snapshot['operationally_ready']
+                ? count($snapshot['open_operational_steps']).' operational workflow step(s) remain open.'
+                : ($snapshot['has_outstanding_financials']
+                    ? 'Financial obligations or unapplied project cash remain. Manager exception is required to close.'
+                    : 'Operational work and all financial categories are reconciled.');
 
-        $latest = $workflow->evaluations()->where('gate_key', self::GATE)->whereNull('project_product_id')->latest('evaluated_at')->latest('id')->first();
-        if ($latest && hash_equals((string) $latest->content_hash, $snapshot['content_hash'])) {
-            app(ProjectWorkflowGates::class)->applyToStep($latest);
-            return $latest;
-        }
+            $latest = $workflow->evaluations()->where('gate_key', self::GATE)->whereNull('project_product_id')->latest('evaluated_at')->latest('id')->first();
+            if ($latest && hash_equals((string) $latest->content_hash, $snapshot['content_hash'])) {
+                app(ProjectWorkflowGates::class)->applyToStep($latest);
+                app(ProjectWorkflowExecution::class)->recalculate($workflow);
+                return $latest;
+            }
 
-        $evaluation = $workflow->evaluations()->create([
-            'gate_key' => self::GATE,
-            'result' => $passed ? 'passed' : 'blocked',
-            'content_hash' => $snapshot['content_hash'],
-            'summary' => $summary,
-            'details' => $snapshot,
-            'evaluated_by' => $userId,
-            'evaluated_at' => now(),
-        ]);
-        app(ProjectWorkflowGates::class)->applyToStep($evaluation);
-        app(ProjectWorkflowExecution::class)->recalculate($workflow);
+            $evaluation = $workflow->evaluations()->create([
+                'gate_key' => self::GATE,
+                'result' => $passed ? 'passed' : 'blocked',
+                'content_hash' => $snapshot['content_hash'],
+                'summary' => $summary,
+                'details' => $snapshot,
+                'evaluated_by' => $userId,
+                'evaluated_at' => now(),
+            ]);
+            app(ProjectWorkflowGates::class)->applyToStep($evaluation);
+            app(ProjectWorkflowExecution::class)->recalculate($workflow);
 
-        return $evaluation;
+            return $evaluation;
+        });
     }
 
     public function close(Project $project, int $userId, bool $acceptOutstanding = false, ?string $reason = null, ?string $expectedDate = null): Closure
     {
         return DB::transaction(function () use ($project, $userId, $acceptOutstanding, $reason, $expectedDate) {
             $locked = Project::query()->lockForUpdate()->findOrFail($project->id);
-            if ($locked->status === 'closed' || ($acceptOutstanding && in_array($locked->status, Project::closureStatuses(), true))) {
-                throw ValidationException::withMessages(['closure' => 'This project already has the requested financial closure. Reopen it before recording another exception.']);
+            if ($locked->status === 'closed' || $locked->status === Closure::TYPE_MANUAL
+                || ($acceptOutstanding && in_array($locked->status, Project::closureStatuses(), true))) {
+                throw ValidationException::withMessages(['closure' => 'This project already has a closure decision. Reopen it before recording another exception.']);
             }
             $workflow = $locked->workflow()->with('steps')->firstOrFail();
             $evaluation = $this->evaluate($workflow, $userId)->fresh('activeOverride');
@@ -230,11 +236,12 @@ class ProjectFinancialClosure
                 'approved_by' => $userId,
                 'closed_at' => now(),
             ]);
-            $locked->forceFill([
+            $closedState = [
                 'status' => $acceptOutstanding ? Closure::TYPE_OUTSTANDING : 'closed',
                 'stage' => 'closed',
                 'completed_at' => now(),
-            ])->save();
+            ];
+            $locked->forceFill($closedState)->save();
             app(ProjectWorkflowExecution::class)->recalculate($workflow);
             $this->writeAudit($locked, $userId, 'financial_closure', $acceptOutstanding ? 'Project closed with outstanding financials' : 'Project financially closed', $reason, [
                 'closure_id' => $closure->id, 'closure_type' => $type, 'content_hash' => $snapshot['content_hash'],
@@ -246,12 +253,55 @@ class ProjectFinancialClosure
         });
     }
 
+    /** Close the project itself without claiming that its financial gate passed. */
+    public function manualClose(Project $project, User $actor, string $reason): Closure
+    {
+        abort_unless($actor->canOverrideProjects(), 403);
+        if (mb_strlen(trim($reason)) < 20) {
+            throw ValidationException::withMessages(['reason' => 'Explain the accepted risk and follow-up in at least 20 characters.']);
+        }
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('projects', 'manual_status')) {
+            throw ValidationException::withMessages(['closure' => 'Run the project administrator controls migration before manually closing.']);
+        }
+
+        return DB::transaction(function () use ($project, $actor, $reason) {
+            $locked = Project::query()->lockForUpdate()->findOrFail($project->id);
+            if (in_array($locked->status, Project::closureStatuses(), true)) {
+                throw ValidationException::withMessages(['closure' => 'This project is already closed. Reopen it before recording another decision.']);
+            }
+            // Older projects can lack a workflow. Start the standard path so the
+            // snapshot honestly includes the controls still open at closure.
+            $workflow = $locked->workflow()->with('steps')->first()
+                ?: app(ProjectWorkflowExecution::class)->start($locked, $actor->id);
+            $evaluation = $this->evaluate($workflow, $actor->id)->fresh();
+            $snapshot = $evaluation->details;
+            $closure = Closure::query()->create([
+                'project_id' => $locked->id, 'project_workflow_id' => $workflow->id,
+                'closure_type' => Closure::TYPE_MANUAL, 'content_hash' => $snapshot['content_hash'],
+                'financial_snapshot' => $snapshot, 'reason' => $reason,
+                'approved_by' => $actor->id, 'closed_at' => now(),
+            ]);
+            $locked->forceFill([
+                'status' => Closure::TYPE_MANUAL, 'stage' => 'closure', 'completed_at' => now(),
+            ])->save();
+            app(ProjectWorkflowExecution::class)->recalculate($workflow);
+            $this->writeAudit($locked, $actor->id, 'manual_closure', 'Project manually closed', $reason, [
+                'closure_id' => $closure->id, 'closure_type' => Closure::TYPE_MANUAL,
+                'content_hash' => $snapshot['content_hash'], 'totals' => $snapshot['totals'],
+                'open_operational_steps' => $snapshot['open_operational_steps'],
+            ]);
+            // Incomplete commercial controls remain blocked; do not issue a
+            // close-out feedback request or pretend the source gate passed.
+            return $closure;
+        });
+    }
+
     public function reopen(Project $project, int $userId, string $reason): Closure
     {
         return DB::transaction(function () use ($project, $userId, $reason) {
             $locked = Project::query()->lockForUpdate()->findOrFail($project->id);
-            if (! in_array($locked->status, ['closed', Closure::TYPE_OUTSTANDING], true)) {
-                throw ValidationException::withMessages(['closure' => 'Only a financially closed project can be reopened.']);
+            if (! in_array($locked->status, Project::closureStatuses(), true)) {
+                throw ValidationException::withMessages(['closure' => 'Only a closed project can be reopened.']);
             }
             $workflow = $locked->workflow()->with('steps')->firstOrFail();
             $snapshot = $this->snapshot($locked);

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PackagingList;
+use App\Models\Project;
 use App\Models\ProjectGateEvaluation;
 use App\Models\ProjectProduct;
 use App\Models\ProjectWorkflow;
@@ -37,7 +38,9 @@ class ProjectOperationalReadiness
     public function evaluateAll(ProjectWorkflow $workflow, ?int $userId = null): array
     {
         return DB::transaction(function () use ($workflow, $userId) {
-            $workflow->loadMissing('project.products.qualityInspections');
+            Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->firstOrFail();
+            $workflow->load('project.products.qualityInspections');
             app(ProjectWorkflowExecution::class)->sync($workflow, $workflow->project);
             $evaluations = [];
             $deliveryEvidence = [];
@@ -250,7 +253,7 @@ class ProjectOperationalReadiness
             'notes'=>$overridden ? 'Gate continued under manager override #'.$evaluation->activeOverride->id.'.' : $evaluation->summary,
             'actual_started_at'=>($step->actual_started_at ?: now()),
             'completed_at'=>(($passed || $overridden) ? now() : null),
-            'completed_by'=>(($passed || $overridden) ? ($evaluation->evaluated_by ?: Auth::id()) : null),
+            'completed_by'=>$overridden ? $evaluation->activeOverride->approved_by : ($passed ? ($evaluation->evaluated_by ?: Auth::id()) : null),
         ]);
     }
 }

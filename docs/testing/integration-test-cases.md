@@ -511,7 +511,7 @@ Sources: `app/Http/Controllers/LeadController.php`, `app/Http/Controllers/LeadCo
 
 ## Project master and product lanes (`PROJECT`)
 
-Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProducts.php`, `app/Models/Project.php`.
+Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProducts.php`, `app/Models/Project.php`, `app/Services/ProjectAdminState.php`, `app/Http/Controllers/ProjectAdminController.php`.
 
 ### IT-PROJECT-001 — Project product edits preserve snapshot identity
 
@@ -572,9 +572,24 @@ Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProd
 
 **Evidence:** `tests/Integration/ThreeDecimalPrecisionTest.php#test_invoice_product_snapshot_preserves_the_three_decimal_rate`
 
+### IT-PROJECT-006 — Persistent admin project state and manual closure preserve source obligations
+
+**Priority:** P0 · **Requirement:** REQ-PROJECT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema; project with a product, client and outstanding invoice
+- **Data:** Independent status and 0–100 progress, incomplete workflow and INR receivable
+1. Set and clear administrator values across recalculations and legacy projects
+2. Attempt changes as restricted or non-admin users
+3. Manually close with acknowledgement, inspect immutable snapshot, then reopen
+4. Check native database serialization and the guarded downgrade
+
+**Expected:** Only the authorized administrator can decide; calculated state remains separate, manual values persist until cleared and open sources remain active.
+
+**Evidence:** `tests/Integration/ProjectAdminControlsTest.php#test_manual_state_persists_through_recalculation_and_can_be_independently_cleared`; `tests/Integration/ProjectAdminControlsTest.php#test_state_closure_and_step_bypass_require_an_admin_with_the_sensitive_permission`; `tests/Integration/ProjectAdminControlsTest.php#test_manual_closure_preserves_open_work_outstanding_money_and_reopening_history`; `tests/Integration/ProjectAdminControlsTest.php#test_a_legacy_project_restores_its_prior_state_and_can_be_manually_closed_without_a_workflow`; `tests/Integration/ProjectAdminControlsTest.php#test_schema_downgrade_refuses_to_erase_active_or_soft_deleted_decisions`; `tests/Database/MySqlProjectAdminControlsTest.php#test_workflow_recalculation_waits_for_a_project_terminal_decision_and_does_not_overwrite_it`; `tests/Integration/ProjectAdminControlsTest.php#test_manual_state_is_preserved_across_closure_and_reopening_until_explicitly_cleared`; `tests/Integration/ProjectAdminControlsTest.php#test_client_portal_shows_published_progress_without_revealing_private_reasons_or_requiring_a_catalogue_product`
+
 ## Execution, approvals, gates and financial closure (`WORKFLOW`)
 
-Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`.
+Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`, `app/Services/ProjectWorkflowBypass.php`, `app/Services/ProjectApprovals.php`.
 
 ### IT-WORKFLOW-001 — Starting workflow twice is idempotent
 
@@ -668,6 +683,21 @@ Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkf
 **Expected:** The INR 0.001 receivable remains visible and financial closure is not incorrectly marked complete.
 
 **Evidence:** `tests/Integration/ThreeDecimalPrecisionTest.php#test_financial_closure_detects_a_thousandth_balance_and_client_summary_preserves_it`
+
+### IT-WORKFLOW-008 — Individually audited and source-scoped project rule bypasses
+
+**Priority:** P0 · **Requirement:** REQ-WORKFLOW · **Implementation:** linked executable evidence
+
+- **Preconditions:** Project workflow with blocked or missing controls and linked production and shipment actions
+- **Data:** Approval versions, current and stale evaluations, restricted actors and injected write failures
+1. Record and revoke individual admin bypasses without altering source records
+2. Create or revise client approval and refresh changed source facts
+3. Exercise linked production and dispatch before and after matching overrides
+4. Try stale, foreign and unauthorized requests and inject a failed audit write
+
+**Expected:** Every bypass is individually authorized and auditable, newer facts supersede old decisions, linked actions honor current evidence and unrelated validation remains intact.
+
+**Evidence:** `tests/Integration/ProjectAdminControlsTest.php#test_each_project_step_can_be_individually_bypassed_and_source_data_is_not_falsified`; `tests/Integration/ProjectAdminControlsTest.php#test_a_stale_missing_request_or_approval_version_cannot_authorize_or_revoke_a_newer_client_file`; `tests/Integration/ProjectAdminControlsTest.php#test_advance_bypass_enables_the_linked_production_action_only_until_source_facts_change`; `tests/Integration/ProjectAdminControlsTest.php#test_individual_dispatch_bypasses_enable_only_the_linked_shipment_with_matching_evidence`; `tests/Integration/ProjectAdminControlsTest.php#test_bypass_creation_and_revocation_are_atomic_when_a_later_write_fails`; `tests/Integration/ProjectAdminControlsTest.php#test_direct_versioned_approval_override_and_revocation_roll_back_when_step_updates_fail`; `tests/Integration/ProjectAdminControlsTest.php#test_direct_approval_override_service_requires_admin_permission_for_recording_and_revoking`
 
 ## Quality inspection and sampling (`QC`)
 

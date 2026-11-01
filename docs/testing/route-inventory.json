@@ -3404,6 +3404,19 @@
             ]
         },
         {
+            "name": "projects.admin-state",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/{project}/admin-state",
+            "action": "App\\Http\\Controllers\\ProjectAdminController@state",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "projects.approvals.store",
             "methods": [
                 "POST"
@@ -3613,6 +3626,19 @@
             ]
         },
         {
+            "name": "projects.workflow.financial-closure.manual-close",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/financial-closure/manual-close",
+            "action": "App\\Http\\Controllers\\ProjectFinancialClosureController@manualClose",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "projects.workflow.financial-closure.reopen",
             "methods": [
                 "POST"
@@ -3671,6 +3697,19 @@
             ],
             "uri": "projects/{project}/workflow/steps/{step}",
             "action": "App\\Http\\Controllers\\ProjectWorkflowController@updateStep",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.steps.bypass",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/steps/{step}/bypass",
+            "action": "App\\Http\\Controllers\\ProjectAdminController@bypass",
             "middleware": [
                 "web",
                 "auth",

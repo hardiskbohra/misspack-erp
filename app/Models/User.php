@@ -118,6 +118,12 @@ class User extends Authenticatable
         return $this->role !== self::ROLE_EMPLOYEE;
     }
 
+    /** Sensitive project bypasses require the actual admin role and permission. */
+    public function canOverrideProjects(): bool
+    {
+        return $this->role === self::ROLE_ADMIN && $this->hasPermission('projects.override');
+    }
+
     /**
      * Whether the password must be followed by a code at the door.
      *

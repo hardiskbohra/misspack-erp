@@ -27,6 +27,8 @@ class Project extends Model
         'target_date' => 'date',
         'completed_at' => 'datetime',
         'progress_percent' => 'integer',
+        'manual_progress_percent' => 'integer',
+        'manual_progress_previous' => 'integer',
         'show_client_portal' => 'boolean',
     ];
 
@@ -378,7 +380,13 @@ class Project extends Model
 
     public static function closureStatuses(): array
     {
-        return ['closed', 'closed_with_outstanding_financials'];
+        return ['closed', 'closed_with_outstanding_financials', 'manually_closed'];
+    }
+
+    /** Financial and manual closure are separate audited decisions, not dropdown values. */
+    public static function manualStatusOptions(): array
+    {
+        return array_diff_key(self::statusOptions(), array_fill_keys(self::closureStatuses(), true));
     }
 
     public static function statusOptions(): array
@@ -393,6 +401,7 @@ class Project extends Model
             'completed' => 'Completed',
             'closed' => 'Financially Closed',
             'closed_with_outstanding_financials' => 'Closed with Outstanding Financials',
+            'manually_closed' => 'Manually closed',
             'cancelled' => 'Cancelled',
         ];
     }

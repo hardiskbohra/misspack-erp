@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PackagingList;
+use App\Models\Project;
 use App\Models\ShipmentItem;
 use App\Models\ProjectGateEvaluation;
 use App\Models\ProjectProduct;
@@ -10,6 +11,7 @@ use App\Models\ProjectQualityInspection;
 use App\Models\ProjectWorkflow;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Shipment;
+use Illuminate\Support\Facades\DB;
 
 class ShipmentDispatchAuthorization
 {
@@ -23,23 +25,26 @@ class ShipmentDispatchAuthorization
 
     public function evaluate(Shipment $shipment, ProjectWorkflow $workflow, array $rows, ?int $userId = null): ProjectGateEvaluation
     {
-        $details = $this->inspect($shipment, $workflow, $rows);
-        $passed = $details['issues'] === [];
-        $summary = $passed
-            ? 'Shipment quantities are covered by confirmed linked Packaging Lists, QC, approvals and Project dispatch documents.'
-            : count($details['issues']).' dispatch authorization issue(s): '.implode(' ', $details['issues']);
-        $hash = hash('sha256', json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        $latest = $workflow->evaluations()->whereNull('project_product_id')->where('gate_key', self::GATE_KEY)->latest('evaluated_at')->latest('id')->first();
-        $evaluation = $latest && hash_equals((string) $latest->content_hash, $hash)
-            ? $latest
-            : $workflow->evaluations()->create([
-                'project_product_id'=>null, 'gate_key'=>self::GATE_KEY,
-                'result'=>$passed ? 'passed' : 'blocked', 'content_hash'=>$hash,
-                'summary'=>$summary, 'details'=>$details, 'evaluated_by'=>$userId, 'evaluated_at'=>now(),
-            ]);
-        app(ProjectWorkflowGates::class)->applyToStep($evaluation);
-        app(ProjectWorkflowExecution::class)->recalculate($workflow);
-        return $evaluation;
+        return DB::transaction(function () use ($shipment, $workflow, $rows, $userId) {
+            Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $details = $this->inspect($shipment, $workflow, $rows);
+            $passed = $details['issues'] === [];
+            $summary = $passed
+                ? 'Shipment quantities are covered by confirmed linked Packaging Lists, QC, approvals and Project dispatch documents.'
+                : count($details['issues']).' dispatch authorization issue(s): '.implode(' ', $details['issues']);
+            $hash = hash('sha256', json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $latest = $workflow->evaluations()->whereNull('project_product_id')->where('gate_key', self::GATE_KEY)->latest('evaluated_at')->latest('id')->first();
+            $evaluation = $latest && hash_equals((string) $latest->content_hash, $hash)
+                ? $latest
+                : $workflow->evaluations()->create([
+                    'project_product_id'=>null, 'gate_key'=>self::GATE_KEY,
+                    'result'=>$passed ? 'passed' : 'blocked', 'content_hash'=>$hash,
+                    'summary'=>$summary, 'details'=>$details, 'evaluated_by'=>$userId, 'evaluated_at'=>now(),
+                ]);
+            app(ProjectWorkflowGates::class)->applyToStep($evaluation);
+            app(ProjectWorkflowExecution::class)->recalculate($workflow);
+            return $evaluation;
+        });
     }
 
     public function inspect(Shipment $shipment, ProjectWorkflow $workflow, array $rows, bool $lockSources = false): array

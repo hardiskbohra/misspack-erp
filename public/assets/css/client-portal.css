@@ -357,6 +357,8 @@ body {
 }
 
 .status-pending,
+.status-manually_closed,
+.status-closed_with_outstanding_financials,
 .status-unpaid,
 .status-waiting_client,
 .status-waiting_vendor,

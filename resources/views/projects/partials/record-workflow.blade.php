@@ -17,7 +17,8 @@
                 $blockedActions = $currentActions->where('is_blocked', true)->count();
                 $waitingActions = $currentActions->where('is_waiting', true)->count();
                 $overdueActions = $currentActions->where('is_overdue', true)->count();
-                $activeOverrides = $workflow->evaluations->filter(fn($evaluation) => $evaluation->activeOverride)->count();
+                $activeOverrides = $workflow->evaluations->filter(fn($evaluation) => $evaluation->activeOverride)->count()
+                    + $workflow->approvals->filter(fn($approval) => $approval->hasActiveOverride())->count();
                 $workflowSettings = \App\Models\OfficeSetting::workflow();
                 $defaultApprovalDue = now()->addDays((int)data_get($workflowSettings, 'deadlines.approval_response_days', 5))->format('Y-m-d\\TH:i');
             @endphp
@@ -249,9 +250,9 @@
                                     @if($evaluation->activeOverride)<div class="project-gate-override"><strong>Manager override by {{ $evaluation->activeOverride->approver?->name ?: 'Administrator' }}</strong><span>{{ $evaluation->activeOverride->reason }}</span>@if($evaluation->activeOverride->expected_resolution_date)<small>Expected resolution {{ $evaluation->activeOverride->expected_resolution_date->format('d M Y') }}</small>@endif</div>@endif
                                 </div>
                                 <div class="project-gate-actions">
-                                    @if($evaluation->result==='blocked' && !$evaluation->activeOverride && auth()->user()?->isAdmin())
+                                    @if($evaluation->result==='blocked' && !$evaluation->activeOverride && !\App\Services\ProjectWorkflowBypass::isSynthetic($evaluation) && auth()->user()?->canOverrideProjects())
                                         <details><summary class="master-btn master-btn-soft master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.workflow.gates.override',[$project,$evaluation]) }}">@csrf<textarea class="master-textarea" name="reason" rows="3" minlength="10" maxlength="2000" required placeholder="Risk and reason for proceeding"></textarea><input class="master-input" type="date" name="expected_resolution_date" aria-label="Expected resolution date"><button class="master-btn master-btn-primary master-btn-sm" type="submit">Approve override</button></form></details>
-                                    @elseif($evaluation->activeOverride && auth()->user()?->isAdmin())
+                                    @elseif($evaluation->activeOverride && auth()->user()?->canOverrideProjects())
                                         <details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$evaluation->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" rows="2" minlength="5" maxlength="2000" required placeholder="Why this override is revoked"></textarea><button class="master-btn master-btn-light master-btn-sm" type="submit">Revoke</button></form></details>
                                     @endif
                                 </div>
@@ -259,7 +260,7 @@
                         @endforeach
                     </div>
                     @if($previousGates->isNotEmpty())
-                        <details class="project-gate-history"><summary>Previous gate evaluations ({{ $previousGates->count() }})</summary><div>@foreach($previousGates->take(12) as $pastGate)<span><strong>{{ $pastGate->gateLabel() }}</strong><small>{{ $pastGate->resultLabel() }} · {{ $pastGate->evaluated_at?->format('d M Y, H:i') }}</small><em>{{ $pastGate->summary }}</em>@if($pastGate->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-light master-btn-sm">Resolve old override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$pastGate->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" rows="2" minlength="5" maxlength="2000" required placeholder="How the accepted risk was resolved"></textarea><button class="master-btn master-btn-light master-btn-sm" type="submit">Record resolution</button></form></details>@endif</span>@endforeach</div></details>
+                        <details class="project-gate-history"><summary>Previous gate evaluations ({{ $previousGates->count() }})</summary><div>@foreach($previousGates->take(12) as $pastGate)<span><strong>{{ $pastGate->gateLabel() }}</strong><small>{{ $pastGate->resultLabel() }} · {{ $pastGate->evaluated_at?->format('d M Y, H:i') }}</small><em>{{ $pastGate->summary }}</em>@if($pastGate->activeOverride && auth()->user()?->canOverrideProjects())<details><summary class="master-btn master-btn-light master-btn-sm">Resolve old override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$pastGate->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" rows="2" minlength="5" maxlength="2000" required placeholder="How the accepted risk was resolved"></textarea><button class="master-btn master-btn-light master-btn-sm" type="submit">Record resolution</button></form></details>@endif</span>@endforeach</div></details>
                     @endif
                 @endif
             </section>
@@ -275,8 +276,8 @@
                             @if($approval->hasActiveOverride())<div class="project-approval-override"><strong>Manager override by {{ $approval->activeOverrideRecord()?->approver?->name ?: 'Administrator' }}</strong><span>{{ $approval->activeOverrideRecord()?->reason }}</span></div>@endif
                             <div class="project-approval-actions">
                                 <details><summary class="master-btn master-btn-soft master-btn-sm">Add revision</summary><form method="POST" enctype="multipart/form-data" action="{{ route('projects.approvals.versions.store',[$project,$approval]) }}">@csrf<input class="master-input" type="file" name="approval_file" required><input class="master-input" type="datetime-local" name="response_due_at" value="{{ $defaultApprovalDue }}"><textarea class="master-textarea" name="submission_notes" rows="2" placeholder="What changed"></textarea><button class="master-btn master-btn-primary master-btn-sm">Send new version</button></form></details>
-                                @if(auth()->user()?->isAdmin() && $approval->status!=='approved' && !$approval->hasActiveOverride())<details><summary class="master-btn master-btn-light master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.approvals.override',[$project,$approval]) }}">@csrf<textarea class="master-textarea" name="override_reason" minlength="10" maxlength="2000" required placeholder="Reason and accepted risk"></textarea><button class="master-btn master-btn-primary master-btn-sm">Approve override</button></form></details>@endif
-                                @if(auth()->user()?->isAdmin() && $approval->hasActiveOverride())<details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.approvals.override.revoke',[$project,$approval]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="override_revocation_reason" minlength="5" maxlength="2000" required placeholder="Reason for revocation"></textarea><button class="master-btn master-btn-light master-btn-sm">Revoke</button></form></details>@endif
+                                @if(auth()->user()?->canOverrideProjects() && $approval->status!=='approved' && !$approval->hasActiveOverride())<details><summary class="master-btn master-btn-light master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.approvals.override',[$project,$approval]) }}">@csrf<input type="hidden" name="approval_version" value="{{ $approval->current_version_number }}"><textarea class="master-textarea" name="override_reason" minlength="10" maxlength="2000" required placeholder="Reason and accepted risk"></textarea><button class="master-btn master-btn-primary master-btn-sm">Approve override</button></form></details>@endif
+                                @if(auth()->user()?->canOverrideProjects() && $approval->hasActiveOverride())<details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.approvals.override.revoke',[$project,$approval]) }}">@csrf @method('PATCH')<input type="hidden" name="override_id" value="{{ $approval->activeOverrideRecord()?->id }}"><textarea class="master-textarea" name="override_revocation_reason" minlength="5" maxlength="2000" required placeholder="Reason for revocation"></textarea><button class="master-btn master-btn-light master-btn-sm">Revoke</button></form></details>@endif
                                 <details><summary>Version history</summary><div class="project-approval-history">@foreach($approval->versions as $version)<span><strong>Version {{ $version->version_number }} · {{ $version->statusLabel() }}</strong><small>{{ $version->submitted_at?->format('d M Y, H:i') }}@if($version->clientUser) · {{ $version->clientUser->displayName() }}@endif</small>@if($version->client_comment)<em>{{ $version->client_comment }}</em>@endif</span>@endforeach</div></details>
                             </div>
                         </article>
@@ -312,8 +313,8 @@
                     <div class="project-gate-icon"><i class="fa-solid {{ $deliveryResult==='passed' ? 'fa-circle-check' : ($deliveryResult==='overridden' ? 'fa-triangle-exclamation' : 'fa-truck-ramp-box') }}"></i></div>
                     <div class="project-gate-copy"><div><strong>Project delivery reconciliation</strong><span class="master-badge is-{{ $deliveryResult }}">{{ $deliveryReconciliation?->resultLabel() ?: 'Not evaluated' }}</span></div><p>{{ $deliveryReconciliation?->summary ?: 'Refresh readiness to reconcile delivered quantities across all active products.' }}</p></div>
                     <div class="project-gate-actions">
-                        @if($deliveryReconciliation && $deliveryReconciliation->result==='blocked' && !$deliveryReconciliation->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-soft master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.workflow.gates.override',[$project,$deliveryReconciliation]) }}">@csrf<textarea class="master-textarea" name="reason" rows="3" minlength="10" maxlength="2000" required placeholder="Risk and reason for reconciling delivery"></textarea><input class="master-input" type="date" name="expected_resolution_date"><button class="master-btn master-btn-primary master-btn-sm">Approve override</button></form></details>
-                        @elseif($deliveryReconciliation?->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$deliveryReconciliation->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" minlength="5" maxlength="2000" required></textarea><button class="master-btn master-btn-light master-btn-sm">Revoke</button></form></details>@endif
+                        @if($deliveryReconciliation && $deliveryReconciliation->result==='blocked' && !$deliveryReconciliation->activeOverride && auth()->user()?->canOverrideProjects())<details><summary class="master-btn master-btn-soft master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.workflow.gates.override',[$project,$deliveryReconciliation]) }}">@csrf<textarea class="master-textarea" name="reason" rows="3" minlength="10" maxlength="2000" required placeholder="Risk and reason for reconciling delivery"></textarea><input class="master-input" type="date" name="expected_resolution_date"><button class="master-btn master-btn-primary master-btn-sm">Approve override</button></form></details>
+                        @elseif($deliveryReconciliation?->activeOverride && auth()->user()?->canOverrideProjects())<details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$deliveryReconciliation->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" minlength="5" maxlength="2000" required></textarea><button class="master-btn master-btn-light master-btn-sm">Revoke</button></form></details>@endif
                     </div>
                 </article>
                 <div class="project-approval-list">
@@ -343,8 +344,8 @@
                                             @if($evaluation?->activeOverride)<div class="project-gate-override"><strong>Manager override by {{ $evaluation->activeOverride->approver?->name ?: 'Administrator' }}</strong><span>{{ $evaluation->activeOverride->reason }}</span></div>@endif
                                         </div>
                                         <div class="project-gate-actions">
-                                            @if($evaluation && $evaluation->result==='blocked' && !$evaluation->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-soft master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.workflow.gates.override',[$project,$evaluation]) }}">@csrf<textarea class="master-textarea" name="reason" rows="3" minlength="10" maxlength="2000" required placeholder="Risk and reason for proceeding"></textarea><input class="master-input" type="date" name="expected_resolution_date"><button class="master-btn master-btn-primary master-btn-sm">Approve override</button></form></details>
-                                            @elseif($evaluation?->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$evaluation->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" minlength="5" maxlength="2000" required></textarea><button class="master-btn master-btn-light master-btn-sm">Revoke</button></form></details>@endif
+                                            @if($evaluation && $evaluation->result==='blocked' && !$evaluation->activeOverride && auth()->user()?->canOverrideProjects())<details><summary class="master-btn master-btn-soft master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.workflow.gates.override',[$project,$evaluation]) }}">@csrf<textarea class="master-textarea" name="reason" rows="3" minlength="10" maxlength="2000" required placeholder="Risk and reason for proceeding"></textarea><input class="master-input" type="date" name="expected_resolution_date"><button class="master-btn master-btn-primary master-btn-sm">Approve override</button></form></details>
+                                            @elseif($evaluation?->activeOverride && auth()->user()?->canOverrideProjects())<details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$evaluation->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" minlength="5" maxlength="2000" required></textarea><button class="master-btn master-btn-light master-btn-sm">Revoke</button></form></details>@endif
                                         </div>
                                     </article>
                                 @endforeach
@@ -376,7 +377,7 @@
 
             @include('projects.partials.financial-closure')
 
-            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="history" role="tabpanel" aria-labelledby="workflow-tab-history" hidden>
+            <section id="workflow-history" class="master-card master-card--flat master-section project-detail-card" data-workflow-view="history" role="tabpanel" aria-labelledby="workflow-tab-history" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Standard execution path · History & manual controls</h2><p class="master-sub">The complete standard path remains available for audit and controlled manual updates.</p></div></div>
                 <div class="workflow-history-toolbar"><span><i class="fa-solid fa-clock-rotate-left"></i> Complete workflow evidence</span><small>Completed and future stages are grouped below for audit and controlled updates.</small></div>
                 <div class="project-workflow-stages">
@@ -390,8 +391,12 @@
                                 <summary><div><span>{{ str_pad((string)$loop->iteration,2,'0',STR_PAD_LEFT) }}</span><div><h3>{{ $stageLabel }}</h3><p>{{ $stageDone }} of {{ $stageSteps->count() }} steps complete</p></div></div><strong>{{ $stageSteps->count() ? round($stageDone/$stageSteps->count()*100) : 0 }}%</strong><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
                                 <div class="project-workflow-step-list">
                                     @foreach($stageSteps as $step)
-                                        @if(in_array($step->step_key, array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS), true))
-                                            <div class="project-workflow-step is-automated"><div class="project-workflow-step-copy"><i class="fa-solid {{ in_array($step->status,['completed','skipped']) ? 'fa-circle-check' : ($step->status==='blocked' ? 'fa-circle-xmark' : 'fa-circle') }}"></i><div><strong>{{ $step->title }}</strong><span>{{ in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) ? 'Client approval' : 'Automated gate' }} · {{ $step->statusLabel() }}</span>@if($step->blocked_reason)<small>{{ $step->blocked_reason }}</small>@endif</div></div><span class="master-badge">Controlled by {{ in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) ? 'approval version' : 'gate checks' }}</span></div>
+                                        @php
+                                            $stepEvaluation = $workflow->evaluations->first(fn ($row) => $row->gate_key === $step->step_key && (int) ($row->project_product_id ?? 0) === (int) ($step->project_product_id ?? 0));
+                                            $syntheticBypass = \App\Services\ProjectWorkflowBypass::isSynthetic($stepEvaluation) && $stepEvaluation?->activeOverride;
+                                        @endphp
+                                        @if($syntheticBypass || in_array($step->step_key, array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS), true))
+                                            <div class="project-workflow-step is-automated"><div class="project-workflow-step-copy"><i class="fa-solid {{ in_array($step->status,['completed','skipped']) ? 'fa-circle-check' : ($step->status==='blocked' ? 'fa-circle-xmark' : 'fa-circle') }}"></i><div><strong>{{ $step->title }}</strong><span>{{ in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) ? 'Client approval' : 'Automated gate' }} · {{ $step->statusLabel() }}</span>@if($step->blocked_reason)<small>{{ $step->blocked_reason }}</small>@endif</div></div><span class="master-badge">{{ $syntheticBypass ? 'Administrator bypass active' : (in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) ? 'Controlled by approval version' : 'Controlled by gate checks') }}</span></div>
                                         @else
                                             <form method="POST" action="{{ route('projects.workflow.steps.update',[$project,$step]) }}" class="project-workflow-step">@csrf @method('PATCH')
                                                 <div class="project-workflow-step-copy"><i class="fa-solid {{ in_array($step->status,['completed','skipped']) ? 'fa-circle-check' : ($step->status==='blocked' ? 'fa-circle-xmark' : 'fa-circle') }}"></i><div><strong>{{ $step->title }}</strong><span>{{ $step->product ? $step->product->product_name : 'Project-level control' }} · {{ $step->owner?->name ?: 'Coordinator unassigned' }}</span>@if($step->blocked_reason)<small>{{ $step->blocked_reason }}</small>@endif</div></div>
@@ -406,6 +411,55 @@
                                                 <button class="master-btn master-btn-soft master-btn-sm" type="submit">Update</button>
                                             </form>
                                         @endif
+                                        @if (auth()->user()?->canOverrideProjects())
+                                            @php
+                                                $stepApprovalType = ['artwork_approved' => 'artwork', 'pps_approved' => 'pps'][$step->step_key] ?? null;
+                                                $stepApproval = $stepApprovalType ? $workflow->approvals->first(fn ($row) => $row->approval_type === $stepApprovalType && (int) $row->project_product_id === (int) $step->project_product_id && $row->status !== 'revoked') : null;
+                                                $approvalBypass = $stepApproval?->activeOverrideRecord();
+                                            @endphp
+                                            <div class="project-admin-bypass">
+                                                @if ($approvalBypass || $stepEvaluation?->activeOverride)
+                                                    @php($decision = $approvalBypass ?: $stepEvaluation->activeOverride)
+                                                    <p class="master-help"><strong>Administrator bypass by {{ $decision->approver?->name ?: 'Administrator' }}</strong> · {{ $decision->approved_at?->format('d M Y, H:i') }}<br>{{ $decision->reason }}</p>
+                                                @endif
+                                                @if ($step->step_key === \App\Services\ProjectFinancialClosure::GATE)
+                                                    <a class="master-btn master-btn-light master-btn-sm" href="{{ route('projects.show', ['project' => $project, 'tab' => 'overview']) }}#project-admin-controls">Manual closure options</a>
+                                                @elseif ($approvalBypass)
+                                                    <details>
+                                                        <summary class="master-btn master-btn-light master-btn-sm">Revoke administrator bypass</summary>
+                                                        <form method="POST" action="{{ route('projects.approvals.override.revoke', [$project, $stepApproval]) }}" class="project-inline-form">@csrf @method('PATCH')
+                                                            <input type="hidden" name="override_id" value="{{ $approvalBypass->id }}">
+                                                            <label class="master-field"><span class="master-label">Reason for revocation</span><textarea class="master-textarea" name="override_revocation_reason" rows="2" minlength="5" maxlength="2000" required></textarea></label>
+                                                            <button class="master-btn master-btn-light master-btn-sm" type="submit">Revoke bypass</button>
+                                                        </form>
+                                                    </details>
+                                                @elseif ($stepEvaluation?->activeOverride)
+                                                    <details>
+                                                        <summary class="master-btn master-btn-light master-btn-sm">Revoke administrator bypass</summary>
+                                                        <form method="POST" action="{{ route('projects.workflow.overrides.revoke', [$project, $stepEvaluation->activeOverride]) }}" class="project-inline-form">@csrf @method('PATCH')
+                                                            <label class="master-field"><span class="master-label">Reason for revocation</span><textarea class="master-textarea" name="revocation_reason" rows="2" minlength="5" maxlength="2000" required></textarea></label>
+                                                            <button class="master-btn master-btn-light master-btn-sm" type="submit">Revoke bypass</button>
+                                                        </form>
+                                                    </details>
+                                                @elseif (!in_array($step->status, ['completed', 'cancelled'], true))
+                                                    <details>
+                                                        <summary class="master-btn master-btn-soft master-btn-sm">Administrator bypass</summary>
+                                                        <form method="POST" action="{{ route('projects.workflow.steps.bypass', [$project, $step]) }}" class="project-inline-form">@csrf
+                                                            <p class="master-help">This bypass is specific to the current rule and source facts. It does not change the underlying record; changed facts may require a new decision.</p>
+                                                            @if ($stepApprovalType)
+                                                                <input type="hidden" name="approval_source" value="{{ $stepApproval?->id ?? 0 }}">
+                                                                @if ($stepApproval)<input type="hidden" name="approval_version" value="{{ $stepApproval->current_version_number }}"><p class="master-help">Applies to {{ $stepApproval->typeLabel() }} request #{{ $stepApproval->id }}, version {{ $stepApproval->current_version_number }}.</p>@else<p class="master-help">No approval request exists yet. A later request requires a fresh decision.</p>@endif
+                                                            @endif
+                                                            <label class="master-field"><span class="master-label">Reason and accepted risk</span><textarea class="master-textarea" name="reason" rows="2" minlength="10" maxlength="2000" required></textarea></label>
+                                                            @if (!$stepApprovalType)
+                                                                <label class="master-field"><span class="master-label">Expected resolution date (optional)</span><input class="master-input" type="date" name="expected_resolution_date"></label>
+                                                            @endif
+                                                            <button class="master-btn master-btn-primary master-btn-sm" type="submit">Record bypass</button>
+                                                        </form>
+                                                    </details>
+                                                @endif
+                                            </div>
+                                        @endif
                                     @endforeach
                                 </div>
                             </details>
@@ -418,7 +472,7 @@
                 <div class="master-modal-card workflow-report-modal" role="dialog" aria-modal="true" aria-labelledby="workflowReportTitle" aria-describedby="workflowReportDescription">
                     <form method="POST" action="{{ route('projects.workflow.report', $project) }}">@csrf @method('PATCH')
                         <div class="master-modal-header">
-                            <div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-user-pen"></i></span><div><h3 class="master-modal-title" id="workflowReportTitle">Coordinator report</h3><p class="master-modal-subtitle" id="workflowReportDescription">Update the reported stage and commercial inputs. Project progress remains calculated exclusively from workflow controls.</p></div></div>
+                            <div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-user-pen"></i></span><div><h3 class="master-modal-title" id="workflowReportTitle">Coordinator report</h3><p class="master-modal-subtitle" id="workflowReportDescription">Update the reported stage and commercial inputs. Workflow progress remains calculated from controls; an administrator may separately set the published project progress.</p></div></div>
                             <button type="button" class="master-modal-close" data-close-modal aria-label="Close coordinator report">×</button>
                         </div>
                         <div class="master-modal-body">

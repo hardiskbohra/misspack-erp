@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\ProjectWorkflow;
 use App\Models\ProjectWorkflowStep;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProjectWorkflowExecution
 {
@@ -49,6 +50,7 @@ class ProjectWorkflowExecution
     public function start(Project $project, ?int $userId = null): ProjectWorkflow
     {
         return DB::transaction(function () use ($project, $userId) {
+            $project = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
             $workflow = ProjectWorkflow::query()->firstOrCreate(
                 ['project_id' => $project->id],
                 [
@@ -90,57 +92,76 @@ class ProjectWorkflowExecution
 
     public function recalculate(ProjectWorkflow $workflow): ProjectWorkflow
     {
-        $workflow->load('steps');
-        $eligible = $workflow->steps
-            ->where('is_required', true)
-            ->whereNotIn('status', ['cancelled']);
-        $totalWeight = (float) $eligible->sum(fn ($step) => (float) $step->weight);
-        $completedWeight = (float) $eligible
-            ->whereIn('status', ['completed', 'skipped'])
-            ->sum(fn ($step) => (float) $step->weight);
-        $progress = $totalWeight > 0 ? (int) round($completedWeight / $totalWeight * 100) : 0;
-        $next = $eligible->whereNotIn('status', ['completed', 'skipped'])->sortBy('sort_order')->first();
+        return DB::transaction(function () use ($workflow) {
+            // Lock the published project state before reading or updating the
+            // workflow. A concurrent manual closure or override must win over
+            // an earlier, stale recalculation, not be silently overwritten.
+            $project = Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->lockForUpdate()->firstOrFail();
+            $workflow->load('steps');
+            $eligible = $workflow->steps
+                ->where('is_required', true)
+                ->whereNotIn('status', ['cancelled']);
+            $totalWeight = (float) $eligible->sum(fn ($step) => (float) $step->weight);
+            $completedWeight = (float) $eligible
+                ->whereIn('status', ['completed', 'skipped'])
+                ->sum(fn ($step) => (float) $step->weight);
+            $progress = $totalWeight > 0 ? (int) round($completedWeight / $totalWeight * 100) : 0;
+            $next = $eligible->whereNotIn('status', ['completed', 'skipped'])->sortBy('sort_order')->first();
 
-        $calculatedProgress = max(0, min(100, $progress));
-        $workflow->fill([
-            'calculated_progress' => $calculatedProgress,
-            'calculated_stage' => $next?->stage_key ?: 'completed',
-            'status' => $next ? 'active' : 'completed',
-        ]);
-        if ($workflow->isDirty()) $workflow->save();
-        // Project progress, stage and ordinary execution status are read caches
-        // controlled only by this workflow calculation. Financial closure and
-        // cancellation are explicit terminal decisions and are never overwritten.
-        $project = $workflow->project()->firstOrFail();
-        $terminalDecision = in_array($project->status, [...Project::closureStatuses(), 'cancelled'], true);
-        $projectState = [
-            'progress_percent' => $calculatedProgress,
-            'stage' => $terminalDecision ? $project->stage : ($next?->stage_key ?: 'completed'),
-            'status' => $terminalDecision ? $project->status : ($next ? 'in_progress' : 'completed'),
-            'completed_at' => $terminalDecision
-                ? $project->completed_at
-                : ($next ? null : ($project->completed_at ?: now())),
-        ];
-        $project->forceFill($projectState);
-        if ($project->isDirty()) $project->save();
+            $calculatedProgress = max(0, min(100, $progress));
+            $workflow->fill([
+                'calculated_progress' => $calculatedProgress,
+                'calculated_stage' => $next?->stage_key ?: 'completed',
+                'status' => $next ? 'active' : 'completed',
+            ]);
+            if ($workflow->isDirty()) $workflow->save();
+            // Keep calculated evidence on the workflow. An explicitly authorised
+            // project override publishes separately until an administrator clears it;
+            // it never changes a step or makes a gate pass. Closure and legacy
+            // cancellation are terminal decisions, not ordinary workflow statuses.
+            $terminalDecision = in_array($project->status, Project::closureStatuses(), true)
+                || ($project->status === 'cancelled' && $project->manual_status === null);
+            $publishedStatus = $terminalDecision
+                ? $project->status
+                : ($project->manual_status ?? ($next ? 'in_progress' : 'completed'));
+            $projectState = [
+                'progress_percent' => $project->manual_progress_percent ?? $calculatedProgress,
+                'stage' => $terminalDecision ? $project->stage : ($next?->stage_key ?: 'completed'),
+                'status' => $publishedStatus,
+                'completed_at' => $terminalDecision
+                    ? $project->completed_at
+                    : ($publishedStatus === 'completed' ? ($project->completed_at ?: now()) : null),
+            ];
+            $project->forceFill($projectState);
+            if ($project->isDirty()) $project->save();
 
-        return $workflow->fresh(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice']);
+            return $workflow->fresh(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice']);
+        });
     }
 
     public function updateStep(ProjectWorkflowStep $step, string $status, ?int $userId, ?string $notes = null, ?string $blockedReason = null): ProjectWorkflow
     {
-        $wasStarted = $step->actual_started_at;
-        $isComplete = in_array($status, ['completed', 'skipped'], true);
-        $step->update([
-            'status' => $status,
-            'notes' => $notes,
-            'blocked_reason' => $status === 'blocked' ? $blockedReason : null,
-            'actual_started_at' => $wasStarted ?: ($status !== 'not_started' ? now() : null),
-            'completed_at' => $isComplete ? now() : null,
-            'completed_by' => $isComplete ? $userId : null,
-        ]);
+        return DB::transaction(function () use ($step, $status, $userId, $notes, $blockedReason) {
+            Project::query()->whereKey($step->workflow->project_id)->lockForUpdate()->firstOrFail();
+            $step = ProjectWorkflowStep::query()->whereKey($step->id)->lockForUpdate()->firstOrFail();
+            $current = ProjectWorkflowBypass::currentEvaluation($step);
+            if (ProjectWorkflowBypass::isSynthetic($current) && $current?->activeOverride) {
+                throw ValidationException::withMessages(['status' => 'Ask an administrator to revoke the active bypass before changing this control.']);
+            }
+            $wasStarted = $step->actual_started_at;
+            $isComplete = in_array($status, ['completed', 'skipped'], true);
+            $step->update([
+                'status' => $status,
+                'notes' => $notes,
+                'blocked_reason' => $status === 'blocked' ? $blockedReason : null,
+                'actual_started_at' => $wasStarted ?: ($status !== 'not_started' ? now() : null),
+                'completed_at' => $isComplete ? now() : null,
+                'completed_by' => $isComplete ? $userId : null,
+            ]);
 
-        return $this->recalculate($step->workflow);
+            return $this->recalculate($step->workflow);
+        });
     }
 
     private function ensureStep(ProjectWorkflow $workflow, ?int $productId, array $definition, string $scope, ?int $ownerId): void

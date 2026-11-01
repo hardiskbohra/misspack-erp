@@ -313,7 +313,7 @@ Sources: `app/Http/Controllers/LeadController.php`, `app/Http/Controllers/LeadCo
 
 ## Project master and product lanes (`PROJECT`)
 
-Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProducts.php`, `app/Models/Project.php`.
+Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProducts.php`, `app/Models/Project.php`, `app/Services/ProjectAdminState.php`, `app/Http/Controllers/ProjectAdminController.php`.
 
 ### UT-PROJECT-001 — Execution status fields are not ordinary form fields
 
@@ -347,7 +347,7 @@ Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProd
 
 ## Execution, approvals, gates and financial closure (`WORKFLOW`)
 
-Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`.
+Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`, `app/Services/ProjectWorkflowBypass.php`, `app/Services/ProjectApprovals.php`.
 
 ### UT-WORKFLOW-001 — Only one standard execution vocabulary exists
 

@@ -28,6 +28,13 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlProjectAdminControlsTest.php",
+      "methods": [
+        "test_native_manual_state_bypass_and_closure_preserve_financial_snapshot",
+        "test_workflow_recalculation_waits_for_a_project_terminal_decision_and_does_not_overwrite_it"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlPublicShortLinksTest.php",
       "methods": [
         "test_guest_links_use_current_tokens_and_the_original_handlers_on_mysql"
@@ -599,6 +606,34 @@
         "test_guest_cannot_read_office_modules",
         "test_employee_is_redirected_before_an_office_controller_can_run",
         "test_sales_reader_cannot_read_finance_or_write_sales"
+      ]
+    },
+    {
+      "file": "tests/Integration/ProjectAdminControlsTest.php",
+      "methods": [
+        "test_manual_state_persists_through_recalculation_and_can_be_independently_cleared",
+        "test_manual_state_validation_does_not_accept_closed_labels_bad_percentages_or_missing_reason",
+        "test_state_closure_and_step_bypass_require_an_admin_with_the_sensitive_permission",
+        "test_manual_closure_preserves_open_work_outstanding_money_and_reopening_history",
+        "test_each_project_step_can_be_individually_bypassed_and_source_data_is_not_falsified",
+        "test_missing_approval_bypass_expires_when_a_request_is_created_and_new_version_is_distinct",
+        "test_changed_gate_facts_expire_a_bypass_and_revoking_stale_evidence_does_not_change_the_new_step",
+        "test_cross_project_bypass_and_invalid_reasons_are_rejected_without_any_audit_or_mutation",
+        "test_a_legacy_project_restores_its_prior_state_and_can_be_manually_closed_without_a_workflow",
+        "test_schema_downgrade_refuses_to_erase_active_or_soft_deleted_decisions",
+        "test_legacy_override_endpoints_and_foreign_ids_do_not_bypass_the_admin_or_ownership_checks",
+        "test_an_unrecalculated_source_change_cannot_be_approved_by_posting_an_old_evaluation",
+        "test_bypass_creation_and_revocation_are_atomic_when_a_later_write_fails",
+        "test_advance_bypass_enables_the_linked_production_action_only_until_source_facts_change",
+        "test_individual_dispatch_bypasses_enable_only_the_linked_shipment_with_matching_evidence",
+        "test_revoking_a_live_feedback_override_restores_the_waiting_for_client_state",
+        "test_direct_versioned_approval_override_and_revocation_roll_back_when_step_updates_fail",
+        "test_a_stale_missing_request_or_approval_version_cannot_authorize_or_revoke_a_newer_client_file",
+        "test_a_manual_step_service_update_cannot_overwrite_an_active_bypass",
+        "test_manual_state_service_rejects_invalid_values_even_when_called_without_the_http_validator",
+        "test_client_portal_shows_published_progress_without_revealing_private_reasons_or_requiring_a_catalogue_product",
+        "test_manual_state_is_preserved_across_closure_and_reopening_until_explicitly_cleared",
+        "test_direct_approval_override_service_requires_admin_permission_for_recording_and_revoking"
       ]
     },
     {
@@ -1176,6 +1211,7 @@
     "app/Http/Controllers/PartyStatementController.php",
     "app/Http/Controllers/PriceCalculatorController.php",
     "app/Http/Controllers/ProductController.php",
+    "app/Http/Controllers/ProjectAdminController.php",
     "app/Http/Controllers/ProjectApprovalController.php",
     "app/Http/Controllers/ProjectAttachmentController.php",
     "app/Http/Controllers/ProjectCommentController.php",
@@ -1264,6 +1300,7 @@
     "app/Services/PartyStatement.php",
     "app/Services/PayslipDocument.php",
     "app/Services/PermissionMatrix.php",
+    "app/Services/ProjectAdminState.php",
     "app/Services/ProjectApprovals.php",
     "app/Services/ProjectCoordinatorQueue.php",
     "app/Services/ProjectExceptionRegistry.php",
@@ -1272,6 +1309,7 @@
     "app/Services/ProjectOperationalReadiness.php",
     "app/Services/ProjectProducts.php",
     "app/Services/ProjectReceipts.php",
+    "app/Services/ProjectWorkflowBypass.php",
     "app/Services/ProjectWorkflowExecution.php",
     "app/Services/ProjectWorkflowGates.php",
     "app/Services/ProjectWorkflowGuidance.php",
@@ -1442,6 +1480,7 @@
     "tools/checks/pdf-documents-check.cjs",
     "tools/checks/permission-audit-check.cjs",
     "tools/checks/php-check.cjs",
+    "tools/checks/project-admin-controls-browser.cjs",
     "tools/checks/project-deletion-check.cjs",
     "tools/checks/project-feedback-closure-check.cjs",
     "tools/checks/project-simplification-check.cjs",

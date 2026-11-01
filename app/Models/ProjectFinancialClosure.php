@@ -9,6 +9,7 @@ class ProjectFinancialClosure extends Model
 {
     public const TYPE_COMPLETE = 'financially_complete';
     public const TYPE_OUTSTANDING = 'closed_with_outstanding_financials';
+    public const TYPE_MANUAL = 'manually_closed';
     public const TYPE_REOPENED = 'reopened';
 
     protected $fillable = [
@@ -55,6 +56,7 @@ class ProjectFinancialClosure extends Model
         return match ($this->closure_type) {
             self::TYPE_COMPLETE => 'Financially complete',
             self::TYPE_OUTSTANDING => 'Closed with outstanding financials',
+            self::TYPE_MANUAL => 'Manually closed',
             self::TYPE_REOPENED => 'Reopened',
             default => str($this->closure_type)->headline()->toString(),
         };

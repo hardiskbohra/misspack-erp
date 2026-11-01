@@ -56,7 +56,12 @@ class PermissionMatrix
         // A permission-filtered directory is an entry point, not cross-module data access.
         if (in_array($route, ['dashboard', 'dashboards.index'], true)) return null;
         if ($route === 'users.permissions.update') return 'permissions.manage';
-        if (Str::is(['projects.*override*','projects.approvals.override*','projects.financial-closure.*','projects.exceptions.escalate'], $route)) return 'projects.override';
+        if (Str::is([
+            'projects.*override*', 'projects.approvals.override*', 'projects.financial-closure.*',
+            'projects.admin-state', 'projects.workflow.steps.bypass',
+            'projects.workflow.financial-closure.manual-close', 'projects.workflow.financial-closure.close-outstanding',
+            'projects.workflow.financial-closure.reopen', 'projects.exceptions.escalate',
+        ], $route)) return 'projects.override';
         if (Str::is(['vendors.portal.*','vendors.shares.*','clients.portal.*'], $route)) return 'portals.manage';
         if (Str::is('audit.*', $route)) return 'audit.view';
         if (Str::is('settings.*', $route)) return 'settings.manage';
