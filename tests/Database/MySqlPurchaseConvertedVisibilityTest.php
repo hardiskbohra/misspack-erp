@@ -2,10 +2,17 @@
 
 namespace Tests\Database;
 
+use App\Models\CashflowAccount;
+use App\Models\CashflowAllocation;
+use App\Models\CashflowEntry;
+use App\Models\Client;
+use App\Models\Project;
 use App\Models\PurchaseInvoice;
+use App\Models\PurchasePaymentSplit;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VendorPaymentEntry;
+use App\Services\CashflowVendorPaymentSync;
 use App\Services\PartyStatement;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactionsManager;
@@ -144,6 +151,46 @@ class MySqlPurchaseConvertedVisibilityTest extends TestCase
         $this->post(route('purchase-invoices.bulk'), ['action' => 'delete_drafts', 'ids' => [$draft->id]])->assertRedirect();
         $this->assertNotNull($draft->fresh());
         $this->assertSame('0.001', DB::table('purchase_invoices')->where('id', $draft->id)->value('amount_paid'));
+    }
+
+    public function test_native_vendor_statement_batches_owned_and_archived_project_links_without_changing_amounts(): void
+    {
+        $client = Client::create(['client_number' => 'MYSQL-STMT-CLIENT', 'company_name' => 'MySQL client', 'preferred_currency' => 'INR']);
+        $first = Project::create(['project_number' => 'MYSQL-STMT-1', 'client_id' => $client->id, 'name' => 'Native archived project']);
+        $second = Project::create(['project_number' => 'MYSQL-STMT-2', 'client_id' => $client->id, 'name' => 'Native second project']);
+        $otherProject = Project::create(['project_number' => 'MYSQL-STMT-3', 'client_id' => $client->id, 'name' => 'Other vendor private project']);
+        $bill = $this->document('MYSQL-PRJ-BILL', 'bill', ['project_id' => $first->id, 'total_amount' => '100.001']);
+        $this->entry($bill, 'credit', 'bill', '100.001'); // legacy ledger row: no direct project_id
+        $otherVendor = Vendor::create(['vendor_number' => 'MYSQL-STMT-OTHER', 'vendor_name' => 'MySQL other vendor', 'preferred_currency' => 'INR']);
+        $wrongBill = $this->document('MYSQL-OTHER-BILL', 'bill', ['vendor_id' => $otherVendor->id, 'project_id' => $otherProject->id]);
+        $this->entry($wrongBill, 'credit', 'bill', '0.100'); // stale cross-vendor link, still a real entry
+        $payment = $this->entry($bill, 'debit', 'payment', '0.125');
+        $payment->forceFill(['purchase_invoice_id' => null, 'invoice_number' => 'MYSQL-PAY-SLICE'])->save();
+        PurchasePaymentSplit::create(['vendor_payment_entry_id' => $payment->id, 'purchase_invoice_id' => $bill->id, 'amount' => '0.100']);
+        PurchasePaymentSplit::create(['vendor_payment_entry_id' => $payment->id, 'purchase_invoice_id' => $wrongBill->id, 'amount' => '0.025']);
+        $account = CashflowAccount::create(['account_name' => 'MySQL Statement Bank', 'account_type' => 'current', 'currency' => 'INR']);
+        $cashflow = CashflowEntry::create(['entry_date' => '2026-10-06', 'particular' => 'Split payment', 'invoice_bill_number' => 'MYSQL-SPLIT',
+            'transaction_type' => 'debit', 'debit_amount' => '50.001', 'credit_amount' => 0, 'currency' => 'INR',
+            'vendor_id' => $this->vendor->id, 'account_id' => $account->id, 'accounting_status' => 'booked']);
+        foreach ([[$first->id, '20'], [$second->id, '30.001']] as [$projectId, $amount]) {
+            CashflowAllocation::create(['cashflow_entry_id' => $cashflow->id, 'project_id' => $projectId, 'amount' => $amount, 'currency' => 'INR']);
+        }
+        app(CashflowVendorPaymentSync::class)->sync($cashflow);
+        $first->delete();
+
+        $statement = app(PartyStatement::class)->build('vendor', $this->vendor->id, null, null, ['currency' => 'INR']);
+        $rows = collect($statement['rows'])->keyBy('reference');
+        $this->assertSame(['Native archived project'], $rows['MYSQL-PRJ-BILL']['project_names']);
+        $this->assertSame(['Native archived project', 'Native second project'], $rows['MYSQL-SPLIT']['project_names']);
+        $this->assertSame(['Native archived project'], $rows['MYSQL-PAY-SLICE']['project_names']);
+        $this->assertSame([], $rows['MYSQL-OTHER-BILL']['project_names']);
+        $this->assertEqualsWithDelta(50.126, $statement['totals']['debit'], 0.0000001);
+        $this->assertEqualsWithDelta(100.101, $statement['totals']['credit'], 0.0000001);
+        $this->assertEqualsWithDelta(49.975, $statement['totals']['closing'], 0.0000001);
+        $this->assertSame(4, $statement['totals']['count']);
+        $this->get(route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $this->vendor->id,
+            'period' => 'all', 'currency' => 'INR']))->assertOk()->assertSee('Native archived project')
+            ->assertSee('Native second project')->assertDontSee('Other vendor private project');
     }
 
     public function test_native_conversion_and_reversal_reopen_the_order_at_one_thousandth(): void

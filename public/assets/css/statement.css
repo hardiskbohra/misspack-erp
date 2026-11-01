@@ -260,6 +260,12 @@
     font-weight: 600;
 }
 
+.stmt-project {
+    display: block;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
 .stmt-opening-label,
 .stmt-total-label {
     font-weight: 700;

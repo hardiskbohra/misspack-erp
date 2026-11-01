@@ -39,6 +39,7 @@
         "test_listing_filters_and_statement_use_native_decimal_values",
         "test_native_legacy_deletion_reposts_the_order_without_overwriting_manual_credit",
         "test_native_opening_advances_are_not_discarded_on_legacy_or_bulk_deletion",
+        "test_native_vendor_statement_batches_owned_and_archived_project_links_without_changing_amounts",
         "test_native_conversion_and_reversal_reopen_the_order_at_one_thousandth"
       ]
     },
@@ -797,6 +798,18 @@
       ]
     },
     {
+      "file": "tests/Integration/VendorStatementProjectsTest.php",
+      "methods": [
+        "test_ledger_bill_and_archived_project_names_preserve_descriptions_and_balances",
+        "test_cashflow_project_allocations_and_safe_legacy_name_matches_do_not_duplicate_money",
+        "test_partially_converted_purchase_payment_keeps_project_context_after_its_document_link_becomes_splits",
+        "test_other_vendors_purchase_and_cashflow_links_cannot_reveal_projects",
+        "test_vendor_views_and_guest_share_escape_project_names_and_leave_client_statements_unchanged",
+        "test_project_lookups_are_batched_instead_of_one_query_per_row",
+        "test_missing_optional_project_and_allocation_tables_leave_legacy_particulars_intact"
+      ]
+    },
+    {
       "file": "tests/Integration/WideningMigrationSafetyTest.php",
       "methods": [
         "test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
@@ -1276,7 +1289,8 @@
     "app/Services/TwoFactorAuthentication.php",
     "app/Services/UnallocatedCashflows.php",
     "app/Services/VendorKyc.php",
-    "app/Services/VendorPaymentCashflowSync.php"
+    "app/Services/VendorPaymentCashflowSync.php",
+    "app/Services/VendorStatementProjects.php"
   ],
   "models": [
     "app/Models/AuditLog.php",
@@ -1438,6 +1452,7 @@
     "tools/checks/ui-components-check.cjs",
     "tools/checks/vendor-kyc-browser.cjs",
     "tools/checks/vendor-portal-check.cjs",
+    "tools/checks/vendor-statement-projects-browser.cjs",
     "tools/checks/workflow-guidance-check.cjs"
   ]
 }

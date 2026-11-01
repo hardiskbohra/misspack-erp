@@ -1695,7 +1695,7 @@ Sources: `app/Services/RecurrenceSchedule.php`, `app/Services/RecurrencePosting.
 
 ## Party statements and reconciliation (`STATEMENT`)
 
-Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
+Sources: `app/Services/PartyStatement.php`, `app/Services/VendorStatementProjects.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
 
 ### IT-STATEMENT-001 — Statement reconciles to source documents
 
@@ -1807,6 +1807,22 @@ Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatement
 **Note:** The vendor opening sign is aligned with credit minus debit; the preferred currency can remain selectable even if it has no visible movement.
 
 **Evidence:** `tests/Integration/PurchaseConvertedVisibilityTest.php#test_statement_excludes_stale_full_po_credits_but_preserves_payments_opening_and_currencies`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_order_credits_without_a_matching_owned_order_or_with_real_cashflow_are_not_hidden`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_print_pdf_and_public_share_use_the_same_visible_ledger`; `tests/Integration/PurchaseVisibilityLegacySchemaTest.php#test_legacy_links_hide_without_requiring_partial_conversion_columns`; `tests/Database/MySqlPurchaseConvertedVisibilityTest.php#test_listing_filters_and_statement_use_native_decimal_values`
+
+### IT-STATEMENT-009 — Show linked project names in vendor statement particulars
+
+**Priority:** P1 · **Requirement:** REQ-STATEMENT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable schema with vendor ledger, purchases, projects and cashflows
+- **Data:** Direct, bill-linked, archived, unlinked, cross-vendor, cashflow-allocated and purchase-payment-split projects; long and HTML-like names
+1. Compare vendor ledger, purchase and split-payment project names with the original particulars and monetary rows
+2. Check office, print/PDF fallback and guest views, privacy, escaping and client non-regression
+3. Verify batched queries, missing legacy schema and native MySQL with three-decimal amounts
+
+**Expected:** Each row shows only its recorded vendor-owned project name(s) without inventing associations, leaking other vendors' projects, duplicating money, changing balances, or causing per-row project queries.
+
+**Note:** Chromium and A4 print geometry are checked separately with guarded disposable fixtures.
+
+**Evidence:** `tests/Integration/VendorStatementProjectsTest.php#test_ledger_bill_and_archived_project_names_preserve_descriptions_and_balances`; `tests/Integration/VendorStatementProjectsTest.php#test_cashflow_project_allocations_and_safe_legacy_name_matches_do_not_duplicate_money`; `tests/Integration/VendorStatementProjectsTest.php#test_partially_converted_purchase_payment_keeps_project_context_after_its_document_link_becomes_splits`; `tests/Integration/VendorStatementProjectsTest.php#test_other_vendors_purchase_and_cashflow_links_cannot_reveal_projects`; `tests/Integration/VendorStatementProjectsTest.php#test_vendor_views_and_guest_share_escape_project_names_and_leave_client_statements_unchanged`; `tests/Integration/VendorStatementProjectsTest.php#test_project_lookups_are_batched_instead_of_one_query_per_row`; `tests/Integration/VendorStatementProjectsTest.php#test_missing_optional_project_and_allocation_tables_leave_legacy_particulars_intact`; `tests/Database/MySqlPurchaseConvertedVisibilityTest.php#test_native_vendor_statement_batches_owned_and_archived_project_links_without_changing_amounts`
 
 ## Asset register, allocation and depreciation (`ASSET`)
 

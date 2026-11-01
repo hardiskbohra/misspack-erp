@@ -760,50 +760,43 @@ class PartyStatement
     private function vendorStatementRows(Vendor $vendor, string $currency): array
     {
         $rows = [];
+        $ledgerCurrency = strtoupper((string) ($vendor->preferred_currency ?: 'RMB'));
+        $entries = Schema::hasTable('vendor_payment_entries')
+            ? VendorPaymentEntry::query()->forPartyStatement()
+                ->where('vendor_id', $vendor->id)->orderBy('transaction_date')->orderBy('id')->get()
+                ->filter(fn ($entry) => strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency)) === $currency)
+            : collect();
 
-        if (Schema::hasTable('vendor_payment_entries')) {
-            $entries = VendorPaymentEntry::query()->forPartyStatement()
-                ->where('vendor_id', $vendor->id)
-                ->orderBy('transaction_date')->orderBy('id')
-                ->get();
-            $ledgerCurrency = strtoupper((string) ($vendor->preferred_currency ?: 'RMB'));
+        /* A mirrored cashflow row is excluded so a payment is never printed
+           twice. Name-matched, foreign or other unlinked cashflow can coexist
+           with ledger rows and is still included. */
+        $cashflows = app(CashflowVendorPaymentSync::class)->unlinkedCashflow($vendor)
+            ->filter(fn ($entry) => strtoupper((string) ($entry->currency ?: 'INR')) === $currency);
+        $projects = app(VendorStatementProjects::class)->forRows($vendor, $entries, $cashflows);
 
-            foreach ($entries as $entry) {
-                $entryCurrency = strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency));
-                if ($entryCurrency !== $currency) {
-                    continue;
-                }
+        foreach ($entries as $entry) {
+            $amount = (float) $entry->foreign_amount;
+            $isBill = $entry->transaction_type !== 'debit';
 
-                $amount = (float) $entry->foreign_amount;
-                $isBill = $entry->transaction_type !== 'debit';
-
-                $rows[] = [
-                    'date' => $entry->transaction_date,
-                    'particular' => $this->vendorParticular($entry),
-                    'reference' => $entry->invoice_number ?: $entry->bank_reference_number,
-                    'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
-                    'debit' => $isBill ? 0.0 : $amount,
-                    'credit' => $isBill ? $amount : 0.0,
-                    'kind' => $isBill ? 'bill' : 'payment',
-                    'rate' => (float) $entry->exchange_rate,
-                    'inr' => (float) $entry->amount_in_inr,
-                ];
-            }
+            $rows[] = [
+                'date' => $entry->transaction_date,
+                'particular' => $this->vendorParticular($entry),
+                'project_names' => $projects['ledger'][$entry->id] ?? [],
+                'reference' => $entry->invoice_number ?: $entry->bank_reference_number,
+                'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
+                'debit' => $isBill ? 0.0 : $amount,
+                'credit' => $isBill ? $amount : 0.0,
+                'kind' => $isBill ? 'bill' : 'payment',
+                'rate' => (float) $entry->exchange_rate,
+                'inr' => (float) $entry->amount_in_inr,
+            ];
         }
 
-        /* The cashflow rows no ledger row stands behind — a name-matched
-           vendor, a foreign-currency payment, money received back. Appended
-           always, not only when the ledger is empty: a vendor can have both a
-           currency ledger and rupee rows the ledger never received. A mirrored
-           row is not here, so a payment is never printed twice. */
-        foreach (app(CashflowVendorPaymentSync::class)->unlinkedCashflow($vendor) as $entry) {
-            if (strtoupper((string) ($entry->currency ?: 'INR')) !== $currency) {
-                continue;
-            }
-
+        foreach ($cashflows as $entry) {
             $rows[] = [
                 'date' => $entry->entry_date,
                 'particular' => (string) $entry->particular,
+                'project_names' => $projects['cashflow'][$entry->id] ?? [],
                 'reference' => $entry->invoice_bill_number ?: $entry->bank_reference_number,
                 'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
                 'debit' => (float) $entry->debit_amount,

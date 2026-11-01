@@ -177,6 +177,9 @@
                 <tr>
                     <td>{{ $row['date'] ? $row['date']->format('d M Y') : '—' }}</td>
                     <td>
+                        @if ($statement['party_type'] === 'vendor' && ! empty($row['project_names']))
+                            <span class="stmt-project">{{ \Illuminate\Support\Str::plural('Project', count($row['project_names'])) }}: {{ implode(' · ', $row['project_names']) }}</span>
+                        @endif
                         {{ $row['particular'] }}
                         @if ($statement['party_type'] !== 'vendor' && ! empty($row['rate']))
                             <span class="stmt-cell-note">@ {{ $row['rate'] }}</span>
