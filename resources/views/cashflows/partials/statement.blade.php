@@ -36,6 +36,18 @@
             .($parts ? ' ('.implode(', ', $parts).')' : '');
     })->implode(' · ');
     $compactPrint = $ctx === 'pdf';
+    // Only the office print/PDF document accepts presentation choices. App,
+    // portal and shared statements always retain their existing complete view.
+    $printFields = $printFields ?? [];
+    $show = fn ($key) => ! $compactPrint || ($printFields[$key] ?? true);
+    $showParticulars = $show('particulars') || ($statement['party_type'] === 'vendor' && $show('project_names'));
+    $showStatus = $ctx === 'app';
+    $textColumns = (int) $showParticulars + (int) $show('reference') + (int) $showStatus;
+    $leadingColumns = (int) $show('date') + $textColumns;
+    $columnCount = $leadingColumns + (int) $show('debit') + (int) $show('credit') + (int) $show('balance');
+    $hasAmounts = $show('debit') || $show('credit') || $show('balance');
+    $firstAmount = $show('debit') ? 'debit' : ($show('credit') ? 'credit' : 'balance');
+    $hiddenTransactions = $compactPrint && \App\Support\StatementPrintFields::hiddenTransactions($printFields, $statement['party_type']);
     $issuer = $statement['issuer'];
     $issuerAddressLines = \App\Services\StatementPrintHeader::addressLines($issuer);
 @endphp
@@ -44,7 +56,7 @@
     @if($compactPrint)
         <header class="stmt-masthead">
             <div class="stmt-masthead-logo">
-                <img class="stmt-logo" src="{{ \App\Models\Organisation::current()->logoUrl('print') }}" alt="{{ $issuer['seller_company_name'] }}">
+                @if($show('logo'))<img class="stmt-logo" src="{{ \App\Models\Organisation::current()->logoUrl('print') }}" alt="{{ $issuer['seller_company_name'] }}">@endif
             </div>
             <div class="stmt-document-heading">
                 <p class="stmt-eyebrow">Statement of account</p>
@@ -59,10 +71,12 @@
         <div class="stmt-brand">
             <p class="stmt-brand-name">{{ $statement['issuer']['seller_company_name'] }}</p>
             @if($compactPrint)
-                @foreach($issuerAddressLines as $line)<p class="stmt-brand-line stmt-issuer-address-line">{{ $line }}</p>@endforeach
-                <p class="stmt-brand-line">GSTIN {{ $issuer['seller_gstin'] }}</p>
-                <p class="stmt-brand-line">{{ $issuer['seller_email'] }} · {{ $issuer['seller_mobile'] }}</p>
-                <p class="stmt-brand-line stmt-issuer-website">{{ $issuer['seller_website'] }}</p>
+                @if($show('issuer_details'))
+                    @foreach($issuerAddressLines as $line)<p class="stmt-brand-line stmt-issuer-address-line">{{ $line }}</p>@endforeach
+                    <p class="stmt-brand-line">GSTIN {{ $issuer['seller_gstin'] }}</p>
+                    <p class="stmt-brand-line">{{ $issuer['seller_email'] }} · {{ $issuer['seller_mobile'] }}</p>
+                    <p class="stmt-brand-line stmt-issuer-website">{{ $issuer['seller_website'] }}</p>
+                @endif
             @else
             <p class="stmt-brand-line">{{ $statement['issuer']['seller_address'] }}</p>
             <p class="stmt-brand-line">{{ $statement['issuer']['seller_city'] }},
@@ -78,7 +92,7 @@
             @unless($compactPrint)<p class="stmt-eyebrow">Statement of account</p>@endunless
             <h1 class="stmt-party-name">{{ $party['name'] }}</h1>
             @unless($compactPrint)<p class="stmt-period">{{ $statement['period']['label'] }}</p>@endunless
-            @if($compactPrint)
+            @if($compactPrint && $show('party_details'))
                 <p class="stmt-block-line">{{ $party['kind'] }} · {{ $party['code'] }}</p>
                 @foreach($party['address_lines'] as $line)<p class="stmt-block-line">{{ $line }}</p>@endforeach
                 @if($party['gstin'])<p class="stmt-block-line">GSTIN {{ $party['gstin'] }}</p>@endif
@@ -95,6 +109,7 @@
         </div>
     </header>
 
+    @if(! $compactPrint || $show('summary'))
     <section class="stmt-meta{{ $compactPrint ? ' stmt-meta--compact' : '' }}">
         @unless($compactPrint)<div class="stmt-block">
             <p class="stmt-block-title">{{ $party['kind'] }}</p>
@@ -141,30 +156,53 @@
                 {{ ($statement['period']['to'] ?? $statement['generated_at'])->format('d M Y') }}</p>
         </div>
     </section>
+    @endif
 
-    <div class="stmt-table-wrap"><table class="stmt-table">
-        @if($compactPrint)<colgroup><col class="stmt-col-date"><col class="stmt-col-particular"><col class="stmt-col-reference"><col class="stmt-col-money"><col class="stmt-col-money"><col class="stmt-col-balance"></colgroup>@endif
+    @if($hiddenTransactions)
+        <p class="stmt-note stmt-field-disclosure">This print omits selected transaction fields; totals still include all transactions.</p>
+    @endif
+
+    @if($columnCount > 0)
+    <div class="stmt-table-wrap"><table class="stmt-table{{ $compactPrint && $columnCount <= 3 ? ' stmt-table--few-fields' : '' }}">
+        @if($compactPrint)
+            <colgroup>
+                @if($show('date'))<col class="stmt-col-date">@endif
+                @if($showParticulars)<col class="stmt-col-particular">@endif
+                @if($show('reference'))<col class="stmt-col-reference">@endif
+                @if($show('debit'))<col class="stmt-col-money">@endif
+                @if($show('credit'))<col class="stmt-col-money">@endif
+                @if($show('balance'))<col class="stmt-col-balance">@endif
+            </colgroup>
+        @endif
         <thead>
             <tr>
-                <th scope="col">Date</th>
-                <th scope="col">Particulars</th>
-                <th scope="col">Reference</th>
-                @if ($ctx === 'app')
-                    <th scope="col">Status</th>
-                @endif
-                <th scope="col" class="stmt-num">Debit <em>({{ $debitWord }})</em></th>
-                <th scope="col" class="stmt-num">Credit <em>({{ $creditWord }})</em></th>
-                <th scope="col" class="stmt-num">Balance</th>
+                @if($show('date'))<th scope="col">Date</th>@endif
+                @if($showParticulars)<th scope="col">{{ $show('particulars') ? 'Particulars' : 'Project' }}</th>@endif
+                @if($show('reference'))<th scope="col">Reference</th>@endif
+                @if($showStatus)<th scope="col">Status</th>@endif
+                @if($show('debit'))<th scope="col" class="stmt-num">Debit <em>({{ $debitWord }})</em></th>@endif
+                @if($show('credit'))<th scope="col" class="stmt-num">Credit <em>({{ $creditWord }})</em></th>@endif
+                @if($show('balance'))<th scope="col" class="stmt-num">Balance</th>@endif
             </tr>
         </thead>
         <tbody>
-            <tr class="stmt-row-opening">
-                <td>{{ $statement['period']['from'] ? $statement['period']['from']->format('d M Y') : '—' }}</td>
-                <td colspan="{{ $ctx === 'app' ? 3 : 2 }}"><span class="stmt-opening-label">Opening balance</span></td>
-                <td class="stmt-num">—</td>
-                <td class="stmt-num">—</td>
-                <td class="stmt-num stmt-num-strong">{{ $money($statement['opening']) }}</td>
-            </tr>
+            @if($show('balance'))
+                <tr class="stmt-row-opening">
+                    @if($show('date'))
+                        <td>{{ $statement['period']['from'] ? $statement['period']['from']->format('d M Y') : '—' }}
+                            @if($textColumns === 0)<span class="stmt-opening-label stmt-row-label-inline">Opening balance</span>@endif
+                        </td>
+                    @endif
+                    @if($textColumns > 0)<td colspan="{{ $textColumns }}"><span class="stmt-opening-label">Opening balance</span></td>@endif
+                    @if($show('debit'))
+                        <td class="stmt-num">@if($leadingColumns === 0 && $firstAmount === 'debit')<span class="stmt-opening-label stmt-row-label-inline">Opening balance</span>@endif —</td>
+                    @endif
+                    @if($show('credit'))
+                        <td class="stmt-num">@if($leadingColumns === 0 && $firstAmount === 'credit')<span class="stmt-opening-label stmt-row-label-inline">Opening balance</span>@endif —</td>
+                    @endif
+                    <td class="stmt-num stmt-num-strong">@if($leadingColumns === 0 && $firstAmount === 'balance')<span class="stmt-opening-label stmt-row-label-inline">Opening balance</span>@endif {{ $money($statement['opening']) }}</td>
+                </tr>
+            @endif
 
             @forelse ($statement['rows'] as $row)
                 @php
@@ -175,48 +213,71 @@
                         : null;
                 @endphp
                 <tr>
-                    <td>{{ $row['date'] ? $row['date']->format('d M Y') : '—' }}</td>
-                    <td>
-                        @if ($statement['party_type'] === 'vendor' && ! empty($row['project_names']))
-                            <span class="stmt-project">{{ \Illuminate\Support\Str::plural('Project', count($row['project_names'])) }}: {{ implode(' · ', $row['project_names']) }}</span>
-                        @endif
-                        {{ $row['particular'] }}
-                        @if ($statement['party_type'] !== 'vendor' && ! empty($row['rate']))
-                            <span class="stmt-cell-note">@ {{ $row['rate'] }}</span>
-                        @endif
-                    </td>
-                    <td>{{ $row['reference'] ?: '—' }}</td>
-                    @if ($ctx === 'app')
-                        <td>@if ($row['status'])<span class="stmt-badge">{{ $row['status'] }}</span>@endif</td>
+                    @if($show('date'))<td>{{ $row['date'] ? $row['date']->format('d M Y') : '—' }}</td>@endif
+                    @if($showParticulars)
+                        <td>
+                            @if ($statement['party_type'] === 'vendor' && $show('project_names') && ! empty($row['project_names']))
+                                <span class="stmt-project">{{ \Illuminate\Support\Str::plural('Project', count($row['project_names'])) }}: {{ implode(' · ', $row['project_names']) }}</span>
+                            @endif
+                            @if($show('particulars'))
+                                {{ $row['particular'] }}
+                                @if ($statement['party_type'] !== 'vendor' && ! empty($row['rate']))
+                                    <span class="stmt-cell-note">@ {{ $row['rate'] }}</span>
+                                @endif
+                            @elseif(empty($row['project_names']))
+                                —
+                            @endif
+                        </td>
                     @endif
-                    <td class="stmt-num">{{ $row['debit'] > 0 ? $money($row['debit']) : '—' }}
-                        @if ($row['debit'] > 0 && $inrNote)<span class="stmt-cell-note">{{ $inrNote }}</span>@endif
-                    </td>
-                    <td class="stmt-num">{{ $row['credit'] > 0 ? $money($row['credit']) : '—' }}
-                        @if ($row['credit'] > 0 && $inrNote)<span class="stmt-cell-note">{{ $inrNote }}</span>@endif
-                    </td>
-                    <td class="stmt-num stmt-num-strong">{{ $money($row['balance']) }}</td>
+                    @if($show('reference'))<td>{{ $row['reference'] ?: '—' }}</td>@endif
+                    @if($showStatus)<td>@if ($row['status'])<span class="stmt-badge">{{ $row['status'] }}</span>@endif</td>@endif
+                    @if($show('debit'))
+                        <td class="stmt-num">{{ $row['debit'] > 0 ? $money($row['debit']) : '—' }}
+                            @if ($row['debit'] > 0 && $inrNote)<span class="stmt-cell-note">{{ $inrNote }}</span>@endif
+                        </td>
+                    @endif
+                    @if($show('credit'))
+                        <td class="stmt-num">{{ $row['credit'] > 0 ? $money($row['credit']) : '—' }}
+                            @if ($row['credit'] > 0 && $inrNote)<span class="stmt-cell-note">{{ $inrNote }}</span>@endif
+                        </td>
+                    @endif
+                    @if($show('balance'))<td class="stmt-num stmt-num-strong">{{ $money($row['balance']) }}</td>@endif
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ $ctx === 'app' ? 7 : 6 }}">
-                        <div class="stmt-empty">No transactions in this period — the balance above is what carried in.</div>
+                    <td colspan="{{ $columnCount }}">
+                        <div class="stmt-empty">No transactions in this period{{ $show('balance') || $show('summary') ? ' — the balance above is what carried in.' : '.' }}</div>
                     </td>
                 </tr>
             @endforelse
         </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="{{ $ctx === 'app' ? 4 : 3 }}"><span class="stmt-total-label">Closing
-                        {{ $direction }}</span></td>
-                <td class="stmt-num">{{ $money($totals['debit']) }}</td>
-                <td class="stmt-num">{{ $money($totals['credit']) }}</td>
-                <td class="stmt-num stmt-num-strong">{{ $money($totals['closing']) }}</td>
-            </tr>
-        </tfoot>
+        @if($hasAmounts)
+            @php
+                $closingLabel = $show('balance') ? 'Closing '.$direction : 'Period totals';
+            @endphp
+            <tfoot>
+                <tr>
+                    @if($leadingColumns > 0)<td colspan="{{ $leadingColumns }}"><span class="stmt-total-label">{{ $closingLabel }}</span></td>@endif
+                    @if($show('debit'))
+                        <td class="stmt-num">@if($leadingColumns === 0 && $firstAmount === 'debit')<span class="stmt-total-label stmt-row-label-inline">{{ $closingLabel }}</span>@endif {{ $money($totals['debit']) }}</td>
+                    @endif
+                    @if($show('credit'))
+                        <td class="stmt-num">@if($leadingColumns === 0 && $firstAmount === 'credit')<span class="stmt-total-label stmt-row-label-inline">{{ $closingLabel }}</span>@endif {{ $money($totals['credit']) }}</td>
+                    @endif
+                    @if($show('balance'))
+                        <td class="stmt-num stmt-num-strong">@if($leadingColumns === 0 && $firstAmount === 'balance')<span class="stmt-total-label stmt-row-label-inline">{{ $closingLabel }}</span>@endif {{ $money($totals['closing']) }}</td>
+                    @endif
+                </tr>
+            </tfoot>
+        @endif
     </table></div>
+    @endif
 
     @if ($statement['ageing'])
+        @php
+            $ageColumnCount = (int) $show('date') + (int) $show('reference') + (int) ($statement['party_type'] === 'client') + 2;
+            $ageLabelSpan = max(1, $ageColumnCount - 2);
+        @endphp
         <section class="stmt-ageing">
             <h2 class="stmt-section-title">{{ $statement['ageing']['title'] }}</h2>
 
@@ -235,8 +296,8 @@
                 <table class="stmt-table stmt-table--compact">
                 <thead>
                     <tr>
-                        <th scope="col">Date</th>
-                        <th scope="col">Reference</th>
+                        @if($show('date'))<th scope="col">Date</th>@endif
+                        @if($show('reference'))<th scope="col">Reference</th>@endif
                         @if ($statement['party_type'] === 'client')
                             <th scope="col">Due</th>
                         @endif
@@ -247,8 +308,8 @@
                 <tbody>
                     @foreach ($statement['ageing']['rows'] as $item)
                         <tr>
-                            <td>{{ $item['date'] ? $item['date']->format('d M Y') : '—' }}</td>
-                            <td>{{ $item['reference'] ?: $item['particular'] }}</td>
+                            @if($show('date'))<td>{{ $item['date'] ? $item['date']->format('d M Y') : '—' }}</td>@endif
+                            @if($show('reference'))<td>{{ $item['reference'] ?: ($show('particulars') ? $item['particular'] : '—') }}</td>@endif
                             @if ($statement['party_type'] === 'client')
                                 <td>{{ $item['due'] ? $item['due']->format('d M Y') : '—' }}</td>
                             @endif
@@ -259,9 +320,8 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="{{ $statement['party_type'] === 'client' ? 3 : 2 }}"><span
-                                class="stmt-total-label">Total outstanding</span></td>
-                        <td colspan="2" class="stmt-num stmt-num-strong">{{ $money($statement['ageing']['total']) }}</td>
+                        <td colspan="{{ $ageLabelSpan }}"><span class="stmt-total-label">Total outstanding</span></td>
+                        <td colspan="{{ $ageColumnCount - $ageLabelSpan }}" class="stmt-num stmt-num-strong">{{ $money($statement['ageing']['total']) }}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -271,30 +331,36 @@
         </section>
     @endif
 
-    @if (! empty($statement['note']))
+    @if ($show('notes') && ! empty($statement['note']))
         <section class="stmt-message">
             <p class="stmt-block-title">Note</p>
             <p>{{ $statement['note'] }}</p>
         </section>
     @endif
 
-    <footer class="stmt-foot">
-        <p class="stmt-note">{{ $statement['source_note'] }}</p>
+    @if($show('notes') || $show('bank_details') || ($show('other_currencies') && $other !== []))
+        <footer class="stmt-foot">
+            @if($show('notes'))<p class="stmt-note">{{ $statement['source_note'] }}</p>@endif
 
-        @if ($other !== [])
-            <p class="stmt-note stmt-note--wide">
-                Also on this account, outside this statement: {{ $otherText }} — each currency is its own statement.
-            </p>
-        @endif
+            @if ($show('other_currencies') && $other !== [])
+                <p class="stmt-note stmt-note--wide">
+                    Also on this account, outside this statement: {{ $otherText }} — each currency is its own statement.
+                </p>
+            @endif
 
-        <p class="stmt-note stmt-note--wide">
-            Bank: {{ $statement['issuer']['seller_bank_name'] }} ·
-            A/C {{ $statement['issuer']['seller_account_number'] }} ·
-            IFSC {{ $statement['issuer']['seller_ifsc'] }} ·
-            SWIFT {{ $statement['issuer']['seller_swift'] }}
-        </p>
+            @if($show('bank_details'))
+                <p class="stmt-note stmt-note--wide">
+                    Bank: {{ $statement['issuer']['seller_bank_name'] }} ·
+                    A/C {{ $statement['issuer']['seller_account_number'] }} ·
+                    IFSC {{ $statement['issuer']['seller_ifsc'] }} ·
+                    SWIFT {{ $statement['issuer']['seller_swift'] }}
+                </p>
+            @endif
 
-        <p class="stmt-note">A computer-generated statement. Kindly confirm the balance against your books and tell us
-            within seven days of the statement date if anything does not match.</p>
-    </footer>
+            @if($show('notes'))
+                <p class="stmt-note">A computer-generated statement. Kindly confirm the balance against your books and tell us
+                    within seven days of the statement date if anything does not match.</p>
+            @endif
+        </footer>
+    @endif
 </article>

@@ -14,7 +14,7 @@
         @include('layouts.partials.design-system-styles', ['forceStatic' => true])
     @endif
     <title>Statement of account — {{ $statement['party']['name'] }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/css/statement.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/statement.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">
 </head>
 

@@ -8,6 +8,7 @@ use App\Models\PartyStatementShare;
 use App\Models\SalesInvoice;
 use App\Models\VendorPaymentEntry;
 use App\Services\PartyStatement;
+use App\Support\StatementPrintFields;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -131,8 +132,14 @@ class PartyStatementController extends Controller
 
     public function print(Request $request, string $partyType, int $party): View
     {
+        $document = $this->documentData($request, $partyType, $party);
+        $printFields = StatementPrintFields::fromRequest($request);
+        $document['documentQuery'] += StatementPrintFields::query($request, $printFields);
+
         return view('cashflows.statement-pdf', [
-            ...$this->documentData($request, $partyType, $party),
+            ...$document,
+            'printFields' => $printFields,
+            'printFieldLabels' => StatementPrintFields::labels($partyType),
             'printPreview' => true,
             'pdfAvailable' => class_exists(\Barryvdh\DomPDF\Facade\Pdf::class),
         ]);
@@ -165,6 +172,7 @@ class PartyStatementController extends Controller
     public function pdf(Request $request, string $partyType, int $party)
     {
         $statement = $this->documentData($request, $partyType, $party)['statement'];
+        $printFields = StatementPrintFields::fromRequest($request);
 
         $fileName = 'statement-'
             .Str::slug($statement['party']['name'] ?: 'party')
@@ -172,13 +180,14 @@ class PartyStatementController extends Controller
             .'.pdf';
 
         if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
-            return \Barryvdh\DomPDF\Facade\Pdf::loadView('cashflows.statement-pdf', ['statement' => $statement])
+            return \Barryvdh\DomPDF\Facade\Pdf::loadView('cashflows.statement-pdf', ['statement' => $statement, 'printFields' => $printFields])
                 ->setPaper('a4')
                 ->download($fileName);
         }
 
         return response()->view('cashflows.statement-pdf', [
             'statement' => $statement,
+            'printFields' => $printFields,
             'pdfFallbackMessage' => 'Use the print dialog and choose Save as PDF to download this statement.',
         ]);
     }

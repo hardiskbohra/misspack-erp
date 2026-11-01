@@ -646,7 +646,7 @@ Sources: `app/Services/RecurrenceSchedule.php`, `app/Services/RecurrencePosting.
 
 ## Party statements and reconciliation (`STATEMENT`)
 
-Sources: `app/Services/PartyStatement.php`, `app/Services/VendorStatementProjects.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
+Sources: `app/Services/PartyStatement.php`, `app/Services/VendorStatementProjects.php`, `app/Support/StatementPrintFields.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
 
 ### UT-STATEMENT-001 — Running balance respects debit/credit direction
 

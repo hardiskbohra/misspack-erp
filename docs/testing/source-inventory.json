@@ -721,6 +721,20 @@
       ]
     },
     {
+      "file": "tests/Integration/StatementPrintFieldsTest.php",
+      "methods": [
+        "test_default_print_fields_are_checked_and_existing_client_and_vendor_documents_remain_complete",
+        "test_selection_is_in_preview_download_and_fallback_without_changing_statement_numbers",
+        "test_all_transaction_column_combinations_have_valid_geometry_and_truthful_totals",
+        "test_project_names_can_show_without_description_and_remain_escaped",
+        "test_date_and_reference_choices_also_apply_to_ageing_and_empty_statements",
+        "test_field_selection_is_print_only_and_unknown_choices_do_not_inject_markup",
+        "test_sections_can_be_omitted_without_changing_negative_foreign_balances_or_identity",
+        "test_print_options_do_not_bypass_office_authorization",
+        "test_optional_server_pdf_receives_the_same_selection"
+      ]
+    },
+    {
       "file": "tests/Integration/StatementPrintPreviewTest.php",
       "methods": [
         "test_statement_page_print_link_opens_new_tab_and_preserves_all_time_currency_and_ageing_off",
@@ -1447,6 +1461,7 @@
     "tools/checks/statement-check.cjs",
     "tools/checks/statement-list-browser.cjs",
     "tools/checks/statement-print-browser.cjs",
+    "tools/checks/statement-print-fields-browser.cjs",
     "tools/checks/status-check.cjs",
     "tools/checks/three-decimal-browser.cjs",
     "tools/checks/ui-components-check.cjs",

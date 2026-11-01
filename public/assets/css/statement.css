@@ -979,3 +979,38 @@ body.stmt-print .stmt-table td {
 }
 
 .stmt-table th.stmt-num { text-align: right; }
+
+/* Print-only document choices use the shared drawer and checkbox controls. */
+body.stmt-print .stmt-print-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+}
+
+body.stmt-print .stmt-print-field {
+    min-height: 44px;
+    padding: 6px 0;
+    cursor: pointer;
+}
+
+body.stmt-print .stmt-print-field input { flex: 0 0 16px; }
+body.stmt-print .stmt-print-help {
+    margin: 0 0 12px;
+    color: var(--mc-text-3, #667085);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+body.stmt-print .stmt-print-ageing { min-height: 44px; margin-top: 4px; }
+body.stmt-print #statementPrintShowAll { min-height: 40px; }
+/* Fewer printed fields leave the flexible text column most of the paper. */
+body.stmt-print .stmt-table--few-fields .stmt-col-particular,
+body.stmt-print .stmt-table--few-fields .stmt-col-reference { width: auto; }
+body.stmt-print .stmt-table--few-fields .stmt-col-money,
+body.stmt-print .stmt-table--few-fields .stmt-col-balance { width: 30%; }
+.stmt-row-label-inline { display: block; }
+.stmt-field-disclosure { margin: 12px 0 0; }
+
+@media screen and (max-width: 380px) {
+    body.stmt-print .stmt-print-fields { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1695,7 +1695,7 @@ Sources: `app/Services/RecurrenceSchedule.php`, `app/Services/RecurrencePosting.
 
 ## Party statements and reconciliation (`STATEMENT`)
 
-Sources: `app/Services/PartyStatement.php`, `app/Services/VendorStatementProjects.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
+Sources: `app/Services/PartyStatement.php`, `app/Services/VendorStatementProjects.php`, `app/Support/StatementPrintFields.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
 
 ### IT-STATEMENT-001 — Statement reconciles to source documents
 
@@ -1823,6 +1823,22 @@ Sources: `app/Services/PartyStatement.php`, `app/Services/VendorStatementProject
 **Note:** Chromium and A4 print geometry are checked separately with guarded disposable fixtures.
 
 **Evidence:** `tests/Integration/VendorStatementProjectsTest.php#test_ledger_bill_and_archived_project_names_preserve_descriptions_and_balances`; `tests/Integration/VendorStatementProjectsTest.php#test_cashflow_project_allocations_and_safe_legacy_name_matches_do_not_duplicate_money`; `tests/Integration/VendorStatementProjectsTest.php#test_partially_converted_purchase_payment_keeps_project_context_after_its_document_link_becomes_splits`; `tests/Integration/VendorStatementProjectsTest.php#test_other_vendors_purchase_and_cashflow_links_cannot_reveal_projects`; `tests/Integration/VendorStatementProjectsTest.php#test_vendor_views_and_guest_share_escape_project_names_and_leave_client_statements_unchanged`; `tests/Integration/VendorStatementProjectsTest.php#test_project_lookups_are_batched_instead_of_one_query_per_row`; `tests/Integration/VendorStatementProjectsTest.php#test_missing_optional_project_and_allocation_tables_leave_legacy_particulars_intact`; `tests/Database/MySqlPurchaseConvertedVisibilityTest.php#test_native_vendor_statement_batches_owned_and_archived_project_links_without_changing_amounts`
+
+### IT-STATEMENT-010 — Choose fields and sections for a statement print
+
+**Priority:** P1 · **Requirement:** REQ-STATEMENT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable client and vendor statements with multiple currencies, project links and ageing
+- **Data:** All 64 transaction-column combinations, negative RMB balance, long project names, empty period and 65-row client print
+1. Choose transaction, project, header and section fields and apply them to the preview and download
+2. Check empty and project-only selections, ageing columns, authorization, escaping and the optional server-PDF adapter
+3. Check mobile and A4 output, URL reload, date changes, cancellation, unchanged statement figures and office/public views
+
+**Expected:** Selection is per print URL, defaults to the full document, preserves identity and full-ledger calculations, and never changes stored data or other statement views. Every visible table has valid aligned geometry; disclosure and independently selected sections remain truthful.
+
+**Note:** Actual browser interactions and A4 PDFs are checked separately with guarded fictional SQLite fixtures; the optional PDF adapter uses a facade test double, not a real DomPDF renderer.
+
+**Evidence:** `tests/Integration/StatementPrintFieldsTest.php#test_default_print_fields_are_checked_and_existing_client_and_vendor_documents_remain_complete`; `tests/Integration/StatementPrintFieldsTest.php#test_selection_is_in_preview_download_and_fallback_without_changing_statement_numbers`; `tests/Integration/StatementPrintFieldsTest.php#test_all_transaction_column_combinations_have_valid_geometry_and_truthful_totals`; `tests/Integration/StatementPrintFieldsTest.php#test_project_names_can_show_without_description_and_remain_escaped`; `tests/Integration/StatementPrintFieldsTest.php#test_date_and_reference_choices_also_apply_to_ageing_and_empty_statements`; `tests/Integration/StatementPrintFieldsTest.php#test_field_selection_is_print_only_and_unknown_choices_do_not_inject_markup`; `tests/Integration/StatementPrintFieldsTest.php#test_sections_can_be_omitted_without_changing_negative_foreign_balances_or_identity`; `tests/Integration/StatementPrintFieldsTest.php#test_print_options_do_not_bypass_office_authorization`; `tests/Integration/StatementPrintFieldsTest.php#test_optional_server_pdf_receives_the_same_selection`
 
 ## Asset register, allocation and depreciation (`ASSET`)
 
