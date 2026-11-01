@@ -80,34 +80,11 @@
         ->reject(fn ($value) => $value === null || $value === '' || $value === 'all')
         ->all());
 
-    /* The list reads as a statement, so it is grouped by when it happened:
-       today, yesterday, the rest of this month, and everything older. The
-       rows are already in date order, so a divider only has to mark the
-       change. */
-    $dateBucket = function ($date) use ($dateRanges) {
-        if (! $date) {
-            return 'Undated';
-        }
-
-        $day = $date->toDateString();
-        $today = \Illuminate\Support\Carbon::now()->toDateString();
-
-        if ($day === $today) {
-            return 'Today';
-        }
-
-        if ($day === \Illuminate\Support\Carbon::now()->subDay()->toDateString()) {
-            return 'Yesterday';
-        }
-
-        return $day >= $dateRanges['this_month']['from'] ? 'Earlier this month' : 'Older entries';
-    };
-
-    /* How many rows each divider covers, counted once — a paginator's
-       filter() would rewrite the page itself. */
+    /* The controller supplies date groups from one office-day snapshot. The
+       rows are already sorted, and divider counts cover this page only. */
     $bucketCounts = [];
     foreach ($entries as $row) {
-        $key = $dateBucket($row->entry_date);
+        $key = $dateGroups->label($row->entry_date);
         $bucketCounts[$key] = ($bucketCounts[$key] ?? 0) + 1;
     }
 @endphp
@@ -324,9 +301,8 @@
 
     <div class="master-card master-table-card master-card--flat">
         <div class="master-list-toolbar">
-            <p class="master-list-hint"
-                title="Newest entry date on top; entries on the same day keep the order they were entered in. The list is grouped by when it happened.">
-                Newest first &middot; grouped by day
+            <p class="master-list-hint" title="Entries are grouped by date; divider counts are for this page.">
+                {{ request()->query('sort') === 'oldest' ? 'Oldest' : 'Newest' }} first &middot; grouped by date
             </p>
 
             {{-- The right-hand end of the toolbar is the shared slot every
@@ -373,7 +349,7 @@
                 <tbody>
                     @php($lastBucket = null)
                     @forelse($entries as $entry)
-                        @php($bucket = $dateBucket($entry->entry_date))
+                        @php($bucket = $dateGroups->label($entry->entry_date))
                         @if ($bucket !== $lastBucket)
                             @php($lastBucket = $bucket)
                             <tr class="master-list-group">
@@ -383,7 +359,7 @@
                                 <td colspan="9">
                                     <div class="master-list-group-inner">
                                         <span>{{ $bucket }}</span>
-                                        <span class="master-list-group-count">{{ $bucketCounts[$bucket] ?? 0 }}</span>
+                                        <span class="master-list-group-count" title="Entries in this group on this page">{{ $bucketCounts[$bucket] ?? 0 }}</span>
                                     </div>
                                 </td>
                             </tr>

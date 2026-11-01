@@ -5645,6 +5645,30 @@
       "notes": "DDL tests use a unique disposable database because MySQL commits schema changes independently."
     },
     {
+      "id": "IT-CASH-009",
+      "module": "CASH",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-CASH",
+      "title": "Cashflow listing groups dates by overlapping calendar periods",
+      "preconditions": "Office finance access, disposable cashflow records and a fixed business-timezone clock",
+      "test_data": "Entries today, yesterday, two days ago, both calendar weeks and months, older and future; page and timezone boundary fixtures",
+      "steps": [
+        "Open cashflow list newest- and oldest-first",
+        "Filter and paginate visible rows",
+        "Cross week, month, year and office-midnight boundaries"
+      ],
+      "expected": "Each visible row appears once under the most specific date group; weeks start Monday, future rows are Upcoming, counts match the page and sorting/filters are unchanged.",
+      "automation": [
+        "tests/Integration/CashflowDateGroupingTest.php#test_listing_groups_rows_in_specificity_order_and_preserves_oldest_sort",
+        "tests/Integration/CashflowDateGroupingTest.php#test_week_month_and_year_boundaries_are_disjoint",
+        "tests/Integration/CashflowDateGroupingTest.php#test_business_timezone_and_filters_control_visible_groups",
+        "tests/Integration/CashflowDateGroupingTest.php#test_divider_counts_are_for_the_current_page",
+        "tests/Unit/CashflowDateGroupsTest.php#test_leap_day_groups_use_calendar_boundaries_without_mutating_the_clock",
+        "tests/Unit/CashflowDateGroupsTest.php#test_groups_remain_contiguous_in_date_order_across_calendar_boundaries"
+      ]
+    },
+    {
       "id": "IT-TAX-013",
       "module": "TAX",
       "level": "integration",

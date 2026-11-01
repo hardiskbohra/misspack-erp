@@ -14,6 +14,7 @@ use App\Models\SavedView;
 use App\Models\User;
 use App\Services\CashflowAllocations;
 use App\Services\CashflowAnalysis;
+use App\Services\CashflowDateGroups;
 use App\Services\CashflowFilters;
 use App\Services\CashflowPickers;
 use App\Services\CashflowLedger;
@@ -58,6 +59,7 @@ class CashflowController extends Controller
         }
 
         $filters = $this->filters($request);
+        $today = DateRanges::today();
 
         /* A report opens its rows in the order it read them — oldest first — so
            a drill-down lands on the same rows the figure was summed over. Every
@@ -101,15 +103,16 @@ class CashflowController extends Controller
             'entries' => $entries,
             'stats' => $stats,
             'pageTotals' => $pageTotals,
-            'chipCounts' => $this->chipCounts($filters),
+            'chipCounts' => $this->chipCounts($filters, $today),
             /* The applied strip is drawn from the same list of dimensions that
                filtered the query, so a filter that arrives by link — a report
                cell, a saved view — is always visible and always removable. */
             'appliedFilters' => app(CashflowFilters::class)->applied($filters),
             'appliedFilterLabels' => app(CashflowFilters::class)->labels($filters),
-            'dateRanges' => DateRanges::presets(),
+            'dateRanges' => DateRanges::presets($today),
             'dateRangeLabels' => DateRanges::LABELS,
-            'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null),
+            'dateGroups' => new CashflowDateGroups($today),
+            'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null, $today),
             'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'cashflows'),
             'mirroredPayments' => $mirroredPayments,
             'mirroredShipmentCosts' => $mirroredShipmentCosts,
@@ -703,7 +706,7 @@ class CashflowController extends Controller
      *
      * @return array<string, int>
      */
-    private function chipCounts(array $filters): array
+    private function chipCounts(array $filters, Carbon $today): array
     {
         $base = array_merge($filters, [
             'transactionType' => 'all',
@@ -729,7 +732,7 @@ class CashflowController extends Controller
         /* The period chips. The ranges come from the shared helper, so the
            number on "Last month" is the number of rows that chip would show —
            in the same month the chip is labelled with. */
-        foreach (DateRanges::presets() as $key => $range) {
+        foreach (DateRanges::presets($today) as $key => $range) {
             $counts[$key] = $count([
                 'dateFrom' => $range['from'],
                 'dateTo' => $range['to'],

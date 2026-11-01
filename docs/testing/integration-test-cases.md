@@ -1628,6 +1628,20 @@ Sources: `app/Services/CashflowAllocations.php`, `app/Services/CashflowLedger.ph
 
 **Evidence:** `tests/Database/MySqlWideningMigrationSafetyTest.php#test_precision_migration_preserves_old_decimals_and_preflights_every_table_before_rollback`
 
+### IT-CASH-009 — Cashflow listing groups dates by overlapping calendar periods
+
+**Priority:** P1 · **Requirement:** REQ-CASH · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office finance access, disposable cashflow records and a fixed business-timezone clock
+- **Data:** Entries today, yesterday, two days ago, both calendar weeks and months, older and future; page and timezone boundary fixtures
+1. Open cashflow list newest- and oldest-first
+2. Filter and paginate visible rows
+3. Cross week, month, year and office-midnight boundaries
+
+**Expected:** Each visible row appears once under the most specific date group; weeks start Monday, future rows are Upcoming, counts match the page and sorting/filters are unchanged.
+
+**Evidence:** `tests/Integration/CashflowDateGroupingTest.php#test_listing_groups_rows_in_specificity_order_and_preserves_oldest_sort`; `tests/Integration/CashflowDateGroupingTest.php#test_week_month_and_year_boundaries_are_disjoint`; `tests/Integration/CashflowDateGroupingTest.php#test_business_timezone_and_filters_control_visible_groups`; `tests/Integration/CashflowDateGroupingTest.php#test_divider_counts_are_for_the_current_page`; `tests/Unit/CashflowDateGroupsTest.php#test_leap_day_groups_use_calendar_boundaries_without_mutating_the_clock`; `tests/Unit/CashflowDateGroupsTest.php#test_groups_remain_contiguous_in_date_order_across_calendar_boundaries`
+
 ## Recurring cashflow planning and posting (`RECUR`)
 
 Sources: `app/Services/RecurrenceSchedule.php`, `app/Services/RecurrencePosting.php`, `app/Services/RecurrencePlan.php`.

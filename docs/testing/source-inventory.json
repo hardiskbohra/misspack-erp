@@ -453,6 +453,15 @@
       ]
     },
     {
+      "file": "tests/Integration/CashflowDateGroupingTest.php",
+      "methods": [
+        "test_listing_groups_rows_in_specificity_order_and_preserves_oldest_sort",
+        "test_week_month_and_year_boundaries_are_disjoint",
+        "test_business_timezone_and_filters_control_visible_groups",
+        "test_divider_counts_are_for_the_current_page"
+      ]
+    },
+    {
       "file": "tests/Integration/DashboardConsolidationTest.php",
       "methods": [
         "test_legacy_dashboard_redirects_to_module_directory_with_custom_dates",
@@ -772,6 +781,13 @@
         "test_schedule_conserves_value_and_never_depreciates_below_residual",
         "test_capitalised_basis_distinguishes_claimed_gst_credit",
         "test_missing_purchase_date_zero_cost_and_non_depreciating_asset_have_no_schedule"
+      ]
+    },
+    {
+      "file": "tests/Unit/CashflowDateGroupsTest.php",
+      "methods": [
+        "test_leap_day_groups_use_calendar_boundaries_without_mutating_the_clock",
+        "test_groups_remain_contiguous_in_date_order_across_calendar_boundaries"
       ]
     },
     {
@@ -1144,6 +1160,7 @@
     "app/Services/CashInvoiceDeletion.php",
     "app/Services/CashflowAllocations.php",
     "app/Services/CashflowAnalysis.php",
+    "app/Services/CashflowDateGroups.php",
     "app/Services/CashflowFilters.php",
     "app/Services/CashflowLedger.php",
     "app/Services/CashflowPickers.php",
@@ -1334,6 +1351,7 @@
     "tools/checks/audit-register-browser.cjs",
     "tools/checks/blade-check.cjs",
     "tools/checks/cash-conversion-check.cjs",
+    "tools/checks/cashflow-date-groups-browser.cjs",
     "tools/checks/client-account-summary-check.cjs",
     "tools/checks/confirmation-dialog-check.cjs",
     "tools/checks/cost-check.cjs",
