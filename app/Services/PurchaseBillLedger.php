@@ -203,10 +203,19 @@ class PurchaseBillLedger
             return null;
         }
 
-        return VendorPaymentEntry::query()
+        $query = VendorPaymentEntry::query()
             ->where('purchase_invoice_id', $invoice->id)
-            ->where('transaction_type', 'credit')
-            ->first();
+            ->where('transaction_type', 'credit');
+
+        if ($invoice->isOrder()) {
+            // A reopened order may still have manual credits or a real
+            // cashflow movement linked to it. Only its PO posting is ours to
+            // update/remove; never turn an adjustment into an order credit.
+            $query->where('entry_category', 'order')
+                ->whereNull('cashflow_entry_id');
+        }
+
+        return $query->first();
     }
 
     /**

@@ -136,7 +136,7 @@ class PartyStatement
 
         if ($type === 'vendor') {
             if (Schema::hasTable('vendor_payment_entries')) {
-                $found = VendorPaymentEntry::where('vendor_id', $id)
+                $found = VendorPaymentEntry::where('vendor_id', $id)->forPartyStatement()
                     ->select('foreign_currency')->distinct()->pluck('foreign_currency')->all();
             }
             /* A payment recorded in the cashflow module posts to the ledger, but
@@ -229,7 +229,7 @@ class PartyStatement
         $ledgerCurrency = strtoupper((string) ($vendor?->preferred_currency ?: 'RMB'));
 
         if (Schema::hasTable('vendor_payment_entries')) {
-            $exists = VendorPaymentEntry::query()
+            $exists = VendorPaymentEntry::query()->forPartyStatement()
                 ->where('vendor_id', $vendorId)
                 ->where(function ($query) use ($currency, $ledgerCurrency) {
                     $query->where('foreign_currency', $currency);
@@ -478,7 +478,7 @@ class PartyStatement
         };
 
         if (Schema::hasTable('vendor_payment_entries')) {
-            VendorPaymentEntry::query()
+            VendorPaymentEntry::query()->forPartyStatement()
                 ->whereIn('vendor_id', $ids)
                 ->selectRaw('vendor_id, foreign_currency, transaction_date, transaction_type, foreign_amount')
                 ->chunk(500, function ($entries) use ($add) {
@@ -556,6 +556,8 @@ class PartyStatement
         [$opening, $moving] = $this->splitOpening($rows, $from, $to);
 
         $sign = $type === 'vendor' ? -1 : 1; // balance = sign × (debit − credit)
+        // Earlier rows must use the same payable/receivable sign as movement.
+        $opening *= $sign;
         $running = $opening;
         $debit = 0.0;
         $credit = 0.0;
@@ -599,7 +601,7 @@ class PartyStatement
 
         $statement['uses_vendor_ledger'] = $type === 'vendor'
             && Schema::hasTable('vendor_payment_entries')
-            && VendorPaymentEntry::where('vendor_id', $id)->exists();
+            && VendorPaymentEntry::where('vendor_id', $id)->forPartyStatement()->exists();
         /* Rupee cashflow rows no ledger row stands behind; the note says so
            rather than claiming the ledger is the whole story. */
         $statement['uses_cashflow'] = $type === 'vendor'
@@ -760,7 +762,7 @@ class PartyStatement
         $rows = [];
 
         if (Schema::hasTable('vendor_payment_entries')) {
-            $entries = VendorPaymentEntry::query()
+            $entries = VendorPaymentEntry::query()->forPartyStatement()
                 ->where('vendor_id', $vendor->id)
                 ->orderBy('transaction_date')->orderBy('id')
                 ->get();
@@ -921,7 +923,7 @@ class PartyStatement
                    as `vendorStatementRows` reads it — not in rupees. */
                 $ledgerCurrency = strtoupper((string) ($party->preferred_currency ?: 'RMB'));
 
-                $collect(VendorPaymentEntry::where('vendor_id', $party->id)->get()
+                $collect(VendorPaymentEntry::where('vendor_id', $party->id)->forPartyStatement()->get()
                     ->map(fn ($entry) => [
                         'currency' => strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency)),
                         'date' => $entry->transaction_date,
@@ -1115,7 +1117,7 @@ class PartyStatement
         $items = [];
         $ledgerCurrency = strtoupper((string) (Vendor::find($id)?->preferred_currency ?: 'RMB'));
 
-        foreach (VendorPaymentEntry::where('vendor_id', $id)
+        foreach (VendorPaymentEntry::where('vendor_id', $id)->forPartyStatement()
             ->orderBy('transaction_date')->orderBy('id')->get() as $entry) {
             $entryCurrency = strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency));
             if ($entryCurrency !== $currency) {

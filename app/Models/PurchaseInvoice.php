@@ -235,6 +235,44 @@ class PurchaseInvoice extends Model
         return $this->isOrder() && (int) $this->converted_invoice_id > 0;
     }
 
+    /**
+     * Legacy conversion has one linked bill; partial conversions consume the
+     * remaining PO amount across any number of cash or purchase bills. A
+     * zero-value order with no conversion is still an order, not history.
+     */
+    public function isFullyConverted(): bool
+    {
+        return $this->isOrder() && ($this->isSuperseded()
+            || ((float) ($this->converted_amount ?? 0) > 0
+                && $this->total_amount !== null && (float) $this->total_amount <= 0));
+    }
+
+    /**
+     * The same predicate for listings, aggregate figures and statement reads.
+     * Older installations/fixtures may not yet have partial-conversion columns;
+     * their legacy linked orders can still be classified correctly. Coalesce
+     * makes the negation safe for nullable historical data on both databases.
+     */
+    public static function fullyConvertedSql(): string
+    {
+        $linked = 'coalesce(purchase_invoices.converted_invoice_id, 0) > 0';
+        $exhausted = Schema::hasColumn('purchase_invoices', 'converted_amount')
+            ? ' or (coalesce(purchase_invoices.converted_amount, 0) > 0 and coalesce(purchase_invoices.total_amount, 1) <= 0)'
+            : '';
+
+        return "(coalesce(purchase_invoices.invoice_type, '') = 'order' and (".$linked.$exhausted.'))';
+    }
+
+    public function scopeFullyConverted(Builder $query): Builder
+    {
+        return $query->whereRaw(self::fullyConvertedSql());
+    }
+
+    public function scopeNotFullyConverted(Builder $query): Builder
+    {
+        return $query->whereRaw('not '.self::fullyConvertedSql());
+    }
+
     /** Draft or sent: the checker has not signed this order off yet. */
     public function needsChecker(): bool
     {

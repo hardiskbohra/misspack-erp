@@ -564,6 +564,18 @@ Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMon
 
 **Expected:** Balance reopens; bill returns to unpaid/received state, not stale paid.
 
+### UT-PURCHASE-004 — Classify fully converted orders at the thousandth
+
+**Priority:** P0 · **Requirement:** REQ-PURCHASE · **Implementation:** linked executable evidence
+
+- **Preconditions:** Unsaved purchase documents with legacy links or partial-conversion totals
+- **Data:** Zero unconverted; 0.001 remaining; 0.001 converted and zero remaining; legacy link; bill
+1. Evaluate the conversion state across each boundary
+
+**Expected:** Only orders with a legacy bill link or positive converted amount and no remaining claim are fully converted.
+
+**Evidence:** `tests/Unit/PurchaseConvertedStateTest.php#test_only_orders_with_a_legacy_link_or_exhausted_converted_amount_are_fully_converted`
+
 ## Cashflow, allocations and account transfers (`CASH`)
 
 Sources: `app/Services/CashflowAllocations.php`, `app/Services/CashflowLedger.php`, `app/Http/Controllers/CashflowController.php`.

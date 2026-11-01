@@ -94,7 +94,7 @@
             </div>
 
             <x-drawer id="purchaseFiltersDrawer" title="Filter purchases" eyebrow="Purchase filters"
-                subtitle="Refine by type, vendor, payment or date." size="medium">
+                subtitle="Refine by type, conversion, vendor, payment or date." size="medium">
                 <section class="core-drawer-section">
                     <h3 class="core-drawer-section-title">Document</h3>
                     <div class="si-filter-grid">
@@ -105,6 +105,14 @@
                                 @foreach($typeOptions as $key => $label)
                                     <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="piFilterConverted">Converted orders</label>
+                            <select class="master-select" name="converted" id="piFilterConverted">
+                                <option value="hide" @selected($converted === 'hide')>Hide fully converted orders</option>
+                                <option value="include" @selected($converted === 'include')>Include fully converted orders</option>
+                                <option value="only" @selected($converted === 'only')>Only fully converted orders</option>
                             </select>
                         </div>
                         <div class="si-filter-field">
@@ -183,7 +191,8 @@
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">{{ $chip['label'] }}</span>
                             <span class="master-list-applied-value">{{ $chip['value'] }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['query'] ?? []) }}">&times;</a>
+                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['query'] ?? []) }}"
+                                aria-label="Remove {{ $chip['label'] }} filter">&times;</a>
                         </span>
                     @endforeach
                     <a class="master-list-applied-clear" href="{{ route('purchase-invoices.index') }}">Clear all filters</a>
@@ -308,9 +317,12 @@
                             </td>
                             <td data-label="State">
                                 <span class="si-status status-{{ $stateKey }}">{{ $invoice->stateLabel() }}</span>
-                                @if ($invoice->isSuperseded())
+                                @if ($invoice->isFullyConverted())
+                                    <span class="master-sub">Fully converted</span>
+                                @endif
+                                @if ($invoice->isSuperseded() && $invoice->convertedInvoice)
                                     <a class="master-sub si-converted-link" href="{{ route('purchase-invoices.show', $invoice->convertedInvoice) }}">
-                                        Became {{ $invoice->convertedInvoice?->invoice_number }}
+                                        Became {{ $invoice->convertedInvoice->invoice_number }}
                                     </a>
                                 @endif
                             </td>

@@ -63,18 +63,18 @@ class PurchaseInvoiceController extends Controller
            `only_full_group_by`. A query with no columns of its own takes one
            aggregate select cleanly — the same rule the invoices listing keeps. */
         $paid = $this->paidSql();
-        /* Bills, and unconverted orders: a PO with an advance is money too.
-           Converted orders are dropped so one purchase is not billed twice. */
+        /* Bills and orders with a remaining claim count once, even when the
+           filter includes converted orders for historical inspection. */
+        $openOrder = "purchase_invoices.invoice_type = 'order' and not ".PurchaseInvoice::fullyConvertedSql();
         $live = "purchase_invoices.status <> 'cancelled' and ("
-            ."purchase_invoices.invoice_type = 'bill'"
-            ." or (purchase_invoices.invoice_type = 'order' and purchase_invoices.converted_invoice_id is null))";
+            ."purchase_invoices.invoice_type = 'bill' or (".$openOrder."))";
         $currencyBits = [];
         foreach (['INR', 'USD', 'RMB'] as $code) {
             $c = "purchase_invoices.currency = '".$code."'";
             $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'bill'"
                 ." and purchase_invoices.status <> 'cancelled' then purchase_invoices.total_amount else 0 end), 0) as billed_".$code;
-            $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'order'"
-                ." and purchase_invoices.converted_invoice_id is null and purchase_invoices.status <> 'cancelled'"
+            $currencyBits[] = "coalesce(sum(case when $c and ".$openOrder
+                ." and purchase_invoices.status <> 'cancelled'"
                 ." then purchase_invoices.total_amount else 0 end), 0) as open_".$code;
             $currencyBits[] = "coalesce(sum(case when $c and $live then ".$paid." else 0 end), 0) as paid_".$code;
             $currencyBits[] = "coalesce(sum(case when $c and $live and purchase_invoices.status <> 'draft'"
@@ -130,6 +130,8 @@ class PurchaseInvoiceController extends Controller
     private function filteredQuery(array $filters)
     {
         return PurchaseInvoice::query()
+            ->when(($filters['converted'] ?? 'hide') === 'hide', fn ($query) => $query->notFullyConverted())
+            ->when(($filters['converted'] ?? 'hide') === 'only', fn ($query) => $query->fullyConverted())
             ->when(($filters['type'] ?? 'all') !== 'all', fn ($query) => $query->where('purchase_invoices.invoice_type', $filters['type']))
             ->when(($filters['search'] ?? '') !== '', fn ($query) => $query->search($filters['search']))
             ->when(($filters['status'] ?? 'all') !== 'all', function ($query) use ($filters) {
@@ -182,9 +184,15 @@ class PurchaseInvoiceController extends Controller
             $type = 'all';
         }
 
+        $converted = $request->query('converted', 'hide');
+        if (! is_string($converted) || ! in_array($converted, ['hide', 'include', 'only'], true)) {
+            $converted = 'hide';
+        }
+
         return [
             'search' => trim((string) $request->query('search', '')),
             'type' => $type,
+            'converted' => $converted,
             'status' => $status,
             'payment' => $payment,
             'currency' => $currency,
@@ -206,6 +214,11 @@ class PurchaseInvoiceController extends Controller
         }
         if ($filters['type'] !== 'all') {
             $chips['type'] = ['label' => 'Type', 'value' => PurchaseInvoice::DOC_LABELS[$filters['type']] ?? $filters['type'], 'query' => ['invoice_type']];
+        }
+        if ($filters['converted'] !== 'hide') {
+            $chips['converted'] = ['label' => 'Converted orders',
+                'value' => $filters['converted'] === 'only' ? 'Only fully converted orders' : 'Include fully converted orders',
+                'query' => ['converted']];
         }
         if ($filters['status'] !== 'all') {
             $chips['status'] = ['label' => 'Status', 'value' => $statuses[$filters['status']] ?? $filters['status'], 'query' => ['status']];
@@ -443,9 +456,9 @@ class PurchaseInvoiceController extends Controller
             if ($invoice->hasPartialConversions() || $invoice->isPartialConversion()) {
                 return back()->with('error', 'This purchase has linked partial conversions. Reverse the linked bills before deleting it.');
             }
-            if ((float) $invoice->ledgerPaid() >= 0.001) {
+            if ($invoice->paidAmount() >= 0.001) {
                 return back()->with('error', $invoice->invoice_number
-                    .' has payments or cashflow allocations filed against it. Remove those links first, then delete the document.');
+                    .' has payments, an opening advance or cashflow allocations filed against it. Resolve those amounts first, then delete the document.');
             }
             if ($invoice->isSuperseded()) {
                 return back()->with('error', $invoice->invoice_number
@@ -462,6 +475,8 @@ class PurchaseInvoiceController extends Controller
                 $order->converted_invoice_id = null;
                 $order->status = 'approved';
                 $order->save();
+                // The bill replaced the order credit; a reopened order needs it back.
+                app(PurchaseBillLedger::class)->sync($order);
             }
             return redirect()->route('purchase-invoices.index')->with('success', $number.' deleted.');
         }, 3);
@@ -759,7 +774,7 @@ class PurchaseInvoiceController extends Controller
                         continue;
                     }
 
-                    if ($invoice->isBill() && (float) $invoice->ledgerPaid() >= 0.001) {
+                    if ($invoice->paidAmount() >= 0.001) {
                         $skipped++;
                         continue;
                     }
@@ -769,7 +784,7 @@ class PurchaseInvoiceController extends Controller
                         continue;
                     }
 
-                    $order = PurchaseInvoice::query()->where('converted_invoice_id', $invoice->id)->first();
+                    $order = PurchaseInvoice::query()->where('converted_invoice_id', $invoice->id)->lockForUpdate()->first();
                     (new PurchaseBillLedger())->remove($invoice);
                     $invoice->items()->delete();
                     $invoice->delete();
@@ -778,6 +793,7 @@ class PurchaseInvoiceController extends Controller
                         $order->converted_invoice_id = null;
                         $order->status = 'approved';
                         $order->save();
+                        app(PurchaseBillLedger::class)->sync($order);
                     }
 
                     $done++;

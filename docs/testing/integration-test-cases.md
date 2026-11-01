@@ -1524,6 +1524,21 @@ Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMon
 
 **Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_scaled_prices_keep_all_original_quantities_on_cash_and_purchase_bills`; `tests/Integration/PurchasePartialConversionsTest.php#test_cash_prices_include_gst_discounts_and_charges_without_separate_components`; `tests/Integration/PurchasePartialConversionsTest.php#test_visible_price_rounding_preserves_exact_totals_and_never_fabricates_a_price`; `tests/Integration/PurchasePartialConversionsTest.php#test_inconsistent_purchase_source_is_not_hidden_as_round_off`; `tests/Integration/PurchasePartialConversionsTest.php#test_converted_bill_packing_requires_actual_physical_quantities`; `tests/Integration/PurchasePartialConversionsTest.php#test_intra_state_percentage_discount_and_original_manual_round_off_are_preserved`; `tests/Integration/PurchasePartialConversionsTest.php#test_existing_legacy_split_is_not_rewritten_when_a_new_bill_is_created`; `tests/Integration/PurchasePartialConversionsTest.php#test_packing_verification_does_not_claim_linked_financial_quantities_are_physical`; `tests/Integration/PurchasePartialConversionsTest.php#test_manual_packing_quantities_are_saved_without_inventing_a_physical_bill_balance`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_native_scaled_price_rounding_keeps_three_decimal_amounts_on_both_bills`; `tests/Integration/PurchasePartialConversionsTest.php#test_purchase_bill_recalculates_mixed_gst_rates_after_invoice_discount`; `tests/Integration/PurchasePartialConversionsTest.php#test_packaging_from_a_real_shipment_is_not_misclassified_by_an_associated_financial_bill`; `tests/Integration/PurchasePartialConversionsTest.php#test_valid_legacy_float_halfway_percentages_are_accepted_without_accepting_arbitrary_errors`; `tests/Integration/PurchasePartialConversionsTest.php#test_valid_legacy_float_halfway_item_gross_is_accepted`
 
+### IT-PURCHASE-012 — Fully converted purchase orders are filterable without double-counting
+
+**Priority:** P0 · **Requirement:** REQ-PURCHASE · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema; approved PO, cash and tax bills, legacy conversion and genuine payment
+- **Data:** PO 10000 → 2500 cash + 7500 bill; unconverted zero; legacy linked bill; multiple pages
+1. Inspect default, include and only-converted listing, combined filters, counts and totals
+2. Reverse a linked bill and delete a legacy bill individually and in bulk
+3. Compare the result on pre-conversion SQLite schema and native three-decimal MySQL
+4. Attempt deletion with a carried opening advance
+
+**Expected:** Partial and unconverted POs remain; fully converted POs are hidden by default and accessible in filters; bills and payments persist; reopening restores the order and its statement posting without overwriting manual credits; aggregates do not duplicate it. A carried opening advance blocks deletion rather than being discarded.
+
+**Evidence:** `tests/Integration/PurchaseConvertedVisibilityTest.php#test_listing_filters_legacy_and_exhausted_orders_without_duplicate_totals`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_conversion_and_reversal_change_visibility_without_losing_payments`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_listing_pagination_and_chips_preserve_the_conversion_filter`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_legacy_bill_deletion_reopens_the_order_and_its_statement_credit`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_bulk_deleting_a_legacy_draft_bill_reposts_the_reopened_order`; `tests/Integration/PurchaseVisibilityLegacySchemaTest.php#test_legacy_links_hide_without_requiring_partial_conversion_columns`; `tests/Database/MySqlPurchaseConvertedVisibilityTest.php#test_listing_filters_and_statement_use_native_decimal_values`; `tests/Database/MySqlPurchaseConvertedVisibilityTest.php#test_native_conversion_and_reversal_reopen_the_order_at_one_thousandth`; `tests/Database/MySqlPurchaseConvertedVisibilityTest.php#test_native_legacy_deletion_reposts_the_order_without_overwriting_manual_credit`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_legacy_bill_with_a_carried_opening_advance_cannot_be_deleted`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_bulk_delete_does_not_discard_a_draft_bill_opening_advance`; `tests/Database/MySqlPurchaseConvertedVisibilityTest.php#test_native_opening_advances_are_not_discarded_on_legacy_or_bulk_deletion`
+
 ## Cashflow, allocations and account transfers (`CASH`)
 
 Sources: `app/Services/CashflowAllocations.php`, `app/Services/CashflowLedger.php`, `app/Http/Controllers/CashflowController.php`.
@@ -1776,6 +1791,22 @@ Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatement
 **Note:** The empty-receipts failure predated short links; both SQLite and strict MySQL exercise its fix.
 
 **Evidence:** `tests/Integration/PublicShortLinksTest.php#test_canonical_handlers_still_enforce_share_expiry_revocation_permissions_and_view_counts`; `tests/Integration/PublicShortLinksTest.php#test_client_statement_with_an_overlapping_project_receipt_counts_it_only_once`; `tests/Database/MySqlPublicShortLinksTest.php#test_guest_links_use_current_tokens_and_the_original_handlers_on_mysql`
+
+### IT-STATEMENT-008 — Hide fully converted PO credits consistently without removing financial history
+
+**Priority:** P0 · **Requirement:** REQ-STATEMENT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema; legacy and exhausted POs, stale ledger credits, partial PO, bills, debits and manual adjustments in multiple currencies
+- **Data:** Historical PO credits before period; PO-linked payment; real USD/RMB movements; unlinked and cashflow-linked credits
+1. Compare statement body, opening, totals, ageing, currency options and statement list
+2. Inspect print/PDF fallback and public share
+3. Compare ledger rows before and after, including mismatched-vendor and real cashflow links
+
+**Expected:** Only fully converted order credits are omitted; partial PO remaining credit, bills, all real payments and adjustments, and currency-separated totals persist. Reads do not mutate historical rows.
+
+**Note:** The vendor opening sign is aligned with credit minus debit; the preferred currency can remain selectable even if it has no visible movement.
+
+**Evidence:** `tests/Integration/PurchaseConvertedVisibilityTest.php#test_statement_excludes_stale_full_po_credits_but_preserves_payments_opening_and_currencies`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_order_credits_without_a_matching_owned_order_or_with_real_cashflow_are_not_hidden`; `tests/Integration/PurchaseConvertedVisibilityTest.php#test_print_pdf_and_public_share_use_the_same_visible_ledger`; `tests/Integration/PurchaseVisibilityLegacySchemaTest.php#test_legacy_links_hide_without_requiring_partial_conversion_columns`; `tests/Database/MySqlPurchaseConvertedVisibilityTest.php#test_listing_filters_and_statement_use_native_decimal_values`
 
 ## Asset register, allocation and depreciation (`ASSET`)
 

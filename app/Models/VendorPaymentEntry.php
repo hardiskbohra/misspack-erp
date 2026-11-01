@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class VendorPaymentEntry extends Model
@@ -67,6 +69,39 @@ class VendorPaymentEntry extends Model
     public function purchaseInvoice()
     {
         return $this->belongsTo(PurchaseInvoice::class, 'purchase_invoice_id');
+    }
+
+    /**
+     * A statement must not count a fully converted order's old credit beside
+     * its bills, including an old/stale posting. Do not hide a real payment or
+     * adjustment just because it is still linked to the order, and do not
+     * delete any ledger history. Unlinked entries are also left untouched.
+     */
+    public function scopeForPartyStatement(Builder $query): Builder
+    {
+        if (! Schema::hasTable('purchase_invoices')
+            || ! Schema::hasColumn('purchase_invoices', 'converted_invoice_id')
+            || ! Schema::hasColumn('vendor_payment_entries', 'purchase_invoice_id')
+            || ! Schema::hasColumn('vendor_payment_entries', 'entry_category')) {
+            return $query;
+        }
+
+        $hasCashflowLink = Schema::hasColumn('vendor_payment_entries', 'cashflow_entry_id');
+
+        return $query->where(function (Builder $visible) use ($hasCashflowLink) {
+            $visible->whereNull('vendor_payment_entries.transaction_type')
+                ->orWhere('vendor_payment_entries.transaction_type', '!=', 'credit')
+                ->orWhereNull('vendor_payment_entries.entry_category')
+                ->orWhere('vendor_payment_entries.entry_category', '!=', 'order');
+
+            // A linked bank/cashflow movement is real money, not a PO mirror.
+            if ($hasCashflowLink) {
+                $visible->orWhereNotNull('vendor_payment_entries.cashflow_entry_id');
+            }
+
+            $visible->orWhereDoesntHave('purchaseInvoice', fn (Builder $order) => $order->fullyConverted()
+                ->whereColumn('purchase_invoices.vendor_id', 'vendor_payment_entries.vendor_id'));
+        });
     }
 
     /** Payments used by a partial conversion are immutable until it is reversed. */

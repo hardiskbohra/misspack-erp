@@ -34,6 +34,15 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlPurchaseConvertedVisibilityTest.php",
+      "methods": [
+        "test_listing_filters_and_statement_use_native_decimal_values",
+        "test_native_legacy_deletion_reposts_the_order_without_overwriting_manual_credit",
+        "test_native_opening_advances_are_not_discarded_on_legacy_or_bulk_deletion",
+        "test_native_conversion_and_reversal_reopen_the_order_at_one_thousandth"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlPurchasePartialConversionTest.php",
       "methods": [
         "test_native_money_slices_and_lossy_rollback_guard",
@@ -632,6 +641,21 @@
       ]
     },
     {
+      "file": "tests/Integration/PurchaseConvertedVisibilityTest.php",
+      "methods": [
+        "test_listing_filters_legacy_and_exhausted_orders_without_duplicate_totals",
+        "test_listing_pagination_and_chips_preserve_the_conversion_filter",
+        "test_conversion_and_reversal_change_visibility_without_losing_payments",
+        "test_legacy_bill_deletion_reopens_the_order_and_its_statement_credit",
+        "test_legacy_bill_with_a_carried_opening_advance_cannot_be_deleted",
+        "test_bulk_delete_does_not_discard_a_draft_bill_opening_advance",
+        "test_bulk_deleting_a_legacy_draft_bill_reposts_the_reopened_order",
+        "test_statement_excludes_stale_full_po_credits_but_preserves_payments_opening_and_currencies",
+        "test_order_credits_without_a_matching_owned_order_or_with_real_cashflow_are_not_hidden",
+        "test_print_pdf_and_public_share_use_the_same_visible_ledger"
+      ]
+    },
+    {
       "file": "tests/Integration/PurchasePartialConversionsTest.php",
       "methods": [
         "test_scaled_prices_keep_all_original_quantities_on_cash_and_purchase_bills",
@@ -669,6 +693,12 @@
         "test_reversal_refuses_vendor_collaboration_and_share_links",
         "test_purchase_reader_and_guest_cannot_create_or_change_conversions",
         "test_linked_documents_and_split_payment_cannot_be_mutated_or_deleted_out_of_band"
+      ]
+    },
+    {
+      "file": "tests/Integration/PurchaseVisibilityLegacySchemaTest.php",
+      "methods": [
+        "test_legacy_links_hide_without_requiring_partial_conversion_columns"
       ]
     },
     {
@@ -992,6 +1022,12 @@
         "test_manage_implies_view_but_view_does_not_imply_manage_or_sensitive_access",
         "test_employee_never_gains_office_access_even_with_full_profile_or_explicit_grants",
         "test_empty_custom_profile_is_deny_by_default"
+      ]
+    },
+    {
+      "file": "tests/Unit/PurchaseConvertedStateTest.php",
+      "methods": [
+        "test_only_orders_with_a_legacy_link_or_exhausted_converted_amount_are_fully_converted"
       ]
     },
     {
@@ -1386,6 +1422,7 @@
     "tools/checks/projects-check.cjs",
     "tools/checks/public-short-links-browser.cjs",
     "tools/checks/purchase-conversions-browser.cjs",
+    "tools/checks/purchase-converted-visibility-browser.cjs",
     "tools/checks/recurring-check.cjs",
     "tools/checks/report-check.cjs",
     "tools/checks/responsive-check.cjs",
