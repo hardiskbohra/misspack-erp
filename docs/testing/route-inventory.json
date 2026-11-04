@@ -5302,6 +5302,46 @@
             ]
         },
         {
+            "name": "shipments.comments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments/{shipment}/comments",
+            "action": "App\\Http\\Controllers\\ShipmentCommentController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.comments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "shipments/{shipment}/comments/{comment}",
+            "action": "App\\Http\\Controllers\\ShipmentCommentController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.comments.attachments.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/{shipment}/comments/{comment}/attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\ShipmentCommentController@file",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "shipments.costs.store",
             "methods": [
                 "POST"
@@ -5406,6 +5446,207 @@
             "action": "App\\Http\\Controllers\\PartyStatementController@publicShow",
             "middleware": [
                 "web"
+            ]
+        },
+        {
+            "name": "stock.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock",
+            "action": "App\\Http\\Controllers\\StockController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/counts",
+            "action": "App\\Http\\Controllers\\StockCountController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts",
+            "action": "App\\Http\\Controllers\\StockCountController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/counts/create",
+            "action": "App\\Http\\Controllers\\StockCountController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/counts/{stockCount}",
+            "action": "App\\Http\\Controllers\\StockCountController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.approve",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/approve",
+            "action": "App\\Http\\Controllers\\StockCountController@approve",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.cancel",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/cancel",
+            "action": "App\\Http\\Controllers\\StockCountController@cancel",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.update",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/draft",
+            "action": "App\\Http\\Controllers\\StockCountController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.refresh",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/refresh",
+            "action": "App\\Http\\Controllers\\StockCountController@refresh",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.reject",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/reject",
+            "action": "App\\Http\\Controllers\\StockCountController@reject",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.submit",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/submit",
+            "action": "App\\Http\\Controllers\\StockCountController@submit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/items",
+            "action": "App\\Http\\Controllers\\StockController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/items/create",
+            "action": "App\\Http\\Controllers\\StockController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/items/{stockItem}",
+            "action": "App\\Http\\Controllers\\StockController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.movements.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/items/{stockItem}/movements",
+            "action": "App\\Http\\Controllers\\StockController@movement",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
             ]
         },
         {

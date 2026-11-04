@@ -245,6 +245,61 @@
     /* ---------------- Page initialisation ---------------- */
 
     document.addEventListener('DOMContentLoaded', function () {
+        var record = document.querySelector('[data-shipment-record]');
+        if (record) {
+            // Old bookmarks and the original upload redirect pointed directly
+            // to an anchor on the one-page record. Land on the new owning tab.
+            var resolveLegacyAnchor = function () {
+                var targets = { '#shipmentAttachments': 'documents', '#shipmentCosts': 'costs' };
+                var target = targets[window.location.hash];
+                var current = new URL(window.location.href);
+                // Match Laravel's boolean query handling: a present but false
+                // receipt flag must not block an old attachment/cost bookmark.
+                var receipt = (current.searchParams.get('record_delivery_receipt') || '').trim().toLowerCase();
+                var receiptRequested = ['1', 'true', 'on', 'yes'].includes(receipt);
+                if (target && current.searchParams.get('tab') !== target && !receiptRequested) {
+                    current.searchParams.set('tab', target);
+                    window.location.replace(current.href);
+                }
+            };
+            resolveLegacyAnchor();
+            window.addEventListener('hashchange', resolveLegacyAnchor);
+
+            // Direct links should not leave the active tab off-screen in the
+            // horizontally scrolling mobile bar. Scroll only that bar so deep
+            // links and receipt targets retain their vertical position.
+            var tabs = Array.prototype.slice.call(record.querySelectorAll('[data-shipment-tab-link]'));
+            var tabNav = record.querySelector('.master-tabs[role="tablist"]');
+            var selectedTab = tabs.find(function (link) { return link.getAttribute('aria-selected') === 'true'; });
+            if (tabNav && selectedTab) {
+                var revealSelectedTab = function () {
+                    var barRect = tabNav.getBoundingClientRect();
+                    var tabRect = selectedTab.getBoundingClientRect();
+                    if (tabRect.right > barRect.right) tabNav.scrollLeft += tabRect.right - barRect.right + 10;
+                    else if (tabRect.left < barRect.left) tabNav.scrollLeft -= barRect.left - tabRect.left + 10;
+                };
+                revealSelectedTab();
+                // Rotation or resizing may make the formerly visible active
+                // tab overflow; keep the user's location visible then too.
+                window.addEventListener('resize', function () { window.requestAnimationFrame(revealSelectedTab); });
+            }
+
+            // Link tabs retain native Enter/open-in-new-tab/back behaviour;
+            // arrows, Home and End also move focus within the strip.
+            tabs.forEach(function (link, index) {
+                link.tabIndex = link.getAttribute('aria-selected') === 'true' ? 0 : -1;
+                link.addEventListener('keydown', function (event) {
+                    var next;
+                    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+                    else if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+                    else if (event.key === 'Home') next = 0;
+                    else if (event.key === 'End') next = tabs.length - 1;
+                    else return;
+                    event.preventDefault();
+                    tabs[next].focus();
+                });
+            });
+        }
         var quickModal = document.getElementById('quickShipmentModal');
         var deleteModal = document.getElementById('deleteShipmentModal');
         var deleteForm = document.getElementById('deleteShipmentForm');

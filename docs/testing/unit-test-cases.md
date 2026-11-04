@@ -449,7 +449,7 @@ Sources: `app/Http/Controllers/PackagingListController.php`, `app/Services/Packa
 
 ## Shipments, dispatch and delivery (`SHIP`)
 
-Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`, `app/Services/PublicShareLinks.php`.
+Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`, `app/Services/PublicShareLinks.php`, `app/Http/Controllers/ShipmentCommentController.php`, `app/Services/ShipmentCommentFiles.php`.
 
 ### UT-SHIP-001 — Dispatch gate requires full financial balance
 
@@ -1275,3 +1275,22 @@ Sources: `app/Support/Gstin.php`, `app/Rules/ValidGstin.php`, `app/Models/HsnSac
 **Expected:** Structure, checksum and state gates hold independently; every typo is refused; nullable input stays nullable.
 
 **Evidence:** `tests/Unit/GstinTest.php#test_known_good_gstins_pass_structure_state_and_checksum`; `tests/Unit/GstinTest.php#test_the_check_digit_is_the_published_mod36_algorithm`; `tests/Unit/GstinTest.php#test_a_single_character_typo_anywhere_fails`; `tests/Unit/GstinTest.php#test_structural_and_state_rejections`; `tests/Unit/GstinTest.php#test_normalise_and_the_parts_it_unlocks`; `tests/Unit/GstinTest.php#test_the_validation_rule_carries_one_message_everywhere`
+
+## Stock ledger and reconciliation (`STOCK`)
+
+Sources: `app/Http/Controllers/StockController.php`, `app/Http/Controllers/StockCountController.php`, `app/Services/StockLedger.php`, `app/Services/StockReconciliation.php`, `app/Services/StockQuantity.php`.
+
+### UT-STOCK-001 — Exact stock quantities reject rounding, overflow and malformed values
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** linked executable evidence
+
+- **Preconditions:** Pure fixed-point quantity parser
+- **Data:** Three decimal places, boundary, negatives, exponent notation and excess precision
+1. Parse supported quantities and signed ledger output
+2. Reject malformed, negative or over-precision inputs
+
+**Expected:** Quantities are represented as integer thousandths and are not silently rounded.
+
+**Note:** Execution results and limits are recorded in docs/testing/stock-reconciliation.md.
+
+**Evidence:** `tests/Unit/StockQuantityTest.php#test_fixed_point_quantities_do_not_use_binary_floats`; `tests/Unit/StockQuantityTest.php#test_malformed_exponent_negative_and_over_precision_inputs_are_not_rounded`

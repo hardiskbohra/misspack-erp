@@ -19,6 +19,7 @@ use App\Services\ClientPortalNotifier;
 use App\Services\SavedViews;
 use App\Services\ShipmentCostCashflowSync;
 use App\Services\ShipmentCostLedger;
+use App\Services\ShipmentCommentFiles;
 use App\Services\ShipmentDocuments;
 use App\Services\ShipmentDispatchAuthorization;
 use App\Services\ShipmentPartyDirectory;
@@ -27,6 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
@@ -38,6 +40,15 @@ class ShipmentController extends Controller
 {
     /** Ceiling for the bulk sticker sheet — a 60-sticker run is already 8 A4 pages. */
     private const STICKER_SHEET_LIMIT = 60;
+
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'tracking' => 'Tracking',
+        'products' => 'Products & delivery',
+        'costs' => 'Costs',
+        'documents' => 'Documents',
+        'comments' => 'Comments',
+    ];
 
     public function index(Request $request): View
     {
@@ -237,14 +248,35 @@ class ShipmentController extends Controller
             ->with('success', 'Quick shipment created successfully. Create its packaging list from the Packaging Lists module when needed.');
     }
 
-    public function show(Shipment $shipment): View
+    public function show(Request $request, Shipment $shipment): View
     {
+        $requestedTab = $request->query('tab');
+        $tab = is_string($requestedTab) && array_key_exists($requestedTab, self::SHOW_TABS) ? $requestedTab : 'overview';
+        // Preserve existing entry points from the shipment/project lists and
+        // reopen the same receipt sheet after a failed submission.
+        if ($request->boolean('record_delivery_receipt') || old('delivery_receipt_form')) $tab = 'products';
+        if (old('shipment_comment_form')) $tab = 'comments';
+
         $shipment->load([
             'items.packingAllocations.packagingListItem.carton.packagingList', 'items.deliveryReceiptLines', 'deliveryReceipts.lines.shipmentItem', 'deliveryReceipts.recorder', 'histories', 'attachments', 'client', 'project', 'salesInvoice', 'latestPackagingList',
             'costs.vendor', 'costs.paidAccount',
         ]);
+        $commentsAvailable = Schema::hasTable('shipment_comments') && Schema::hasTable('shipment_comment_attachments');
+        $commentCount = $commentsAvailable ? $shipment->comments()->count() : 0;
+        if ($commentsAvailable && $tab === 'comments') $shipment->load(['comments.creator', 'comments.attachments']);
 
-        return view('shipments.show', $this->formData($shipment));
+        return view('shipments.show', array_merge($this->formData($shipment), [
+            'tabs' => self::SHOW_TABS,
+            'tab' => $tab,
+            'commentsAvailable' => $commentsAvailable,
+            'tabCounts' => [
+                'tracking' => $shipment->histories->count(),
+                'products' => $shipment->items->count(),
+                'costs' => $shipment->costs->count(),
+                'documents' => $shipment->attachments->count(),
+                'comments' => $commentCount,
+            ],
+        ]));
     }
 
     public function edit(Shipment $shipment): View
@@ -347,23 +379,33 @@ class ShipmentController extends Controller
 
     public function destroy(Shipment $shipment): RedirectResponse
     {
-        abort_if(in_array($shipment->status, Shipment::dispatchedStatuses(), true), 422, 'A dispatched shipment is an operational audit record. Cancel it before deletion.');
-        abort_if($shipment->deliveryReceipts()->exists(), 422, 'A shipment with immutable delivery receipts cannot be deleted.');
-        $project = $shipment->project;
-        foreach ($shipment->attachments as $attachment) {
-            if ($attachment->file_path) {
-                Storage::disk('public')->delete($attachment->file_path);
+        $publicFiles = [];
+        $privateFiles = [];
+        $project = null;
+        DB::transaction(function () use ($shipment, &$project, &$publicFiles, &$privateFiles) {
+            // Match comment writes: hold the parent before reading its files or
+            // deleting it, and do not remove any files if the DB delete fails.
+            $locked = Shipment::query()->whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+            abort_if(in_array($locked->status, Shipment::dispatchedStatuses(), true), 422, 'A dispatched shipment is an operational audit record. Cancel it before deletion.');
+            abort_if($locked->deliveryReceipts()->exists(), 422, 'A shipment with immutable delivery receipts cannot be deleted.');
+            $project = $locked->project;
+            $publicFiles = $locked->attachments()->lockForUpdate()->pluck('file_path')->filter()->all();
+            if (Schema::hasTable('shipment_comments') && Schema::hasTable('shipment_comment_attachments')) {
+                $privateFiles = DB::table('shipment_comment_attachments as files')
+                    ->join('shipment_comments as comments', 'comments.id', '=', 'files.shipment_comment_id')
+                    ->where('comments.shipment_id', $locked->id)->lockForUpdate()->pluck('files.file_path')->all();
             }
-        }
-
-        $shipment->delete();
+            $locked->delete();
+        });
+        if ($publicFiles) Storage::disk('public')->delete($publicFiles);
+        $removed = app(ShipmentCommentFiles::class)->remove($privateFiles);
         if ($project?->workflow) {
             app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($project->workflow, Auth::id());
         }
 
-        return redirect()
-            ->route('shipments.index')
-            ->with('success', 'Shipment deleted successfully.');
+        return redirect()->route('shipments.index')->with($removed ? 'success' : 'warning', $removed
+            ? 'Shipment deleted successfully.'
+            : 'Shipment deleted, but some private comment files could not be removed. Please contact an administrator.');
     }
 
     public function storeHistory(Request $request, Shipment $shipment): RedirectResponse
@@ -558,7 +600,9 @@ class ShipmentController extends Controller
 
         $this->storePhotoAttachments($request, $shipment, $request->boolean('is_public'));
 
-        return redirect()->route('shipments.show', $shipment)->withFragment('shipmentAttachments')
+        $parameters = ['shipment' => $shipment];
+        if ($request->input('_shipment_tab') === 'documents') $parameters['tab'] = 'documents';
+        return redirect()->route('shipments.show', $parameters)->withFragment('shipmentAttachments')
             ->with('success', 'Shipment attachments uploaded successfully.');
     }
 

@@ -77,6 +77,22 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlShipmentCommentsTest.php",
+      "methods": [
+        "test_native_schema_foreign_keys_private_files_and_lossy_rollback_guard",
+        "test_comment_upload_waiting_for_shipment_deletion_cannot_store_a_file_or_orphan_a_comment",
+        "test_shipment_deletion_waits_for_a_committing_comment_and_cleans_its_new_file"
+      ]
+    },
+    {
+      "file": "tests/Database/MySqlStockReconciliationTest.php",
+      "methods": [
+        "test_native_foreign_keys_exact_decimal_and_populated_rollback_guard",
+        "test_simultaneous_count_approvals_post_one_adjustment",
+        "test_competing_issues_are_serialized_and_cannot_make_stock_negative"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlThreeDecimalPrecisionTest.php",
       "methods": [
         "test_discounted_tax_payload_reconciles_saved_mysql_totals",
@@ -785,6 +801,28 @@
       ]
     },
     {
+      "file": "tests/Integration/ShipmentDetailTabsCommentsTest.php",
+      "methods": [
+        "test_record_sections_are_bookmarkable_tabs_and_only_the_selected_panel_renders",
+        "test_existing_receipt_deep_link_opens_the_product_panel_and_receipt_form",
+        "test_comment_with_multiple_private_files_stays_on_its_shipment_and_is_escaped",
+        "test_plain_comments_work_and_are_ordered_newest_first_with_stable_counts",
+        "test_invalid_or_mixed_uploads_do_not_create_comments_or_leave_files",
+        "test_comment_limits_accept_five_ten_megabyte_files_and_reject_oversized_text",
+        "test_comment_files_are_scoped_to_their_shipment_and_require_office_operations_access",
+        "test_comment_delete_removes_only_its_own_files_and_shipment_delete_removes_the_rest",
+        "test_receipt_and_shipment_upload_forms_return_to_their_own_tabs",
+        "test_failed_comment_validation_preserves_text_and_reopens_the_comments_tab",
+        "test_failed_database_write_rolls_back_the_comment_and_deletes_previously_uploaded_files",
+        "test_failed_private_storage_write_rolls_back_the_comment_and_cleans_earlier_files",
+        "test_failed_file_cleanup_warns_the_operator_and_logs_the_private_path_for_recovery",
+        "test_migration_refuses_to_drop_comments_or_files_and_an_empty_rollback_leaves_the_record_usable",
+        "test_missing_and_wrong_comment_attachments_are_not_downloaded_and_deletion_rules_remain",
+        "test_csrf_and_employee_office_boundary_protect_comment_mutations",
+        "test_client_portal_and_printouts_never_reveal_internal_comment_or_files"
+      ]
+    },
+    {
       "file": "tests/Integration/StatementListFiltersTest.php",
       "methods": [
         "test_rendered_all_time_link_keeps_the_explicit_preset_and_fetches_both_party_types",
@@ -820,6 +858,19 @@
         "test_print_masthead_separates_title_filters_from_aligned_party_names_and_removes_only_header_badges",
         "test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained",
         "test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained"
+      ]
+    },
+    {
+      "file": "tests/Integration/StockReconciliationTest.php",
+      "methods": [
+        "test_opening_batch_identity_and_fixed_point_manual_ledger",
+        "test_binary_float_quantity_from_json_is_rejected_without_posting",
+        "test_blank_is_not_zero_and_independent_reviewer_posts_audited_variance_once",
+        "test_changed_ledger_even_if_net_zero_blocks_post_until_reject_refresh_and_recount",
+        "test_permissions_and_product_stock_history_are_protected",
+        "test_stale_draft_or_review_form_cannot_change_a_newer_count_revision",
+        "test_inconsistent_cached_balance_blocks_new_postings_and_count_snapshots",
+        "test_populated_stock_migration_cannot_be_rolled_back"
       ]
     },
     {
@@ -1174,6 +1225,13 @@
       ]
     },
     {
+      "file": "tests/Unit/StockQuantityTest.php",
+      "methods": [
+        "test_fixed_point_quantities_do_not_use_binary_floats",
+        "test_malformed_exponent_negative_and_over_precision_inputs_are_not_rounded"
+      ]
+    },
+    {
       "file": "tests/Unit/TotpTest.php",
       "methods": [
         "test_codes_match_the_rfc_6238_vectors",
@@ -1272,8 +1330,11 @@
     "app/Http/Controllers/SalesInvoiceEInvoiceController.php",
     "app/Http/Controllers/SalesInvoiceNoteController.php",
     "app/Http/Controllers/SettingsController.php",
+    "app/Http/Controllers/ShipmentCommentController.php",
     "app/Http/Controllers/ShipmentController.php",
     "app/Http/Controllers/ShipmentDeliveryReceiptController.php",
+    "app/Http/Controllers/StockController.php",
+    "app/Http/Controllers/StockCountController.php",
     "app/Http/Controllers/TaskController.php",
     "app/Http/Controllers/TaxSettingController.php",
     "app/Http/Controllers/TwoFactorChallengeController.php",
@@ -1372,6 +1433,7 @@
     "app/Services/SalesInvoiceFilters.php",
     "app/Services/SavedViews.php",
     "app/Services/SettingsDirectory.php",
+    "app/Services/ShipmentCommentFiles.php",
     "app/Services/ShipmentCostCashflowSync.php",
     "app/Services/ShipmentCostLedger.php",
     "app/Services/ShipmentDispatchAuthorization.php",
@@ -1379,6 +1441,9 @@
     "app/Services/ShipmentPartyDirectory.php",
     "app/Services/ShipmentPrintIssuer.php",
     "app/Services/StatementPrintHeader.php",
+    "app/Services/StockLedger.php",
+    "app/Services/StockQuantity.php",
+    "app/Services/StockReconciliation.php",
     "app/Services/TwoFactorAuthentication.php",
     "app/Services/UnallocatedCashflows.php",
     "app/Services/VendorKyc.php",
@@ -1468,12 +1533,19 @@
     "app/Models/SavedView.php",
     "app/Models/Shipment.php",
     "app/Models/ShipmentAttachment.php",
+    "app/Models/ShipmentComment.php",
+    "app/Models/ShipmentCommentAttachment.php",
     "app/Models/ShipmentCost.php",
     "app/Models/ShipmentDeliveryReceipt.php",
     "app/Models/ShipmentDeliveryReceiptLine.php",
     "app/Models/ShipmentItem.php",
     "app/Models/ShipmentPackingAllocation.php",
     "app/Models/ShipmentTrackingHistory.php",
+    "app/Models/StockCount.php",
+    "app/Models/StockCountEvent.php",
+    "app/Models/StockCountLine.php",
+    "app/Models/StockItem.php",
+    "app/Models/StockMovement.php",
     "app/Models/Task.php",
     "app/Models/User.php",
     "app/Models/Vendor.php",
@@ -1537,6 +1609,7 @@
     "tools/checks/responsive-check.cjs",
     "tools/checks/searchable-selects-browser.cjs",
     "tools/checks/settings-check.cjs",
+    "tools/checks/shipment-tabs-comments-browser.cjs",
     "tools/checks/sidebar-navigation-check.cjs",
     "tools/checks/sql-check.cjs",
     "tools/checks/statement-check.cjs",
@@ -1544,6 +1617,7 @@
     "tools/checks/statement-print-browser.cjs",
     "tools/checks/statement-print-fields-browser.cjs",
     "tools/checks/status-check.cjs",
+    "tools/checks/stock-reconciliation-browser.cjs",
     "tools/checks/three-decimal-browser.cjs",
     "tools/checks/ui-components-check.cjs",
     "tools/checks/vendor-kyc-browser.cjs",

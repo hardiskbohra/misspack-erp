@@ -63,7 +63,7 @@
             </section>
 
             @if ($workflowUnmatchedSalesItems->isNotEmpty())
-                <div class="master-alert master-alert--warning" role="alert">
+                <div class="master-alert warning" role="alert">
                     <strong>Unmatched sales invoice items need review</strong>
                     <span>{{ $workflowUnmatchedSalesItems->count() }} sales {{ \Illuminate\Support\Str::plural('item', $workflowUnmatchedSalesItems->count()) }} cannot be matched to one project product. Review the sales invoice and its project-product links before relying on its workflow.</span>
                     <ul>@foreach($workflowUnmatchedSalesItems->take(5) as $unmatched)<li><a href="{{ route('sales-invoices.show', $unmatched->invoice_id) }}">{{ $unmatched->invoice_number }}</a> · {{ $unmatched->product_name }} · line #{{ $unmatched->id }}</li>@endforeach</ul>
@@ -392,7 +392,7 @@
                 <div class="master-section-head"><div><h2 class="master-section-title">Standard execution path · History & manual controls</h2><p class="master-sub">The complete standard path remains available for audit and controlled manual updates.</p></div></div>
                 <div class="workflow-history-toolbar"><span><i class="fa-solid fa-clock-rotate-left"></i> {{ $workflowOpenRuleCount }} open rules · {{ $workflowOpenCheckCount }} open checks</span><small>Rules are grouped once; individual checks apply only to sales-invoice products. Purchase records remain in the project and shipment.</small></div>
                 @if ($workflowDuplicateGroups->isNotEmpty())
-                    <div class="master-alert master-alert--warning" role="alert"><div><strong>Potential duplicate workflow records</strong><p>Review these historical records before relying on their status. No evidence was deleted.</p>
+                    <div class="master-alert warning" role="alert"><div><strong>Potential duplicate workflow records</strong><p>Review these historical records before relying on their status. No evidence was deleted.</p>
                         <ul>@foreach($workflowDuplicateGroups as $duplicateSteps)<li>{{ $duplicateSteps->first()->title }} · {{ $duplicateSteps->first()->product?->product_name ?: 'Project-level control' }}: @foreach($duplicateSteps as $duplicate) Step #{{ $duplicate->id }}{{ ! $loop->last ? ',' : '' }} @endforeach</li>@endforeach</ul>
                     </div></div>
                 @endif

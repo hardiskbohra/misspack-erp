@@ -13,6 +13,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ShipmentDeliveryReceiptController;
+use App\Http\Controllers\StockController;
+use App\Http\Controllers\StockCountController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\VendorPortalAuthController;
@@ -48,6 +50,7 @@ use App\Http\Controllers\ProjectExceptionController;
 use App\Http\Controllers\ProjectQualityInspectionController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
+use App\Http\Controllers\ShipmentCommentController;
 use App\Http\Controllers\PublicFeedbackController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ClientPortalFeedbackController;
@@ -341,7 +344,28 @@ Route::middleware('auth')->group(function () {
         Route::put('/shipments/attachments/{attachment}', [ShipmentController::class, 'updateAttachment'])->name('shipments.attachments.update');
         Route::delete('/shipments/attachments/{attachment}', [ShipmentController::class, 'destroyAttachment'])->name('shipments.attachments.destroy');
         Route::put('/shipments/attachments/{attachment}/toggle-public', [ShipmentController::class, 'togglePublic'])->name('shipments.attachments.toggle-public');
+        // These files are private office notes, not shipment/public attachments.
+        Route::post('/shipments/{shipment}/comments', [ShipmentCommentController::class, 'store'])->name('shipments.comments.store');
+        Route::delete('/shipments/{shipment}/comments/{comment}', [ShipmentCommentController::class, 'destroy'])->name('shipments.comments.destroy');
+        Route::get('/shipments/{shipment}/comments/{comment}/attachments/{attachment}', [ShipmentCommentController::class, 'file'])->name('shipments.comments.attachments.file');
         Route::resource('shipments', ShipmentController::class);
+
+        // Single-location manual stock ledger and independently reviewed physical counts.
+        Route::get('/stock', [StockController::class, 'index'])->name('stock.index');
+        Route::get('/stock/items/create', [StockController::class, 'create'])->name('stock.items.create');
+        Route::post('/stock/items', [StockController::class, 'store'])->name('stock.items.store');
+        Route::get('/stock/items/{stockItem}', [StockController::class, 'show'])->name('stock.items.show');
+        Route::post('/stock/items/{stockItem}/movements', [StockController::class, 'movement'])->name('stock.movements.store');
+        Route::get('/stock/counts', [StockCountController::class, 'index'])->name('stock.counts.index');
+        Route::get('/stock/counts/create', [StockCountController::class, 'create'])->name('stock.counts.create');
+        Route::post('/stock/counts', [StockCountController::class, 'store'])->name('stock.counts.store');
+        Route::get('/stock/counts/{stockCount}', [StockCountController::class, 'show'])->name('stock.counts.show');
+        Route::post('/stock/counts/{stockCount}/draft', [StockCountController::class, 'update'])->name('stock.counts.update');
+        Route::post('/stock/counts/{stockCount}/submit', [StockCountController::class, 'submit'])->name('stock.counts.submit');
+        Route::post('/stock/counts/{stockCount}/approve', [StockCountController::class, 'approve'])->name('stock.counts.approve');
+        Route::post('/stock/counts/{stockCount}/reject', [StockCountController::class, 'reject'])->name('stock.counts.reject');
+        Route::post('/stock/counts/{stockCount}/refresh', [StockCountController::class, 'refresh'])->name('stock.counts.refresh');
+        Route::post('/stock/counts/{stockCount}/cancel', [StockCountController::class, 'cancel'])->name('stock.counts.cancel');
 
         // Packaging Lists — printable carton/item manifests linked to shipments.
         Route::patch('/packaging-lists/{packagingList}/print-settings', [PackagingListController::class, 'updatePrintSettings'])->name('packaging-lists.print-settings');

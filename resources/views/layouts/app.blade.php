@@ -84,6 +84,7 @@
         request()->routeIs('settings.*') => 'settings',
         request()->routeIs('notes.*') => 'notes',
         request()->routeIs('shipments.*') => 'shipments',
+        request()->routeIs('stock.*') => 'stock',
         request()->routeIs('clients.*') => 'clients',
         request()->routeIs('cashflows.*') => 'cashflows',
         request()->routeIs('users.*') => 'users',
@@ -124,6 +125,7 @@
             ['label' => 'Exceptions', 'route' => 'projects.exceptions.index', 'active' => 'projects.exceptions.*', 'icon' => 'fa-solid fa-triangle-exclamation'],
             ['label' => 'Packaging lists', 'route' => 'packaging-lists.index', 'active' => 'packaging-lists.*', 'icon' => 'fa-solid fa-boxes-stacked'],
             ['label' => 'Shipments', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'fas fa-truck'],
+            ['label' => 'Stock reconciliation', 'route' => 'stock.index', 'active' => 'stock.*', 'icon' => 'fa-solid fa-warehouse'],
             ['label' => 'Feedback', 'route' => 'feedback.index', 'active' => 'feedback.*', 'except' => ['feedback.public.*'], 'icon' => 'fa-regular fa-comment-dots'],
 
             ['section' => 'Sales & catalogue'],

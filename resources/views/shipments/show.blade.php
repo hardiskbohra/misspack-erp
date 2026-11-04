@@ -8,9 +8,12 @@
     <link rel="stylesheet" href="{{ $assetVer('assets/css/shipments.css') }}">
 @endpush
 
-@php($statusClass = str_replace('_', '-', $shipment->status))
+@php
+    $statusClass = str_replace('_', '-', $shipment->status);
+    $recordUrl = fn (string $key) => route('shipments.show', ['shipment' => $shipment, 'tab' => $key]);
+@endphp
 
-<div class="ship">
+<div class="ship ship-show" data-shipment-record data-shipment-tab="{{ $tab }}">
     {{-- Header: what the record is, what state it is in, what you can do with
          it. The state chips come first so the page answers "where is this
          shipment?" before any action is taken. --}}
@@ -59,40 +62,30 @@
             <a href="{{ route('shipments.edit', $shipment) }}" class="master-btn master-btn-primary">
                 <i class="fa-solid fa-pen"></i> Edit Shipment
             </a>
-            @if ($shipment->latestPackagingList)
-                <a href="{{ route('packaging-lists.show', $shipment->latestPackagingList) }}" class="master-btn master-btn-soft">
-                    <i class="fa-solid fa-boxes-stacked"></i> View Packaging List
-                </a>
-                <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-light">
-                    <i class="fa-solid fa-plus"></i> New Packaging List
-                </a>
-            @else
-                <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-soft">
-                    <i class="fa-solid fa-boxes-stacked"></i> Create Packaging List
-                </a>
-            @endif
-
-            {{-- Print previews are one capability, so they read as one group. --}}
-            <div class="record-action-group" role="group" aria-label="Print and preview">
-                <a href="{{ route('shipments.shipping-mark', $shipment) }}" target="_blank" class="master-btn master-btn-soft">
-                    <i class="fa-solid fa-tag"></i> Shipping Mark
-                </a>
-                <a href="{{ route('shipments.print', [$shipment, 'delivery-challan']) }}" target="_blank" class="master-btn master-btn-soft">
-                    <i class="fas fa-print"></i> Challan
-                </a>
-                <a href="{{ route('shipments.print', [$shipment, 'summary']) }}" target="_blank" class="master-btn master-btn-soft">
-                    <i class="fas fa-print"></i> Summary
-                </a>
-            </div>
-
             <a href="{{ \App\Services\PublicShareLinks::url($shipment) }}" target="_blank" class="master-btn master-btn-soft">
                 <i class="fa-solid fa-arrow-up-right-from-square"></i> Public Tracking
             </a>
         </div>
     </header>
 
-    <div class="master-grid">
-        <div>
+    {{-- Link-based tabs match vendor records: every section has its own URL,
+         can be bookmarked, and works without client-side panel switching. --}}
+    <div class="master-tabs-card">
+        <nav class="master-tabs" role="tablist" aria-label="Shipment record sections">
+            @foreach ($tabs as $key => $label)
+                <a id="shipment-tab-{{ $key }}" class="master-tab {{ $tab === $key ? 'is-active' : '' }}"
+                    role="tab" aria-controls="shipment-panel-{{ $key }}" aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
+                    href="{{ $recordUrl($key) }}" data-shipment-tab-link="{{ $key }}">
+                    {{ $label }}
+                    @if (($tabCounts[$key] ?? 0) > 0)
+                        <span class="master-tab-count">{{ $tabCounts[$key] }}</span>
+                    @endif
+                </a>
+            @endforeach
+        </nav>
+        <div class="master-tabs-panels">
+            @if ($tab === 'overview')
+                <section class="master-tab-panel ship-panel" id="shipment-panel-overview" role="tabpanel" aria-labelledby="shipment-tab-overview">
             <section class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Shipment Overview</h3>
 
@@ -181,9 +174,6 @@
                     The same steps are shown to the client on the portal and on the public tracking page.
                 </p>
             </section>
-
-            @include('shipments.partials.costs-card')
-
             <section class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Route Details</h3>
 
@@ -213,12 +203,124 @@
                     </x-fact>
                 </div>
             </section>
+                </section>
+            @elseif ($tab === 'tracking')
+                <section class="master-tab-panel ship-panel" id="shipment-panel-tracking" role="tabpanel" aria-labelledby="shipment-tab-tracking">
+                    <div class="master-grid">
+                        <div class="ship-side">
+            <section class="master-card master-card--flat master-section">
+                <h3 class="master-section-title">Share Tracking</h3>
+                <p class="master-sub">Anyone with this link can follow the shipment without logging in.</p>
+                <div class="public-box">
+                    <input class="master-input" id="publicTrackingLink" readonly value="{{ \App\Services\PublicShareLinks::url($shipment) }}" aria-label="Public tracking link">
+                    <button type="button" class="master-btn master-btn-soft" onclick="maCopy('publicTrackingLink', 'Copy tracking link')">Copy</button>
+                </div>
+            </section>
 
+            <section class="master-card master-card--flat master-section">
+                <h3 class="master-section-title">Add Tracking Update</h3>
+                <form method="POST" action="{{ route('shipments.history.store', $shipment) }}" class="history-form">
+                    @csrf
+                    <div class="row">
+                        <div class="ship-form-field">
+                            <label class="ship-form-label" for="historyStatus">Status</label>
+                            <select class="master-select" id="historyStatus" name="status">
+                                @foreach ($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($shipment->status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="ship-form-field">
+                            <label class="ship-form-label" for="historyLocation">Location</label>
+                            <input class="master-input" id="historyLocation" name="location" placeholder="e.g. Mundra Port">
+                        </div>
+                    </div>
+
+                    {{-- Marking it delivered records a delivery date: the field
+                         appears with today in it, and leaving it empty records
+                         today anyway. --}}
+                    <div class="ship-form-field" data-delivery-optional
+                        @if ($shipment->status !== \App\Models\Shipment::STATUS_DELIVERED) hidden @endif>
+                        <label class="ship-form-label" for="historyDropDate">Delivery (drop) date</label>
+                        <input class="master-input" id="historyDropDate" type="date" name="drop_date"
+                            data-today="{{ now(config('app.business_timezone'))->toDateString() }}"
+                            value="{{ old('drop_date', now(config('app.business_timezone'))->toDateString()) }}">
+                        <small class="master-sub">Used only when the status becomes delivered. An existing delivery date on the shipment is never overwritten.</small>
+                    </div>
+
+                    <div class="ship-form-field">
+                        <label class="ship-form-label" for="historyTime">When</label>
+                        <input class="master-input" id="historyTime" type="datetime-local" name="event_time"
+                            value="{{ now(config('app.business_timezone'))->format('Y-m-d\TH:i') }}">
+                    </div>
+
+                    <div class="ship-form-field">
+                        <label class="ship-form-label" for="historyRemarks">Remarks</label>
+                        <textarea class="master-textarea" id="historyRemarks" name="remarks" rows="3" placeholder="What changed?"></textarea>
+                    </div>
+
+                    <div class="ship-form-checks">
+                        <label class="master-check"><input type="checkbox" name="is_public" value="1" checked> Show on public tracking</label>
+                        <label class="master-check"><input type="checkbox" name="notify_client" value="1" @checked($shipment->client_id && $shipment->show_client_portal)> Notify client on status change</label>
+                    </div>
+
+                    <button class="master-btn master-btn-primary" type="submit">Add History</button>
+                </form>
+            </section>
+                        </div>
+                        <div class="ship-side">
+            <section class="master-card master-card--flat master-section">
+                <div class="master-section-head">
+                    <h3 class="master-section-title">Tracking History</h3>
+                    @if ($shipment->histories->isNotEmpty())
+                        <span class="master-chip">{{ $shipment->histories->count() }} update{{ $shipment->histories->count() === 1 ? '' : 's' }}</span>
+                    @endif
+                </div>
+
+                @if ($shipment->histories->isEmpty())
+                    <div class="master-empty-state">
+                        <i class="fa-regular fa-clock"></i>
+                        <p>No tracking updates yet. Add the first one above.</p>
+                    </div>
+                @else
+                    <div class="timeline">
+                        @foreach ($shipment->histories as $history)
+                            @php($historyStatusClass = str_replace('_', '-', $history->status))
+                            <div class="timeline-item">
+                                <div class="timeline-title">
+                                    <span class="master-badge status-{{ $historyStatusClass }}">{{ $statusOptions[$history->status] ?? $history->status }}</span>
+                                    <span class="master-chip">{{ $history->is_public ? 'Public' : 'Internal' }}</span>
+                                </div>
+                                <div class="timeline-meta">
+                                    {{ $history->event_time ? $history->event_time->format('d M Y, h:i A') : '—' }}@if ($history->location) · {{ $history->location }}@endif
+                                </div>
+                                @if ($history->remarks)
+                                    <div class="timeline-remarks">{{ $history->remarks }}</div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
+                        </div>
+                    </div>
+                </section>
+            @elseif ($tab === 'products')
+                <section class="master-tab-panel ship-panel" id="shipment-panel-products" role="tabpanel" aria-labelledby="shipment-tab-products">
             <section class="master-card master-card--flat master-section">
                 <div class="master-section-head">
                     <h3 class="master-section-title">Shipment Products</h3>
                     @if ($shipment->items->isNotEmpty())
                         <span class="master-chip">{{ $shipment->items->count() }} line{{ $shipment->items->count() === 1 ? '' : 's' }}</span>
+                    @endif
+                </div>
+
+                <div class="ship-panel-actions" aria-label="Packaging list actions">
+                    @if ($shipment->latestPackagingList)
+                        <a href="{{ route('packaging-lists.show', $shipment->latestPackagingList) }}" class="master-btn master-btn-soft"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> View Packaging List</a>
+                        <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-light"><i class="fa-solid fa-plus" aria-hidden="true"></i> New Packaging List</a>
+                    @else
+                        <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-soft"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Create Packaging List</a>
                     @endif
                 </div>
 
@@ -331,105 +433,34 @@
                     @endforelse
                 </div>
             </section>
-        </div>
-
-        <div class="ship-side">
-            <section class="master-card master-card--flat master-section">
-                <h3 class="master-section-title">Share Tracking</h3>
-                <p class="master-sub">Anyone with this link can follow the shipment without logging in.</p>
-                <div class="public-box">
-                    <input class="master-input" id="publicTrackingLink" readonly value="{{ \App\Services\PublicShareLinks::url($shipment) }}" aria-label="Public tracking link">
-                    <button type="button" class="master-btn master-btn-soft" onclick="maCopy('publicTrackingLink', 'Copy tracking link')">Copy</button>
-                </div>
-            </section>
-
-            <section class="master-card master-card--flat master-section">
-                <h3 class="master-section-title">Add Tracking Update</h3>
-                <form method="POST" action="{{ route('shipments.history.store', $shipment) }}" class="history-form">
-                    @csrf
-                    <div class="row">
-                        <div class="ship-form-field">
-                            <label class="ship-form-label" for="historyStatus">Status</label>
-                            <select class="master-select" id="historyStatus" name="status">
-                                @foreach ($statusOptions as $key => $label)
-                                    <option value="{{ $key }}" @selected($shipment->status === $key)>{{ $label }}</option>
-                                @endforeach
-                            </select>
+                </section>
+            @elseif ($tab === 'costs')
+                <section class="master-tab-panel ship-panel" id="shipment-panel-costs" role="tabpanel" aria-labelledby="shipment-tab-costs">
+                    @include('shipments.partials.costs-card')
+                </section>
+            @elseif ($tab === 'documents')
+                <section class="master-tab-panel ship-panel" id="shipment-panel-documents" role="tabpanel" aria-labelledby="shipment-tab-documents">
+                    <section class="master-card master-card--flat master-section">
+                        <div class="master-section-head"><div><h2 class="master-section-title">Shipment paperwork</h2><p class="master-sub">Open the print previews or keep supporting files with this shipment.</p></div></div>
+                        <div class="ship-panel-actions" role="group" aria-label="Print and preview">
+                            <a href="{{ route('shipments.shipping-mark', $shipment) }}" target="_blank" rel="noopener" class="master-btn master-btn-soft"><i class="fa-solid fa-tag" aria-hidden="true"></i> Shipping Mark</a>
+                            <a href="{{ route('shipments.print', [$shipment, 'delivery-challan']) }}" target="_blank" rel="noopener" class="master-btn master-btn-soft"><i class="fas fa-print" aria-hidden="true"></i> Challan</a>
+                            <a href="{{ route('shipments.print', [$shipment, 'summary']) }}" target="_blank" rel="noopener" class="master-btn master-btn-soft"><i class="fas fa-print" aria-hidden="true"></i> Summary</a>
                         </div>
-                        <div class="ship-form-field">
-                            <label class="ship-form-label" for="historyLocation">Location</label>
-                            <input class="master-input" id="historyLocation" name="location" placeholder="e.g. Mundra Port">
-                        </div>
-                    </div>
-
-                    {{-- Marking it delivered records a delivery date: the field
-                         appears with today in it, and leaving it empty records
-                         today anyway. --}}
-                    <div class="ship-form-field" data-delivery-optional
-                        @if ($shipment->status !== \App\Models\Shipment::STATUS_DELIVERED) hidden @endif>
-                        <label class="ship-form-label" for="historyDropDate">Delivery (drop) date</label>
-                        <input class="master-input" id="historyDropDate" type="date" name="drop_date"
-                            data-today="{{ now(config('app.business_timezone'))->toDateString() }}"
-                            value="{{ old('drop_date', now(config('app.business_timezone'))->toDateString()) }}">
-                        <small class="master-sub">Used only when the status becomes delivered. An existing delivery date on the shipment is never overwritten.</small>
-                    </div>
-
-                    <div class="ship-form-field">
-                        <label class="ship-form-label" for="historyTime">When</label>
-                        <input class="master-input" id="historyTime" type="datetime-local" name="event_time"
-                            value="{{ now(config('app.business_timezone'))->format('Y-m-d\TH:i') }}">
-                    </div>
-
-                    <div class="ship-form-field">
-                        <label class="ship-form-label" for="historyRemarks">Remarks</label>
-                        <textarea class="master-textarea" id="historyRemarks" name="remarks" rows="3" placeholder="What changed?"></textarea>
-                    </div>
-
-                    <div class="ship-form-checks">
-                        <label class="master-check"><input type="checkbox" name="is_public" value="1" checked> Show on public tracking</label>
-                        <label class="master-check"><input type="checkbox" name="notify_client" value="1" @checked($shipment->client_id && $shipment->show_client_portal)> Notify client on status change</label>
-                    </div>
-
-                    <button class="master-btn master-btn-primary" type="submit">Add History</button>
-                </form>
-            </section>
-
-
-            @include('shipments.partials.attachments-card')
-
-            <section class="master-card master-card--flat master-section">
-                <div class="master-section-head">
-                    <h3 class="master-section-title">Tracking History</h3>
-                    @if ($shipment->histories->isNotEmpty())
-                        <span class="master-chip">{{ $shipment->histories->count() }} update{{ $shipment->histories->count() === 1 ? '' : 's' }}</span>
-                    @endif
-                </div>
-
-                @if ($shipment->histories->isEmpty())
-                    <div class="master-empty-state">
-                        <i class="fa-regular fa-clock"></i>
-                        <p>No tracking updates yet. Add the first one above.</p>
-                    </div>
-                @else
-                    <div class="timeline">
-                        @foreach ($shipment->histories as $history)
-                            @php($historyStatusClass = str_replace('_', '-', $history->status))
-                            <div class="timeline-item">
-                                <div class="timeline-title">
-                                    <span class="master-badge status-{{ $historyStatusClass }}">{{ $statusOptions[$history->status] ?? $history->status }}</span>
-                                    <span class="master-chip">{{ $history->is_public ? 'Public' : 'Internal' }}</span>
-                                </div>
-                                <div class="timeline-meta">
-                                    {{ $history->event_time ? $history->event_time->format('d M Y, h:i A') : '—' }}@if ($history->location) · {{ $history->location }}@endif
-                                </div>
-                                @if ($history->remarks)
-                                    <div class="timeline-remarks">{{ $history->remarks }}</div>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
+                    </section>
+                    @include('shipments.partials.attachments-card')
+                </section>
+            @elseif ($tab === 'comments')
+                <section class="master-tab-panel ship-panel" id="shipment-panel-comments" role="tabpanel" aria-labelledby="shipment-tab-comments">
+                    @include('shipments.partials.comments')
+                </section>
+            @endif
+            {{-- Provide valid aria-controls targets for the other link tabs. --}}
+            @foreach ($tabs as $key => $label)
+                @if ($key !== $tab)
+                    <div id="shipment-panel-{{ $key }}" role="tabpanel" aria-labelledby="shipment-tab-{{ $key }}" hidden></div>
                 @endif
-            </section>
+            @endforeach
         </div>
     </div>
 </div>

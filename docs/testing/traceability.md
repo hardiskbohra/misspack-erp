@@ -14,7 +14,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-WORKFLOW | Execution, approvals, gates and financial closure | 3 | 10 | 10 |
 | REQ-QC | Quality inspection and sampling | 3 | 3 | 0 |
 | REQ-PACK | Packaging lists, verification and print labels | 3 | 5 | 4 |
-| REQ-SHIP | Shipments, dispatch and delivery | 4 | 10 | 9 |
+| REQ-SHIP | Shipments, dispatch and delivery | 4 | 13 | 12 |
 | REQ-SALES | Proformas, cash invoices and tax invoices | 3 | 35 | 35 |
 | REQ-PURCHASE | Purchase documents and vendor settlement | 4 | 12 | 11 |
 | REQ-CASH | Cashflow, allocations and account transfers | 3 | 9 | 6 |
@@ -36,3 +36,4 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-FILES | Shared file policy and storage lifecycle | 3 | 4 | 4 |
 | REQ-UI | Shared UI, printing and accessible interactions | 4 | 9 | 5 |
 | REQ-TAX | GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) | 1 | 13 | 14 |
+| REQ-STOCK | Stock ledger and reconciliation | 1 | 5 | 6 |

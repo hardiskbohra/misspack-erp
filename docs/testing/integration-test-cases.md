@@ -840,7 +840,7 @@ Sources: `app/Http/Controllers/PackagingListController.php`, `app/Services/Packa
 
 ## Shipments, dispatch and delivery (`SHIP`)
 
-Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`, `app/Services/PublicShareLinks.php`.
+Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`, `app/Services/PublicShareLinks.php`, `app/Http/Controllers/ShipmentCommentController.php`, `app/Services/ShipmentCommentFiles.php`.
 
 ### IT-SHIP-001 — Shipment view uploads directly to project
 
@@ -978,6 +978,55 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 **Note:** Chromium additionally copies the URL on desktop/mobile and decodes the actual rendered QR. See public-short-links.md.
 
 **Evidence:** `tests/Integration/PublicShortLinksTest.php#test_shipment_share_fields_sticker_qr_and_tracking_link_use_the_same_short_url`; `tests/Integration/FullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels`
+
+### IT-SHIP-011 — Shipment detail tabs preserve actions, URLs and receipt entry points
+
+**Priority:** P1 · **Requirement:** REQ-SHIP; REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Fresh full disposable schema; authenticated shipment manager; shipment with product and history
+- **Data:** Six named panels, invalid tab, legacy receipt deep link, validation and successful form submissions
+1. Open each selected panel and an unknown tab
+2. Open the existing receipt deep link
+3. Submit receipt and shipment upload forms; follow validation redirect
+
+**Expected:** Each URL displays only its selected details and existing actions; invalid tabs fall back to overview; receipt and uploads return to their owning tabs; failed comments preserve text and show errors.
+
+**Note:** The linked PHP cases prove server rendering and form round trips. Chromium additionally exercises keyboard, browser navigation, mobile geometry and legacy fragment redirects; see shipment-detail-tabs-comments.md.
+
+**Evidence:** `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_record_sections_are_bookmarkable_tabs_and_only_the_selected_panel_renders`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_existing_receipt_deep_link_opens_the_product_panel_and_receipt_form`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_receipt_and_shipment_upload_forms_return_to_their_own_tabs`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_failed_comment_validation_preserves_text_and_reopens_the_comments_tab`
+
+### IT-SHIP-012 — Internal shipment comments and attachments remain private and transactionally scoped
+
+**Priority:** P0 · **Requirement:** REQ-SHIP; REQ-FILES; REQ-AUTH; REQ-CPORTAL · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema, fake private/public disks, manager, reader, unprivileged office user, employee, guest and client portal user
+- **Data:** Plain and escaped notes, matching private files, mixed invalid/oversized files, wrong parent IDs, missing files and injected storage/database failures
+1. Write and read comments and attachments as permitted office users
+2. Try invalid, forged, cross-shipment and unauthorised requests
+3. Inspect public tracking, portal and printouts
+4. Delete one comment, delete an eligible shipment and inject failed writes
+
+**Expected:** Only authorised office readers see notes and parent-scoped forced downloads; all writes require manage permission and CSRF; private data never appears in external views; invalid batches and failed writes leave no partial rows or files; deletion cleans only intended files. Failed cleanup warns the operator and logs relative private paths for administrator recovery.
+
+**Note:** A malicious MIME-matching file is not virus-scanned; forced private download reduces browser execution risk but does not certify file contents.
+
+**Evidence:** `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_comment_with_multiple_private_files_stays_on_its_shipment_and_is_escaped`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_plain_comments_work_and_are_ordered_newest_first_with_stable_counts`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_invalid_or_mixed_uploads_do_not_create_comments_or_leave_files`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_comment_files_are_scoped_to_their_shipment_and_require_office_operations_access`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_comment_delete_removes_only_its_own_files_and_shipment_delete_removes_the_rest`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_failed_database_write_rolls_back_the_comment_and_deletes_previously_uploaded_files`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_failed_private_storage_write_rolls_back_the_comment_and_cleans_earlier_files`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_missing_and_wrong_comment_attachments_are_not_downloaded_and_deletion_rules_remain`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_csrf_and_employee_office_boundary_protect_comment_mutations`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_client_portal_and_printouts_never_reveal_internal_comment_or_files`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_failed_file_cleanup_warns_the_operator_and_logs_the_private_path_for_recovery`; `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_comment_limits_accept_five_ten_megabyte_files_and_reject_oversized_text`
+
+### IT-SHIP-013 — Shipment comment schema protects existing data and serializes deletion with file writes
+
+**Priority:** P0 · **Requirement:** REQ-SHIP; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable full-schema SQLite and strict MySQL databases; isolated private disk and separate MySQL processes
+- **Data:** Existing comment and attachment, invalid parent foreign key, deleted author, competing shipment deletion and upload
+1. Attempt populated and empty migration rollback
+2. Enforce native foreign keys and author null-on-delete
+3. Race a waiting upload against shipment deletion and a waiting deletion against a committing upload
+
+**Expected:** Populated rollback refuses before destructive DDL; empty rollback leaves the record usable with a clear unavailable notice; parent ownership and cascading are enforced; competing writes cannot orphan comments or private files.
+
+**Note:** The native tests exercise two ordered deletion/upload interleavings, not every possible filesystem or cross-module failure. Operators still need a coordinated backup and stopped writers before DDL.
+
+**Evidence:** `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_migration_refuses_to_drop_comments_or_files_and_an_empty_rollback_leaves_the_record_usable`; `tests/Database/MySqlShipmentCommentsTest.php#test_native_schema_foreign_keys_private_files_and_lossy_rollback_guard`; `tests/Database/MySqlShipmentCommentsTest.php#test_comment_upload_waiting_for_shipment_deletion_cannot_store_a_file_or_orphan_a_comment`; `tests/Database/MySqlShipmentCommentsTest.php#test_shipment_deletion_waits_for_a_committing_comment_and_cleans_its_new_file`
 
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
@@ -2892,3 +2941,87 @@ Sources: `app/Support/Gstin.php`, `app/Rules/ValidGstin.php`, `app/Models/HsnSac
 **Expected:** The allocated line discounts total INR 3, item taxable and tax values sum to the saved header, and the discount is not subtracted again at invoice level.
 
 **Evidence:** `tests/Integration/ThreeDecimalPrecisionTest.php#test_einvoice_allocates_an_invoice_wide_discount_without_double_counting`; `tests/Database/MySqlThreeDecimalPrecisionTest.php#test_discounted_tax_payload_reconciles_saved_mysql_totals`
+
+## Stock ledger and reconciliation (`STOCK`)
+
+Sources: `app/Http/Controllers/StockController.php`, `app/Http/Controllers/StockCountController.php`, `app/Services/StockLedger.php`, `app/Services/StockReconciliation.php`, `app/Services/StockQuantity.php`.
+
+### IT-STOCK-001 — Opening balance and manual ledger preserve distinct batches and prevent negative stock
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema and office operations manager
+- **Data:** Distinct lots, zero opening quantity, exact fractional movements, duplicate identity and retried request
+1. Create item and opening movement for each batch
+2. Post receipt, issue and retried movement
+3. Attempt duplicate identity and excessive issue
+
+**Expected:** Each batch retains an independent append-only balance; retries are idempotent, excessive issues and duplicate identities fail. Cached balance/revision disagreement with the latest movement blocks new postings and snapshots.
+
+**Note:** Execution results and limits are recorded in docs/testing/stock-reconciliation.md.
+
+**Evidence:** `tests/Integration/StockReconciliationTest.php#test_opening_batch_identity_and_fixed_point_manual_ledger`; `tests/Integration/StockReconciliationTest.php#test_inconsistent_cached_balance_blocks_new_postings_and_count_snapshots`; `tests/Integration/StockReconciliationTest.php#test_binary_float_quantity_from_json_is_rejected_without_posting`
+
+### IT-STOCK-002 — Independent physical count approval posts all variances once
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** linked executable evidence
+
+- **Preconditions:** Counter and separate operations reviewer with stock in a disposable schema
+- **Data:** Blank, explicit zero and nonzero physical differences with reasons
+1. Create a count and submit blank or unexplained differences
+2. Submit complete counts and attempt self-approval
+3. Approve as another manager and retry
+
+**Expected:** Blank is not zero; differences require reasons; self-approval fails and the independently approved adjustment is posted once with history. Stale draft or review forms cannot overwrite or approve a newer count revision.
+
+**Note:** Execution results and limits are recorded in docs/testing/stock-reconciliation.md.
+
+**Evidence:** `tests/Integration/StockReconciliationTest.php#test_blank_is_not_zero_and_independent_reviewer_posts_audited_variance_once`; `tests/Integration/StockReconciliationTest.php#test_stale_draft_or_review_form_cannot_change_a_newer_count_revision`
+
+### IT-STOCK-003 — Changes during counting require rejection, refreshed snapshots and recount
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** linked executable evidence
+
+- **Preconditions:** Submitted count and separate reviewer
+- **Data:** Receipt and issue that return to the same net book balance
+1. Change the ledger after submission
+2. Attempt approval
+3. Reject, refresh, recount and approve
+
+**Expected:** Any intervening ledger revision blocks posting even when the net balance is unchanged; recount clears old entered values while preserving prior submitted history.
+
+**Note:** Execution results and limits are recorded in docs/testing/stock-reconciliation.md.
+
+**Evidence:** `tests/Integration/StockReconciliationTest.php#test_changed_ledger_even_if_net_zero_blocks_post_until_reject_refresh_and_recount`
+
+### IT-STOCK-004 — Office access and product history are protected
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** partial evidence
+
+- **Preconditions:** Reader, manager, guest, product and stock item
+- **Data:** Read and write requests and a product deletion attempt
+1. Read as a viewer and attempt a write
+2. Try to delete a product with stock history
+3. Request the register as a guest
+
+**Expected:** Manage permission is required for writes; product and stock history remain intact; unauthenticated access is redirected.
+
+**Note:** The linked method does not itself exercise invoice/shipment mutations or portal sessions; those boundaries require additional verification. Execution results and limits are recorded in docs/testing/stock-reconciliation.md.
+
+**Evidence:** `tests/Integration/StockReconciliationTest.php#test_permissions_and_product_stock_history_are_protected`
+
+### IT-STOCK-005 — Native schema, locking and destructive rollback safeguards
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** partial evidence
+
+- **Preconditions:** Disposable full-schema SQLite and strict MySQL databases
+- **Data:** Populated ledger, protected product FK, two concurrent issues and competing approvals
+1. Attempt rollback with live stock
+2. Attempt deleting a referenced product
+3. Race two issues that together exceed stock and two approvals of the same count
+
+**Expected:** Rollback and product deletion refuse; concurrent issues cannot create a negative balance and competing approvals post only once.
+
+**Note:** The native locking cases cover specific ordered interleavings, not all cross-operation races. Execution results and limits are recorded in docs/testing/stock-reconciliation.md.
+
+**Evidence:** `tests/Integration/StockReconciliationTest.php#test_populated_stock_migration_cannot_be_rolled_back`; `tests/Database/MySqlStockReconciliationTest.php#test_native_foreign_keys_exact_decimal_and_populated_rollback_guard`; `tests/Database/MySqlStockReconciliationTest.php#test_simultaneous_count_approvals_post_one_adjustment`; `tests/Database/MySqlStockReconciliationTest.php#test_competing_issues_are_serialized_and_cannot_make_stock_negative`

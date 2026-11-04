@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -168,14 +169,21 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
-        foreach ($product->media as $media) {
-            if ($media->file_path) {
-                Storage::disk('public')->delete($media->file_path);
+        $paths = DB::transaction(function () use ($product) {
+            // Stock-item creation locks this same product first, so neither path
+            // can race past the history check and strand ledger references.
+            $locked = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            if (Schema::hasTable('stock_items') && DB::table('stock_items')->where('product_id', $locked->id)->lockForUpdate()->first(['id'])) {
+                return null;
             }
+            $paths = $locked->media()->whereNotNull('file_path')->pluck('file_path')->all();
+            $locked->delete();
+            return $paths;
+        }, 3);
+        if ($paths === null) {
+            return back()->with('error', 'This product has stock history and cannot be deleted. Mark it inactive instead.');
         }
-
-        $product->delete();
-
+        foreach ($paths as $path) Storage::disk('public')->delete($path);
         return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
     }
 
