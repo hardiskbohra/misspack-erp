@@ -23,5 +23,10 @@ class StockCountLine extends Model
         return StockQuantity::format($this->counted_milli - $this->book_milli);
     }
 
-    public function isStale(): bool { return $this->item && $this->item->ledger_version !== $this->ledger_version; }
+    public function isStale(): bool
+    {
+        return $this->item && ($this->item->ledger_version !== $this->ledger_version
+            || $this->item->identity_revision !== (int) ($this->item_snapshot['identity_revision'] ?? 0)
+            || $this->item->archived_at !== null);
+    }
 }

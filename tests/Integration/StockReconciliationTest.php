@@ -49,7 +49,8 @@ class StockReconciliationTest extends TestCase
     private function movement(StockItem $item, string $type, string $quantity, ?string $key = null): void
     {
         $this->post(route('stock.movements.store', $item), ['type' => $type, 'quantity' => $quantity,
-            'reason' => 'Fictional movement', 'reference' => 'Fixture ref', 'request_key' => $key ?: (string) Str::uuid()])->assertRedirect();
+            'reason' => 'Fictional movement', 'reference' => 'Fixture ref', 'record_revision' => $item->fresh()->record_revision,
+            'request_key' => $key ?: (string) Str::uuid()])->assertRedirect();
     }
 
     private function createCount(StockItem ...$items): StockCount
@@ -78,7 +79,8 @@ class StockReconciliationTest extends TestCase
         $this->assertSame('10.224', $item->fresh()->quantity_on_hand);
         $this->assertSame(3, $item->movements()->count(), 'A retried movement must not post twice.');
         $this->from(route('stock.items.show', $item))->post(route('stock.movements.store', $item), ['type' => 'issue',
-            'quantity' => '11', 'reason' => 'Too much', 'request_key' => (string) Str::uuid()])->assertSessionHasErrors('quantity');
+            'quantity' => '11', 'reason' => 'Too much', 'record_revision' => $item->fresh()->record_revision,
+            'request_key' => (string) Str::uuid()])->assertSessionHasErrors('quantity');
         $this->assertSame('10.224', $item->fresh()->quantity_on_hand);
         $this->from(route('stock.items.create'))->post(route('stock.items.store'), ['product_id' => $this->product->id,
             'variant' => ' AMBER   100ML ', 'batch_code' => ' b-01 ', 'unit' => 'pcs', 'opening_quantity' => '0', 'reason' => 'Duplicate'])
@@ -147,7 +149,7 @@ class StockReconciliationTest extends TestCase
         $reader = $this->user('reader', ['operations.view']);
         $this->actingAs($reader)->get(route('stock.index'))->assertOk()->assertSee('Fictional bottle');
         $this->post(route('stock.movements.store', $item), ['type' => 'issue', 'quantity' => '1', 'reason' => 'No access',
-            'request_key' => (string) Str::uuid()])->assertForbidden();
+            'record_revision' => $item->fresh()->record_revision, 'request_key' => (string) Str::uuid()])->assertForbidden();
         $this->actingAs($this->counter)->delete(route('products.destroy', $this->product))->assertRedirect()->assertSessionHas('error');
         $this->assertDatabaseHas('products', ['id' => $this->product->id]);
         $this->assertSame(1, $item->movements()->count());
@@ -179,7 +181,8 @@ class StockReconciliationTest extends TestCase
         $item = $this->makeItem();
         DB::table('stock_items')->where('id', $item->id)->update(['quantity_milli' => 99000]);
         $this->from(route('stock.items.show', $item))->post(route('stock.movements.store', $item), ['type' => 'receipt',
-            'quantity' => '1', 'reason' => 'Should be blocked', 'request_key' => (string) Str::uuid()])->assertSessionHasErrors();
+            'quantity' => '1', 'reason' => 'Should be blocked', 'record_revision' => $item->fresh()->record_revision,
+            'request_key' => (string) Str::uuid()])->assertSessionHasErrors();
         $this->from(route('stock.counts.create'))->post(route('stock.counts.store'), ['title' => 'Unsafe snapshot', 'item_ids' => [$item->id]])
             ->assertSessionHasErrors();
         $this->assertSame(1, $item->movements()->count());

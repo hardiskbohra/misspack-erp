@@ -354,6 +354,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/stock', [StockController::class, 'index'])->name('stock.index');
         Route::get('/stock/items/create', [StockController::class, 'create'])->name('stock.items.create');
         Route::post('/stock/items', [StockController::class, 'store'])->name('stock.items.store');
+        Route::get('/stock/items/{stockItem}/edit', [StockController::class, 'edit'])->name('stock.items.edit');
+        Route::put('/stock/items/{stockItem}', [StockController::class, 'update'])->name('stock.items.update');
+        Route::delete('/stock/items/{stockItem}', [StockController::class, 'destroy'])->name('stock.items.destroy');
+        Route::post('/stock/items/{stockItem}/restore', [StockController::class, 'restore'])->name('stock.items.restore');
         Route::get('/stock/items/{stockItem}', [StockController::class, 'show'])->name('stock.items.show');
         Route::post('/stock/items/{stockItem}/movements', [StockController::class, 'movement'])->name('stock.movements.store');
         Route::get('/stock/counts', [StockCountController::class, 'index'])->name('stock.counts.index');

@@ -21,7 +21,10 @@ class StockReconciliation
         return DB::transaction(function () use ($data, $counter, $ids) {
             $items = StockItem::with('product')->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
             if ($items->count() !== $ids->count()) throw ValidationException::withMessages(['item_ids' => 'One or more selected stock items no longer exist.']);
-            foreach ($items as $item) $this->ledger->assertConsistentLocked($item);
+            foreach ($items as $item) {
+                if ($item->archived_at) throw ValidationException::withMessages(['item_ids' => 'Restore archived items before starting a count.']);
+                $this->ledger->assertConsistentLocked($item);
+            }
             $count = StockCount::create(['title' => $data['title'], 'notes' => $data['notes'] ?? null,
                 'status' => 'draft', 'revision' => 0, 'created_by' => $counter->id, 'counter_name' => $counter->name]);
             foreach ($items as $item) {
@@ -164,14 +167,18 @@ class StockReconciliation
     {
         $items = StockItem::with('product')->whereIn('id', $lines->pluck('stock_item_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
         if ($items->count() !== $lines->count()) throw ValidationException::withMessages(['count' => 'A selected stock item is missing.']);
-        foreach ($items as $item) $this->ledger->assertConsistentLocked($item);
+        foreach ($items as $item) {
+            if ($item->archived_at) throw ValidationException::withMessages(['count' => 'A selected stock item is archived. Restore it before continuing this count.']);
+            $this->ledger->assertConsistentLocked($item);
+        }
         return $items;
     }
 
     private function assertCurrent(Collection $lines, Collection $items): void
     {
         $stale = $lines->filter(fn (StockCountLine $line) => $items->get($line->stock_item_id)->ledger_version !== $line->ledger_version
-            || $items->get($line->stock_item_id)->quantity_milli !== $line->book_milli);
+            || $items->get($line->stock_item_id)->quantity_milli !== $line->book_milli
+            || $items->get($line->stock_item_id)->identity_revision !== (int) ($line->item_snapshot['identity_revision'] ?? 0));
         if ($stale->isNotEmpty()) {
             $names = $stale->map(fn ($line) => $line->item_snapshot['item_number'])->implode(', ');
             throw ValidationException::withMessages(['count' => 'Stock changed after the snapshot for '.$names.'. Reject or refresh the draft and recount before approval.']);

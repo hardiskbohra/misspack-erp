@@ -189,13 +189,97 @@ async function main() {
         assert.match(await reviewPage.locator('.stock-events').innerText(), /Stock moved; recount required/);
         console.log('PASS stale ledger blocks approval, return, refresh and independently approved recount');
 
+        // Edit, movement and archive checks for the later register-controls release.
+        // Exercise stock correction, independent review, guarded archive and restore.
+        const editPath = `${itemPath}/edit`;
+        for (const width of [1440, 768, 390, 320]) {
+            await geometry(page, editPath, width);
+            await geometry(page, `${itemPath}#stockArchive`, width);
+        }
+        await page.setViewportSize({ width: 1440, height: 900 });
+        const staleMovement = await counter.newPage();
+        staleMovement.on('pageerror', error => errors.push(error.message));
+        await visit(staleMovement, itemPath);
+        await select(staleMovement, '#movementType', 'Issue');
+        await staleMovement.locator('#movementQuantity').fill('2');
+        await staleMovement.locator('#movementReason').fill('Unsubmitted old identity movement');
+        const staleEdit = await counter.newPage();
+        staleEdit.on('pageerror', error => errors.push(error.message));
+        await visit(staleEdit, editPath);
+        await staleEdit.locator('#stockVariant').fill('Unsaved old variant');
+        await staleEdit.locator('#stockEditReason').fill('Old edit form');
+        await visit(page, editPath);
+        await page.locator('#stockVariant').fill('Amber corrected');
+        await page.locator('#stockEditReason').fill('Corrected the descriptive variant');
+        await submit(page, 'button:has-text("Save changes")');
+        assert.match(await page.locator('.stock-table').innerText(), /Amber 100 ml/);
+        assert.match(await page.locator('.stock-events').innerText(), /Corrected the descriptive variant/);
+        await submit(staleMovement, 'button:has-text("Record movement")');
+        assert.match(await staleMovement.locator('[role="alert"]').first().innerText(), /item changed since you opened/i);
+        await dismissValidation(staleMovement);
+        await staleMovement.locator('summary:has-text("View your unsaved movement")').click();
+        assert.match(await staleMovement.locator('details.stock-alert').innerText(), /Unsubmitted old identity movement/);
+        assert.equal(await staleMovement.locator('#movementQuantity').inputValue(), '');
+        await submit(staleEdit, 'button:has-text("Save changes")');
+        assert.match(await staleEdit.locator('[role="alert"]').first().innerText(), /item or its balance changed/i);
+        await dismissValidation(staleEdit);
+        await staleEdit.locator('summary:has-text("View your unsaved entries")').click();
+        assert.match(await staleEdit.locator('details.stock-alert').innerText(), /Unsaved old variant/);
+        assert.equal(await staleEdit.locator('#stockVariant').inputValue(), 'Amber corrected');
+        await staleMovement.close(); await staleEdit.close();
+
+        await visit(page, editPath);
+        await page.locator('#stockRequestedQuantity').fill('9.500');
+        await page.locator('#stockEditReason').fill('Physical correction request');
+        await submit(page, 'button:has-text("Save changes")');
+        const correctionPath = new URL(page.url()).pathname;
+        assert.match(correctionPath, /^\/stock\/counts\/\d+$/);
+        assert.match(await page.locator('.stock-count-table').innerText(), /11\.500[\s\S]*9\.500/);
+        assert.equal(await page.getByRole('button', { name: 'Approve and post', exact: true }).count(), 0);
+        await visit(reviewPage, correctionPath);
+        await reviewPage.locator('#approveReason').fill('Verified correction evidence');
+        await confirmAndSubmit(reviewPage, 'Approve and post', 'Approve and post');
+        await visit(page, itemPath);
+        assert.match(await page.locator('.stock-facts').innerText(), /9\.500/);
+        assert.match(await page.locator('.stock-events').innerText(), /Physical correction request/);
+
+        const archiveCount = await createCount(page, itemId, 'Count blocks archive');
+        await visit(page, `${itemPath}#stockArchive`);
+        assert.match(await page.locator('#stockArchive').innerText(), /Finish or cancel the open counts/);
+        assert.equal(await page.getByRole('button', { name: 'Archive item', exact: true }).count(), 0);
+        await visit(page, archiveCount);
+        await page.locator('summary:has-text("Cancel this count")').click();
+        await page.locator('#cancelReason').fill('Count no longer required');
+        await confirmAndSubmit(page, 'Cancel count', 'Cancel count');
+        await visit(page, `${itemPath}#stockArchive`);
+        assert.equal(await page.locator('#stockArchive').evaluate(el => el.open), true);
+        await page.locator('#archiveReason').fill('Retire the duplicate register record');
+        await page.locator('[name="acknowledge_nonzero"]').check();
+        await confirmAndSubmit(page, 'Archive item', 'Archive item');
+        assert.match(await page.locator('.stock').innerText(), /This item is archived/);
+        assert.equal(await page.getByRole('button', { name: 'Record movement' }).count(), 0);
+        await visit(page, '/stock');
+        assert.match(await page.locator('.stock').innerText(), /archived with stock/);
+        await visit(page, '/stock?status=archived');
+        assert.match(await page.locator('.stock-table').innerText(), /Fictional stock bottle[\s\S]*9\.500/);
+        await visit(page, `${itemPath}#stockRestore`);
+        assert.equal(await page.locator('#stockRestore').evaluate(el => el.open), true);
+        await page.locator('#restoreReason').fill('Restore after review');
+        await confirmAndSubmit(page, 'Restore item', 'Restore item');
+        assert.match(await page.locator('.stock-facts').innerText(), /9\.500/);
+        assert.match(await page.locator('.stock-events').innerText(), /Restore after review/);
+        console.log('PASS correction review, stale recovery, guarded archive and restoration');
+
         const reader = await browser.newContext({ viewport: { width: 390, height: 900 } });
         const readerPage = await reader.newPage();
         readerPage.on('pageerror', error => errors.push(error.message));
         await login(readerPage, 'stock-reader-browser@example.test');
         await visit(readerPage, itemPath);
         assert.equal(await readerPage.getByRole('button', { name: 'Record movement' }).count(), 0);
+        assert.equal(await readerPage.getByRole('link', { name: 'Edit item' }).count(), 0);
+        assert.equal(await readerPage.locator('#stockArchive').count(), 0);
         assert.equal((await readerPage.goto(url('/stock/items/create'))).status(), 403);
+        assert.equal((await readerPage.goto(url(editPath))).status(), 403);
         await visit(readerPage, second);
         assert.equal(await readerPage.getByRole('button', { name: 'Approve and post' }).count(), 0);
         console.log('PASS read-only office access');

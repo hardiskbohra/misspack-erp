@@ -36,4 +36,4 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-FILES | Shared file policy and storage lifecycle | 3 | 4 | 4 |
 | REQ-UI | Shared UI, printing and accessible interactions | 4 | 9 | 5 |
 | REQ-TAX | GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) | 1 | 13 | 14 |
-| REQ-STOCK | Stock ledger and reconciliation | 1 | 5 | 6 |
+| REQ-STOCK | Stock ledger and reconciliation | 1 | 9 | 10 |

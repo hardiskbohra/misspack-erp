@@ -117,6 +117,7 @@ class MySqlStockReconciliationTest extends TestCase
                 DB::table('stock_count_lines')->where('stock_count_id', $count->id)->delete();
                 DB::table('stock_counts')->where('id', $count->id)->delete();
             }
+            DB::table('stock_item_product_history')->where('stock_item_id', $item->id)->delete();
             DB::table('stock_items')->where('id', $item->id)->delete();
             DB::table('products')->where('id', $product->id)->delete();
             DB::table('users')->whereIn('id', [$counter->id, $reviewer->id])->delete();
@@ -142,7 +143,8 @@ class MySqlStockReconciliationTest extends TestCase
             usleep(300000);
             $this->assertTrue(proc_get_status($process)['running'], 'The second issue must wait for the item lock.');
             app(StockLedger::class)->manualMovement($item, ['type' => 'issue', 'quantity' => '6.000',
-                'reason' => 'First issue', 'reference' => null, 'request_key' => (string) Str::uuid()], $actor);
+                'reason' => 'First issue', 'reference' => null, 'record_revision' => $item->record_revision,
+                'request_key' => (string) Str::uuid()], $actor);
             $db->commit();
             $output = stream_get_contents($pipes[1]);
             $error = stream_get_contents($pipes[2]);
@@ -160,6 +162,7 @@ class MySqlStockReconciliationTest extends TestCase
                 proc_close($process);
             }
             DB::table('stock_movements')->where('stock_item_id', $item->id)->delete();
+            DB::table('stock_item_product_history')->where('stock_item_id', $item->id)->delete();
             DB::table('stock_items')->where('id', $item->id)->delete();
             DB::table('products')->where('id', $product->id)->delete();
             DB::table('users')->where('id', $actor->id)->delete();

@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class StockMovement extends Model
 {
     protected $fillable = ['stock_item_id', 'type', 'delta_milli', 'balance_after_milli', 'ledger_version', 'reason',
-        'reference', 'request_key', 'stock_count_line_id', 'created_by', 'actor_name'];
+        'reference', 'request_key', 'stock_count_line_id', 'created_by', 'actor_name', 'item_snapshot'];
 
-    protected $casts = ['delta_milli' => 'integer', 'balance_after_milli' => 'integer', 'ledger_version' => 'integer'];
+    protected $casts = ['delta_milli' => 'integer', 'balance_after_milli' => 'integer', 'ledger_version' => 'integer', 'item_snapshot' => 'array'];
 
     public function getQuantityDeltaAttribute(): string { return StockQuantity::format($this->delta_milli); }
     public function getBalanceAfterAttribute(): string { return StockQuantity::format($this->balance_after_milli); }

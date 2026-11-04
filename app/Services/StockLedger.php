@@ -15,10 +15,11 @@ class StockLedger
 {
     public function createItem(array $data, User $actor): StockItem
     {
-        $variant = self::clean($data['variant'] ?? null);
-        $batch = self::clean($data['batch_code'] ?? null);
-        $unit = self::clean($data['unit']);
-        $identity = hash('sha256', json_encode([(int) $data['product_id'], self::key($variant), self::key($batch)], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        $variant = self::normalizeLabel($data['variant'] ?? null);
+        $batch = self::normalizeLabel($data['batch_code'] ?? null);
+        $unit = self::normalizeLabel($data['unit']);
+        if ($unit === null) throw ValidationException::withMessages(['unit' => 'Enter a stock unit.']);
+        $identity = self::identityHash((int) $data['product_id'], $variant, $batch);
         $quantity = StockQuantity::fromInput($data['opening_quantity']);
 
         try {
@@ -26,12 +27,13 @@ class StockLedger
                 // Serializes with product deletion as well as other item creation for this product.
                 $product = Product::whereKey($data['product_id'])->lockForUpdate()->firstOrFail();
                 if (StockItem::where('identity_hash', $identity)->exists()) {
-                    throw ValidationException::withMessages(['batch_code' => 'This product, variant and batch already exist. Use the existing stock item.']);
+                    throw ValidationException::withMessages(['batch_code' => 'This product, variant and batch already exist, including in the archive. View or restore the existing stock item.']);
                 }
                 $item = StockItem::create(['product_id' => $product->id, 'variant' => $variant, 'batch_code' => $batch,
                     'expires_on' => $data['expires_on'] ?? null, 'unit' => $unit, 'identity_hash' => $identity,
-                    'quantity_milli' => 0, 'ledger_version' => 0,
+                    'quantity_milli' => 0, 'ledger_version' => 0, 'record_revision' => 0, 'identity_revision' => 0,
                     'created_by' => $actor->id, 'creator_name' => $actor->name]);
+                DB::table('stock_item_product_history')->insert(['stock_item_id' => $item->id, 'product_id' => $product->id]);
                 $this->postLocked($item, 'opening', $quantity, $data['reason'], $data['reference'] ?? null,
                     'opening:'.$item->id, $actor);
                 return $item;
@@ -39,7 +41,7 @@ class StockLedger
         } catch (QueryException $error) {
             // A database unique key is the final defence even under competing requests.
             if (StockItem::where('identity_hash', $identity)->exists()) {
-                throw ValidationException::withMessages(['batch_code' => 'This product, variant and batch already exist. Use the existing stock item.']);
+                throw ValidationException::withMessages(['batch_code' => 'This product, variant and batch already exist, including in the archive. View or restore the existing stock item.']);
             }
             throw $error;
         }
@@ -54,8 +56,12 @@ class StockLedger
         if ($quantity <= 0) throw ValidationException::withMessages(['quantity' => 'Enter a quantity greater than zero.']);
         $delta = $data['type'] === 'issue' ? -$quantity : $quantity;
         $key = 'manual:'.$data['request_key'];
+        $recordRevision = $data['record_revision'] ?? null;
+        if ((! is_int($recordRevision) && ! is_string($recordRevision)) || ! ctype_digit((string) $recordRevision)) {
+            throw ValidationException::withMessages(['stock' => 'Reload the item before recording a movement.']);
+        }
 
-        return DB::transaction(function () use ($item, $data, $actor, $delta, $key) {
+        return DB::transaction(function () use ($item, $data, $actor, $delta, $key, $recordRevision) {
             $locked = StockItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
             $existing = StockMovement::where('request_key', $key)->lockForUpdate()->first();
             if ($existing) {
@@ -66,6 +72,11 @@ class StockLedger
                 }
                 return $existing;
             }
+            // A form opened before an identity correction or archive/restore
+            // decision must never post a movement against a different record.
+            if ($locked->record_revision !== (int) $recordRevision) {
+                throw ValidationException::withMessages(['stock' => 'This item changed since you opened the movement form. Review its current identity before recording the movement.']);
+            }
             return $this->postLocked($locked, $data['type'], $delta, $data['reason'], $data['reference'] ?? null, $key, $actor);
         }, 3);
     }
@@ -74,6 +85,7 @@ class StockLedger
     public function postLocked(StockItem $item, string $type, int $delta, string $reason, ?string $reference, string $key, User $actor, ?int $countLineId = null): StockMovement
     {
         if (DB::transactionLevel() < 1) throw new \LogicException('Stock postings require a transaction and a locked stock item.');
+        if ($item->archived_at) throw ValidationException::withMessages(['stock' => 'Restore this archived item before recording stock movements.']);
         $valid = match ($type) {
             'opening' => $item->ledger_version === 0 && $delta >= 0 && $countLineId === null,
             'receipt' => $delta > 0 && $countLineId === null,
@@ -90,7 +102,8 @@ class StockLedger
         $movement = StockMovement::create(['stock_item_id' => $item->id, 'type' => $type,
             'delta_milli' => $delta, 'balance_after_milli' => $next,
             'ledger_version' => $version, 'reason' => $reason, 'reference' => $reference, 'request_key' => $key,
-            'stock_count_line_id' => $countLineId, 'created_by' => $actor->id, 'actor_name' => $actor->name]);
+            'stock_count_line_id' => $countLineId, 'created_by' => $actor->id, 'actor_name' => $actor->name,
+            'item_snapshot' => $item->snapshot() + ['snapshot_basis' => 'at_movement']]);
         $item->forceFill(['quantity_milli' => $next, 'ledger_version' => $version])->save();
         return $movement;
     }
@@ -106,11 +119,15 @@ class StockLedger
         }
     }
 
-    private static function clean(?string $value): ?string
+    public static function normalizeLabel(?string $value): ?string
     {
         $value = preg_replace('/\s+/u', ' ', trim((string) $value));
         return $value === '' ? null : $value;
     }
 
-    private static function key(?string $value): string { return mb_strtolower($value ?? '', 'UTF-8'); }
+    public static function identityHash(int $productId, ?string $variant, ?string $batch): string
+    {
+        $key = fn (?string $value) => mb_strtolower(self::normalizeLabel($value) ?? '', 'UTF-8');
+        return hash('sha256', json_encode([$productId, $key($variant), $key($batch)], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    }
 }

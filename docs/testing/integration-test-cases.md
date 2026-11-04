@@ -2944,7 +2944,7 @@ Sources: `app/Support/Gstin.php`, `app/Rules/ValidGstin.php`, `app/Models/HsnSac
 
 ## Stock ledger and reconciliation (`STOCK`)
 
-Sources: `app/Http/Controllers/StockController.php`, `app/Http/Controllers/StockCountController.php`, `app/Services/StockLedger.php`, `app/Services/StockReconciliation.php`, `app/Services/StockQuantity.php`.
+Sources: `app/Http/Controllers/StockController.php`, `app/Http/Controllers/StockCountController.php`, `app/Services/StockLedger.php`, `app/Services/StockReconciliation.php`, `app/Services/StockQuantity.php`, `app/Services/StockRegistry.php`, `app/Models/StockItemEvent.php`.
 
 ### IT-STOCK-001 — Opening balance and manual ledger preserve distinct batches and prevent negative stock
 
@@ -3025,3 +3025,67 @@ Sources: `app/Http/Controllers/StockController.php`, `app/Http/Controllers/Stock
 **Note:** The native locking cases cover specific ordered interleavings, not all cross-operation races. Execution results and limits are recorded in docs/testing/stock-reconciliation.md.
 
 **Evidence:** `tests/Integration/StockReconciliationTest.php#test_populated_stock_migration_cannot_be_rolled_back`; `tests/Database/MySqlStockReconciliationTest.php#test_native_foreign_keys_exact_decimal_and_populated_rollback_guard`; `tests/Database/MySqlStockReconciliationTest.php#test_simultaneous_count_approvals_post_one_adjustment`; `tests/Database/MySqlStockReconciliationTest.php#test_competing_issues_are_serialized_and_cannot_make_stock_negative`
+
+### IT-STOCK-006 — Audited identity correction, product history and legacy movement snapshots
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** partial evidence
+
+- **Preconditions:** Existing stock and multiple products in a disposable full schema
+- **Data:** Legacy movement, corrected product/variant/batch/expiry/unit, duplicate or archived identity
+1. Upgrade existing records and correct item details with a reason
+2. Inspect before/after events, historical movement identities and product references
+3. Attempt to reuse another active or archived identity and delete a historical product
+
+**Expected:** Details change without directly changing quantity; original movement identity and product history remain available; normalized duplicate identities and historical product deletion are blocked.
+
+**Note:** See docs/testing/stock-register-edit-delete.md for execution results; pre-feature movement identities are reconstructed at the first correction, not at original posting time.
+
+**Evidence:** `tests/Integration/StockRegistryEditArchiveTest.php#test_details_are_audited_and_legacy_movements_keep_their_original_identity_and_unit`; `tests/Integration/StockRegistryEditArchiveTest.php#test_upgrade_preserves_existing_stock_and_backfills_product_references`; `tests/Integration/StockRegistryEditArchiveTest.php#test_duplicate_identity_stale_forms_and_float_quantities_do_not_mutate_the_register`; `tests/Integration/StockRegistryEditArchiveTest.php#test_an_archived_identity_remains_reserved_for_later_edits`; `tests/Database/MySqlStockRegistryTest.php#test_native_foreign_key_keeps_an_original_product_after_item_reassignment`; `tests/Database/MySqlStockRegistryTest.php#test_native_upgrade_backfills_existing_stock_and_preserves_its_first_identity`
+
+### IT-STOCK-007 — Quantity correction requires an independent count and stale identities require a recount
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** partial evidence
+
+- **Preconditions:** Two distinct operations managers, current item and an optional open count
+- **Data:** Combined identity/quantity correction, rejected self-review, intervening identity change and retry
+1. Request a different physical balance with a reason
+2. Attempt self-review and stale request replay
+3. Approve independently, or return a stale count for refresh and recount
+
+**Expected:** No quantity posts until another manager approves; identity changes invalidate open snapshots and existing history is retained.
+
+**Note:** Execution results and the separate native concurrency and browser checks are recorded in docs/testing/stock-register-edit-delete.md.
+
+**Evidence:** `tests/Integration/StockRegistryEditArchiveTest.php#test_quantity_edit_is_an_independently_approved_count_not_a_direct_ledger_write`; `tests/Integration/StockRegistryEditArchiveTest.php#test_combined_identity_and_balance_correction_snapshots_the_corrected_item_for_review`; `tests/Integration/StockRegistryEditArchiveTest.php#test_identity_edit_invalidates_an_open_count_even_when_the_balance_does_not_change`
+
+### IT-STOCK-008 — Archive and restore stock without losing balances or history
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** partial evidence
+
+- **Preconditions:** Operations manager and read-only user; zero and nonzero items, including an open count
+- **Data:** Reasons, explicit nonzero acknowledgement, stale archive/restore forms and attempted writes
+1. Attempt archive with an open count and without nonzero acknowledgement
+2. Archive, inspect active warning and retained archive, then restore
+3. Attempt unauthorized and stale writes
+
+**Expected:** Archive is reversible and retains history/balances; open counts and nonzero acknowledgements are enforced; active-only writes and permissions are protected.
+
+**Note:** Execution results, including acknowledgement and mobile-layout browser checks, are recorded in docs/testing/stock-register-edit-delete.md.
+
+**Evidence:** `tests/Integration/StockRegistryEditArchiveTest.php#test_archive_warns_for_nonzero_stock_preserves_history_blocks_new_writes_and_can_be_restored`; `tests/Integration/StockRegistryEditArchiveTest.php#test_zero_balance_archive_needs_no_nonzero_acknowledgement_and_old_restore_cannot_repeat`; `tests/Integration/StockRegistryEditArchiveTest.php#test_open_count_blocks_archive_and_readers_cannot_edit_or_archive`; `tests/Integration/StockRegistryEditArchiveTest.php#test_stale_archive_decision_rejects_a_new_balance_and_keeps_the_unapplied_reason`; `tests/Integration/StockRegistryEditArchiveTest.php#test_archived_item_exposes_completed_count_history_even_without_a_ledger_adjustment`
+
+### IT-STOCK-009 — Stale movement forms and competing archive operations remain safe
+
+**Priority:** P0 · **Requirement:** REQ-STOCK · **Implementation:** partial evidence
+
+- **Preconditions:** Disposable SQLite and strict MySQL with independent connections and a current stock item
+- **Data:** Movement form opened before identity change; archive racing a receipt or count creation; populated migration rollback
+1. Change identity while an older movement form is open
+2. Race archive against a locked movement and a count creation
+3. Attempt destructive rollback after audited changes
+
+**Expected:** Old movement forms cannot post against changed identity; archive observes current balance and open counts after waiting; rollback refuses history loss.
+
+**Note:** Execution results are recorded in docs/testing/stock-register-edit-delete.md; selected ordered interleavings are not an exhaustive proof of concurrency.
+
+**Evidence:** `tests/Integration/StockRegistryEditArchiveTest.php#test_stale_movement_form_cannot_post_to_a_corrected_identity_and_preserves_unsaved_entries`; `tests/Integration/StockRegistryEditArchiveTest.php#test_populated_edit_archive_migration_refuses_to_discard_history`; `tests/Database/MySqlStockRegistryTest.php#test_archive_waiting_for_a_movement_rejects_the_stale_balance_and_keeps_history`; `tests/Database/MySqlStockRegistryTest.php#test_archive_waiting_for_count_creation_observes_the_open_count`; `tests/Integration/StockRegistryEditArchiveTest.php#test_unsaved_edit_remains_visible_if_the_item_was_archived_in_another_session`; `tests/Integration/StockRegistryEditArchiveTest.php#test_exact_movement_retry_remains_idempotent_after_identity_correction`

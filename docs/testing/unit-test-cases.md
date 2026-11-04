@@ -1278,7 +1278,7 @@ Sources: `app/Support/Gstin.php`, `app/Rules/ValidGstin.php`, `app/Models/HsnSac
 
 ## Stock ledger and reconciliation (`STOCK`)
 
-Sources: `app/Http/Controllers/StockController.php`, `app/Http/Controllers/StockCountController.php`, `app/Services/StockLedger.php`, `app/Services/StockReconciliation.php`, `app/Services/StockQuantity.php`.
+Sources: `app/Http/Controllers/StockController.php`, `app/Http/Controllers/StockCountController.php`, `app/Services/StockLedger.php`, `app/Services/StockReconciliation.php`, `app/Services/StockQuantity.php`, `app/Services/StockRegistry.php`, `app/Models/StockItemEvent.php`.
 
 ### UT-STOCK-001 — Exact stock quantities reject rounding, overflow and malformed values
 

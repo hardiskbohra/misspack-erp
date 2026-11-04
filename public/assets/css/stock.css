@@ -22,6 +22,12 @@
 .stock-alert--warning { border-left-color: var(--master-orange); }
 .stock-alert ul { margin: 6px 0 0; padding-left: 20px; }
 .stock-filter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 240px) auto auto; align-items: end; gap: 12px; margin-bottom: 16px; }
+.stock .master-list-chips { margin-bottom: 16px; }
+.stock-row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.stock-decision-form { margin-top: 16px; }
+.stock-checkbox { display: flex; align-items: flex-start; gap: 8px; color: var(--mc-text); font-size: 13px; line-height: 1.5; cursor: pointer; }
+.stock-checkbox input { flex: 0 0 auto; margin-top: 3px; accent-color: var(--master-primary); }
+.stock-checkbox input:focus-visible { outline: 2px solid var(--master-primary); outline-offset: 3px; }
 .stock-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
 .stock-form-grid .master-field { min-width: 0; }
 .stock-field-wide { grid-column: 1 / -1; }
@@ -32,6 +38,7 @@
 .stock-status--submitted { border-left: 3px solid var(--master-orange); }
 .stock-status--posted { border-left: 3px solid var(--master-green); }
 .stock-status--cancelled { border-left: 3px solid var(--master-red); }
+.stock-status--archived { border-left: 3px solid var(--mc-text-3); }
 .stock-count-input { width: min(100%, 130px); }
 .stock-count-reason { min-width: 160px; }
 .stock-review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }

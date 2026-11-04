@@ -7,7 +7,7 @@
     <header class="master-card master-header stock-header"><div><p class="stock-eyebrow">Physical counts</p><h1>Start a physical count</h1><p class="master-sub">Choose the batches to count. Their current book quantities are snapshotted when the count starts.</p></div><a class="master-btn master-btn-soft" href="{{ route('stock.counts.index') }}">Back to counts</a></header>
     @include('stock.partials.navigation')
     @include('stock.partials.errors')
-    <div class="stock-alert stock-alert--warning"><strong>Count against a stable snapshot.</strong> Movements may continue, but if any selected item's ledger changes, that item must be recounted against a refreshed snapshot before approval.</div>
+    <div class="stock-alert stock-alert--warning"><strong>Count against a stable snapshot.</strong> If an item's balance or identity changes, it must be recounted against a refreshed snapshot before approval. Archived items are not available for new counts.</div>
     <form method="POST" action="{{ route('stock.counts.store') }}" class="master-card stock-section">@csrf
         <h2 class="master-section-title">Count details</h2>
         <div class="master-form-grid stock-form-grid">

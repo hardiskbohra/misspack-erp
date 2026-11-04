@@ -26,14 +26,14 @@ class StockCountController extends Controller
     public function create(Request $request): View
     {
         abort_unless($request->user()->hasPermission('operations.manage'), 403);
-        return view('stock.counts.create', ['items' => StockItem::with('product')->orderBy('id')->get()]);
+        return view('stock.counts.create', ['items' => StockItem::with('product')->whereNull('archived_at')->orderBy('id')->get()]);
     }
 
     public function store(Request $request, StockReconciliation $service): RedirectResponse
     {
         $data = $request->validate(['title' => ['required', 'string', 'max:160'], 'notes' => ['nullable', 'string', 'max:2000'],
             'item_ids' => ['required', 'array', 'min:1', 'max:100'],
-            'item_ids.*' => ['required', 'integer', 'distinct', Rule::exists('stock_items', 'id')]]);
+            'item_ids.*' => ['required', 'integer', 'distinct', Rule::exists('stock_items', 'id')->whereNull('archived_at')]]);
         $count = $service->create($data, $request->user());
         return redirect()->route('stock.counts.show', $count)->with('success', 'Count created with current book balances. Enter the physical count for every selected item.');
     }

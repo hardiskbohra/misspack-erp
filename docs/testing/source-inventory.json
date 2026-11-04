@@ -93,6 +93,15 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlStockRegistryTest.php",
+      "methods": [
+        "test_native_upgrade_backfills_existing_stock_and_preserves_its_first_identity",
+        "test_native_foreign_key_keeps_an_original_product_after_item_reassignment",
+        "test_archive_waiting_for_count_creation_observes_the_open_count",
+        "test_archive_waiting_for_a_movement_rejects_the_stale_balance_and_keeps_history"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlThreeDecimalPrecisionTest.php",
       "methods": [
         "test_discounted_tax_payload_reconciles_saved_mysql_totals",
@@ -874,6 +883,27 @@
       ]
     },
     {
+      "file": "tests/Integration/StockRegistryEditArchiveTest.php",
+      "methods": [
+        "test_details_are_audited_and_legacy_movements_keep_their_original_identity_and_unit",
+        "test_quantity_edit_is_an_independently_approved_count_not_a_direct_ledger_write",
+        "test_combined_identity_and_balance_correction_snapshots_the_corrected_item_for_review",
+        "test_duplicate_identity_stale_forms_and_float_quantities_do_not_mutate_the_register",
+        "test_unsaved_edit_remains_visible_if_the_item_was_archived_in_another_session",
+        "test_stale_movement_form_cannot_post_to_a_corrected_identity_and_preserves_unsaved_entries",
+        "test_exact_movement_retry_remains_idempotent_after_identity_correction",
+        "test_identity_edit_invalidates_an_open_count_even_when_the_balance_does_not_change",
+        "test_archive_warns_for_nonzero_stock_preserves_history_blocks_new_writes_and_can_be_restored",
+        "test_archived_item_exposes_completed_count_history_even_without_a_ledger_adjustment",
+        "test_zero_balance_archive_needs_no_nonzero_acknowledgement_and_old_restore_cannot_repeat",
+        "test_an_archived_identity_remains_reserved_for_later_edits",
+        "test_stale_archive_decision_rejects_a_new_balance_and_keeps_the_unapplied_reason",
+        "test_open_count_blocks_archive_and_readers_cannot_edit_or_archive",
+        "test_upgrade_preserves_existing_stock_and_backfills_product_references",
+        "test_populated_edit_archive_migration_refuses_to_discard_history"
+      ]
+    },
+    {
       "file": "tests/Integration/ThreeDecimalPrecisionTest.php",
       "methods": [
         "test_proforma_keeps_three_decimal_unit_price_total_print_and_words",
@@ -1444,6 +1474,7 @@
     "app/Services/StockLedger.php",
     "app/Services/StockQuantity.php",
     "app/Services/StockReconciliation.php",
+    "app/Services/StockRegistry.php",
     "app/Services/TwoFactorAuthentication.php",
     "app/Services/UnallocatedCashflows.php",
     "app/Services/VendorKyc.php",
@@ -1545,6 +1576,7 @@
     "app/Models/StockCountEvent.php",
     "app/Models/StockCountLine.php",
     "app/Models/StockItem.php",
+    "app/Models/StockItemEvent.php",
     "app/Models/StockMovement.php",
     "app/Models/Task.php",
     "app/Models/User.php",

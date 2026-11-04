@@ -5623,6 +5623,19 @@
             ]
         },
         {
+            "name": "stock.items.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "stock/items/{stockItem}",
+            "action": "App\\Http\\Controllers\\StockController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "stock.items.show",
             "methods": [
                 "GET",
@@ -5637,12 +5650,52 @@
             ]
         },
         {
+            "name": "stock.items.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "stock/items/{stockItem}",
+            "action": "App\\Http\\Controllers\\StockController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/items/{stockItem}/edit",
+            "action": "App\\Http\\Controllers\\StockController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "stock.movements.store",
             "methods": [
                 "POST"
             ],
             "uri": "stock/items/{stockItem}/movements",
             "action": "App\\Http\\Controllers\\StockController@movement",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.restore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/items/{stockItem}/restore",
+            "action": "App\\Http\\Controllers\\StockController@restore",
             "middleware": [
                 "web",
                 "auth",

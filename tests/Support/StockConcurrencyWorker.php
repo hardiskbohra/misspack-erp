@@ -20,7 +20,7 @@ echo "READY\n";
 flush();
 try {
     app(StockLedger::class)->manualMovement($item, ['type' => 'issue', 'quantity' => '6.000', 'reason' => 'Concurrent issue',
-        'reference' => null, 'request_key' => '5cabba89-7a92-41bd-a214-032f44d67bcd'], $actor);
+        'reference' => null, 'record_revision' => $item->record_revision, 'request_key' => '5cabba89-7a92-41bd-a214-032f44d67bcd'], $actor);
     echo "POSTED\n";
 } catch (ValidationException $exception) {
     echo "REJECTED\n";
