@@ -27,7 +27,7 @@ class ProjectFinancialClosureController extends Controller
 
     public function closeOutstanding(Request $request, Project $project, ProjectFinancialClosure $closure): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:20', 'max:2000'],
             'risk_acknowledgement' => ['accepted'],
@@ -38,9 +38,21 @@ class ProjectFinancialClosureController extends Controller
         return back()->with('warning', 'Manager exception recorded. The project is closed with outstanding financials; every underlying balance remains active.');
     }
 
+    public function manualClose(Request $request, Project $project, ProjectFinancialClosure $closure): RedirectResponse
+    {
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:20', 'max:2000'],
+            'risk_acknowledgement' => ['accepted'],
+        ]);
+        $closure->manualClose($project, Auth::user(), trim($data['reason']));
+
+        return back()->with('warning', 'Project manually closed. Open workflow actions and financial obligations remain visible and active.');
+    }
+
     public function reopen(Request $request, Project $project, ProjectFinancialClosure $closure): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
         $data = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:2000']]);
         $closure->reopen($project, Auth::id(), $data['reason']);
 

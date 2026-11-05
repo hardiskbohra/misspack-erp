@@ -17,6 +17,7 @@
         <form method="POST" enctype="multipart/form-data" action="{{ route('shipments.delivery-receipts.store',$shipment) }}">
             @csrf
             <input type="hidden" name="delivery_receipt_form" value="1">
+            <input type="hidden" name="_shipment_tab" value="products">
             <div class="master-modal-header">
                 <div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-clipboard-check"></i></span><div><h3 class="master-modal-title" id="deliveryReceiptModalTitle">Record delivery receipt</h3><p class="master-modal-subtitle">{{ $shipment->shipment_number }} · reconcile accepted and exception quantities against the dispatched lines.</p></div></div>
                 <button type="button" class="master-modal-close" data-delivery-receipt-close aria-label="Close delivery receipt form">×</button>

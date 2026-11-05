@@ -181,6 +181,9 @@ class VendorPaymentCashflowSync
                 }))->orderBy('id')->lockForUpdate()->get();
             $count = 0;
             foreach ($payments as $payment) {
+                if ($payment->protectedByPurchaseConversion()) {
+                    throw ValidationException::withMessages(['entry' => 'This payment is linked to a partial purchase conversion. Reverse the conversions before deleting its cashflow entry.']);
+                }
                 if ($payment->status === 'cancelled') continue;
                 $before = $payment->only(['id', 'vendor_id', 'purchase_invoice_id', 'cashflow_entry_id',
                     'status', 'foreign_currency', 'foreign_amount', 'exchange_rate', 'amount_in_inr', 'paid_account_id']);

@@ -101,7 +101,7 @@ class CashflowVendorPaymentSync
         }
 
         $row = $linked ?: new VendorPaymentEntry();
-        $amount = round((float) $entry->amountMoved(), 2);
+        $amount = round((float) $entry->amountMoved(), 3);
         $documented = $this->documentDenomination($entry);
 
         /* `exchange_rate` is rupees per unit of the ledger currency, which is
@@ -249,7 +249,7 @@ class CashflowVendorPaymentSync
 
         $amount = round((float) $allocations->sum(
             fn ($allocation) => (float) ($allocation->document_amount ?? $allocation->amount)
-        ), 2);
+        ), 3);
 
         if ($amount <= 0) {
             return null;

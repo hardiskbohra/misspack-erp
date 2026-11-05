@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 /**
@@ -85,7 +86,9 @@ class AccountController extends Controller
     {
         $data = $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            /* The rule is the same one the office's user editor enforces —
+               `Password::defaults()` in the service provider says what it is. */
+            'password' => ['required', 'string', 'confirmed', Password::defaults()],
         ]);
 
         Auth::user()->update(['password' => Hash::make($data['password'])]);

@@ -41,6 +41,29 @@ Two consequences the list leans on:
 foreign key, because the ledger predates the invoice module and the table may not
 exist at all on an old install. Guard it (`Schema::hasTable`) wherever it is read.
 
+## Rounding a new invoice
+
+New INR proforma and tax invoices default to **automatic whole-rupee rounding**
+after discounts, GST and charges. Half a rupee rounds up: ₹100.49 → ₹100.00
+(`round_off` −₹0.49), ₹100.50 → ₹101.00 (`round_off` +₹0.50). The office can
+uncheck the option and enter its own signed adjustment; auto mode recomputes on
+subsequent draft edits. The server, not the browser preview, is authoritative.
+
+`auto_round_total` is stored per invoice and defaults **off** in the migration so
+legacy records and their manual adjustments do not change. An older caller that
+creates an invoice with a non-zero `round_off` and no mode is treated as manual;
+an explicit mode takes precedence. Cash invoices and USD/RMB invoices never auto
+round. On a type or currency change, a computed INR adjustment is not carried
+into the newly ineligible invoice as a manual adjustment. Issued tax invoices
+lock both the adjustment and the mode along with the other monetary fields.
+
+Converting a proforma to tax or cash continues the existing claim and never
+re-rounds: the exact amount and outstanding balance, including paise, survive.
+Duplicating an eligible invoice is a new draft, so it discards the old adjustment
+and calculates a fresh automatic one. The migration refuses to roll back while
+any invoice uses auto mode; stop invoice writes and follow the rollback notes in
+[the acceptance and verification record](testing/invoice-auto-rounding.md).
+
 ## One question, one query
 
 The listing asks three questions — the tiles, the footer, and the rows — and each gets
@@ -288,6 +311,15 @@ without a version the browser keeps serving the old sheet after a deploy.
 | POST | `sales-invoices/{salesInvoice}/duplicate` | `sales-invoices.duplicate` |
 | POST | `sales-invoices/{salesInvoice}/convert` | `sales-invoices.convert` |
 | GET | `sales-invoices/{salesInvoice}/print` | `sales-invoices.print` |
+| POST | `sales-invoices/{salesInvoice}/notes` | `sales-invoices.notes.store` |
+| POST | `sales-invoices/{salesInvoice}/returns` | `sales-invoices.returns.store` |
+| GET | `sales-invoice-notes/{note}/print` | `sales-invoice-notes.print` |
+| PATCH | `sales-invoice-notes/{note}/cancel` | `sales-invoice-notes.cancel` |
+
+The four corrections routes are the state machine's public verbs: an issued
+tax invoice's money no longer edits; it moves through credit notes, debit
+notes, and returns, and a note is *cancelled with a reason*, never edited.
+`docs/invoice-adjustments.md` carries the whole rule.
 
 All of them are declared **before** `Route::resource('sales-invoices', …)`, or
 `/sales-invoices/export` is read as an invoice called "export". The client portal is

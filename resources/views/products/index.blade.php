@@ -119,7 +119,7 @@
                             {{-- Footer --}}
                             <div class="master-product-footer">
                 
-                                <a href="{{ route('products.public', $product->public_token) }}" target="_blank" class="master-btn-light">
+                                <a href="{{ \App\Services\PublicShareLinks::url($product) }}" target="_blank" class="master-btn-light">
                                     <i class="fa-solid fa-link"></i>
                                 </a>
                 

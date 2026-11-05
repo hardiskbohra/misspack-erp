@@ -315,6 +315,30 @@ for (const file of files) {
 
 check('every @php block has balanced brackets',
     unbalancedPhpBlocks.length === 0, [...new Set(unbalancedPhpBlocks)].slice(0, 3).join(' | '));
+/* ---------------- the expression/block @php mix trap ----------------------- */
+/* Blade's v13 storer runs /(?<!@)@php(.*?)@endphp/s BEFORE directives: an
+   expression-form `@php($x = …)` written ahead of any later block-form
+   `@endphp` swallows everything between into a raw PHP block — the @endif or
+   @endforeach in that span never compiles, and the page falls over with a
+   cryptic "unexpected endforeach" / "expecting endif" ParseError at render.
+   Block form is the only @php this codebase grows (reminder: the receipts
+   loop on the invoice record page); an expression that precedes a later
+   @endphp is a Linux-bottle, not a convenience. */
+const phpMixTraps = [];
+
+for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8');
+
+    for (const m of text.matchAll(/(?<!@)@php[\s\S]*?@endphp/g)) {
+        if (m[0].startsWith('@php(')) {
+            phpMixTraps.push(`${rel(file)}: expression @php(… swallows to the @endphp at line ${text.slice(0, m.index + m[0].length).split('\n').length}`);
+        }
+    }
+}
+
+check('no expression @php(…) is swallowed by a later @endphp block',
+    phpMixTraps.length === 0, [...new Set(phpMixTraps)].slice(0, 3).join(' | '));
+
 
 /* A Blade directive inside a PHP island is not a directive. Blade turns the
    whole island into PHP first, then walks the directives it can still see — so

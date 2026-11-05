@@ -81,6 +81,10 @@ class ClientPortalProjectController extends ClientPortalBaseController
         }
 
         $project->load($load);
+        if ($project->relationLoaded('approvalRequests')) {
+            $salesIds = app(\App\Services\ProjectWorkflowSalesScope::class)->products($project->id)->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $project->setRelation('approvalRequests', $project->approvalRequests->filter(fn ($approval) => in_array((int) $approval->project_product_id, $salesIds, true))->values());
+        }
         if ($project->relationLoaded('cashflowAllocations')) {
             $allocatedReceipts = $project->cashflowAllocations
                 ->filter(fn ($allocation) => $allocation->cashflowEntry

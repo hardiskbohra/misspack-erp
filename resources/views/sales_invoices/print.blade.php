@@ -17,13 +17,15 @@
     $currency = (string) ($invoice->currency ?: 'INR');
     $money = fn ($amount) => \App\Helpers\CommonHelper::amount((float) $amount, $currency);
     $invoiceItems = $invoice->items->values();
-    $lineDiscountTotal = round((float) $invoiceItems->sum('discount_amount'), 2);
+    $precision = $invoice->invoice_type === 'tax' ? 2 : 3;
+    $scale = 10 ** $precision;
+    $lineDiscountTotal = round((float) $invoiceItems->sum('discount_amount'), $precision);
 
     /* Item tax values are saved before the invoice-wide discount. Use a
-       largest-remainder allocation of the final header amounts in cents, so
+       largest-remainder allocation at the document’s precision, so
        printed taxable/tax rows reconcile; the row discount includes its
        allocated share of the invoice-wide discount as well. */
-    $allocateCents = static function (float $target, array $weights): array {
+    $allocateCents = static function (float $target, array $weights) use ($scale): array {
         $weights = array_map(static fn ($weight) => max((float) $weight, 0), array_values($weights));
         $count = count($weights);
 
@@ -31,7 +33,7 @@
             return [];
         }
 
-        $targetCents = max(0, (int) round($target * 100));
+        $targetCents = max(0, (int) round($target * $scale));
         if ($targetCents === 0) {
             return array_fill(0, $count, 0.0);
         }
@@ -57,7 +59,7 @@
             $allocatedCents[$order[$cent % $count]]++;
         }
 
-        return array_map(static fn ($cents) => $cents / 100, $allocatedCents);
+        return array_map(static fn ($cents) => $cents / $scale, $allocatedCents);
     };
 
     $taxableWeights = $invoiceItems->map(fn ($item) => max((float) $item->taxable_amount, 0))->all();
@@ -174,6 +176,14 @@
                     <strong>{{ $invoice->invoice_number }}</strong>
                 </p>
                 <span class="invoice-status">{{ $invoice->statusLabel() }}</span>
+                @if (($eInvoice ?? null) && $eInvoice->isRegistered() && $eInvoice->irn)
+                    <div class="invoice-einvoice">
+                        <p class="invoice-irn"><span>IRN</span> <strong>{{ $eInvoice->irn }}</strong></p>
+                        @if ($eInvoice->signed_qr_code)
+                            <div class="invoice-qr" data-invoice-qr="{{ $eInvoice->signed_qr_code }}"></div>
+                        @endif
+                    </div>
+                @endif
             </div>
         </header>
 
@@ -415,7 +425,7 @@
                             @if ((float) $invoice->other_charges !== 0.0)
                                 <tr><td>Other charges</td><td>{{ $money($invoice->other_charges) }}</td></tr>
                             @endif
-                            @if (abs((float) $invoice->round_off) >= 0.01)
+                            @if (abs((float) $invoice->round_off) >= 0.001)
                                 <tr><td>Round off</td><td>{{ $money($invoice->round_off) }}</td></tr>
                             @endif
                             <tr class="grand-total">
@@ -455,6 +465,16 @@
 
         <footer class="footer-note">This is a computer-generated invoice. Please verify all details before payment.</footer>
     </main>
+@if (($eInvoice ?? null) && $eInvoice->isRegistered() && $eInvoice->signed_qr_code)
+<script src="{{ asset('assets/js/qr.js') }}"></script>
+<script>
+    /* The signed QR is drawn locally — a printed invoice must verify offline. */
+    document.querySelectorAll('[data-invoice-qr]').forEach(function (node) {
+        try { node.innerHTML = window.ShipQR.svg(node.getAttribute('data-invoice-qr'), { quiet: 2, dark: '#0f172a' }); }
+        catch (e) { node.outerHTML = ''; }
+    });
+</script>
+@endif
 </body>
 
 </html>

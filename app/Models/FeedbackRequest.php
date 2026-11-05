@@ -179,7 +179,7 @@ class FeedbackRequest extends Model
     /** The link itself. Named for what it is, so a view never spells the route. */
     public function url(): string
     {
-        return route('feedback.public.show', $this->token);
+        return \App\Services\PublicShareLinks::url($this);
     }
 
     /**

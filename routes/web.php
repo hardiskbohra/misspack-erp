@@ -13,6 +13,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ShipmentDeliveryReceiptController;
+use App\Http\Controllers\StockController;
+use App\Http\Controllers\StockCountController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\VendorPortalAuthController;
@@ -40,6 +42,7 @@ use App\Http\Controllers\LeadCommentController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectAdminController;
 use App\Http\Controllers\ProjectApprovalController;
 use App\Http\Controllers\ProjectWorkflowController;
 use App\Http\Controllers\ProjectCoordinatorQueueController;
@@ -47,6 +50,7 @@ use App\Http\Controllers\ProjectExceptionController;
 use App\Http\Controllers\ProjectQualityInspectionController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
+use App\Http\Controllers\ShipmentCommentController;
 use App\Http\Controllers\PublicFeedbackController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ClientPortalFeedbackController;
@@ -72,6 +76,11 @@ use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\PackagingListController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
+use App\Http\Controllers\SalesInvoiceNoteController;
+use App\Http\Controllers\SalesInvoiceEInvoiceController;
+use App\Http\Controllers\TaxSettingController;
+use App\Http\Controllers\TwoFactorChallengeController;
+use App\Http\Controllers\TwoFactorController;
 
 // Public-disk fallback when the web host cannot create public/storage.
 Route::get('/storage/{path}', \App\Http\Controllers\PublicMediaController::class)->where('path', '.*')->name('media.public');
@@ -81,8 +90,24 @@ Route::get('/', fn () => redirect()->route('login'));
 
 // ── Auth ─────────────────────────────────────────────────────
 Route::get('/login',   [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login',  [AuthController::class, 'login'])->name('login.post');
+/* The per-email+IP lockout lives in the controller; this is the blunt
+   backstop so the door cannot even be *knocked* on endlessly. */
+Route::post('/login',  [AuthController::class, 'login'])->name('login.post')->middleware('throttle:30,1');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+/* The second half of sign-in: the password left a name in the session, this
+   page trades a six-digit code — or a recovery code — for the session. */
+Route::get('/two-factor-challenge',  [TwoFactorChallengeController::class, 'show'])->name('two-factor.challenge');
+Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])->middleware('throttle:15,1')->name('two-factor.challenge.store');
+
+/* Short, same-domain sharing addresses. The token parameter name is important:
+   the audit trail redacts it just like the original bearer-token routes. The
+   canonical destinations, not this redirect, enforce each resource's policy. */
+Route::get('/s/e', [PublicLeadController::class, 'create'])->name('public-links.enquiry');
+Route::get('/s/c', [ClientPortalAuthController::class, 'showLogin'])->name('public-links.client-login');
+Route::get('/s/v', [VendorPortalAuthController::class, 'showLogin'])->name('public-links.vendor-login');
+Route::get('/s/{token}', [\App\Http\Controllers\PublicShortLinkController::class, 'show'])
+    ->middleware('throttle:120,1,short-links:')->name('public-links.short');
 
 // Shipment Tracking
 Route::get('/track-shipment/{token}', [ShipmentController::class, 'publicTrack'])->name('shipments.publicTrack');
@@ -188,6 +213,11 @@ Route::middleware('auth')->group(function () {
            redirects where the old routes were.
            ===================================================================== */
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        // Taxes & HSN — the rate master the invoice forms offer and the e-invoice payload checks.
+        Route::get('/settings/taxes', [TaxSettingController::class, 'index'])->name('settings.taxes');
+        Route::post('/settings/taxes/hsn', [TaxSettingController::class, 'storeHsn'])->name('settings.taxes.hsn.store');
+        Route::put('/settings/taxes/hsn/{hsnSacCode}', [TaxSettingController::class, 'updateHsn'])->name('settings.taxes.hsn.update');
+        Route::delete('/settings/taxes/hsn/{hsnSacCode}', [TaxSettingController::class, 'destroyHsn'])->name('settings.taxes.hsn.destroy');
         Route::get('/settings/packaging', [\App\Http\Controllers\PackagingListSettingController::class, 'index'])->name('settings.packaging');
         Route::put('/settings/packaging', [\App\Http\Controllers\PackagingListSettingController::class, 'update'])->name('settings.packaging.update');
 
@@ -245,6 +275,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings/cashflow/masters/{master}', [CashflowSettingController::class, 'updateMaster'])->name('settings.cashflow.masters.update');
         Route::delete('/settings/cashflow/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('settings.cashflow.masters.destroy');
         Route::get('/office-alerts', [OfficeAlertController::class, 'inbox'])->name('office-alerts.inbox');
+        Route::get('/office-alerts/centre', [OfficeAlertController::class, 'centre'])->name('office-alerts.centre');
         Route::patch('/office-alerts/{office_alert}/seen', [OfficeAlertController::class, 'seen'])->name('office-alerts.seen');
         Route::patch('/office-alerts/{office_alert}/ack', [OfficeAlertController::class, 'ack'])->name('office-alerts.ack');
         Route::patch('/office-alerts/{office_alert}/snooze', [OfficeAlertController::class, 'snooze'])->name('office-alerts.snooze');
@@ -313,7 +344,32 @@ Route::middleware('auth')->group(function () {
         Route::put('/shipments/attachments/{attachment}', [ShipmentController::class, 'updateAttachment'])->name('shipments.attachments.update');
         Route::delete('/shipments/attachments/{attachment}', [ShipmentController::class, 'destroyAttachment'])->name('shipments.attachments.destroy');
         Route::put('/shipments/attachments/{attachment}/toggle-public', [ShipmentController::class, 'togglePublic'])->name('shipments.attachments.toggle-public');
+        // These files are private office notes, not shipment/public attachments.
+        Route::post('/shipments/{shipment}/comments', [ShipmentCommentController::class, 'store'])->name('shipments.comments.store');
+        Route::delete('/shipments/{shipment}/comments/{comment}', [ShipmentCommentController::class, 'destroy'])->name('shipments.comments.destroy');
+        Route::get('/shipments/{shipment}/comments/{comment}/attachments/{attachment}', [ShipmentCommentController::class, 'file'])->name('shipments.comments.attachments.file');
         Route::resource('shipments', ShipmentController::class);
+
+        // Single-location manual stock ledger and independently reviewed physical counts.
+        Route::get('/stock', [StockController::class, 'index'])->name('stock.index');
+        Route::get('/stock/items/create', [StockController::class, 'create'])->name('stock.items.create');
+        Route::post('/stock/items', [StockController::class, 'store'])->name('stock.items.store');
+        Route::get('/stock/items/{stockItem}/edit', [StockController::class, 'edit'])->name('stock.items.edit');
+        Route::put('/stock/items/{stockItem}', [StockController::class, 'update'])->name('stock.items.update');
+        Route::delete('/stock/items/{stockItem}', [StockController::class, 'destroy'])->name('stock.items.destroy');
+        Route::post('/stock/items/{stockItem}/restore', [StockController::class, 'restore'])->name('stock.items.restore');
+        Route::get('/stock/items/{stockItem}', [StockController::class, 'show'])->name('stock.items.show');
+        Route::post('/stock/items/{stockItem}/movements', [StockController::class, 'movement'])->name('stock.movements.store');
+        Route::get('/stock/counts', [StockCountController::class, 'index'])->name('stock.counts.index');
+        Route::get('/stock/counts/create', [StockCountController::class, 'create'])->name('stock.counts.create');
+        Route::post('/stock/counts', [StockCountController::class, 'store'])->name('stock.counts.store');
+        Route::get('/stock/counts/{stockCount}', [StockCountController::class, 'show'])->name('stock.counts.show');
+        Route::post('/stock/counts/{stockCount}/draft', [StockCountController::class, 'update'])->name('stock.counts.update');
+        Route::post('/stock/counts/{stockCount}/submit', [StockCountController::class, 'submit'])->name('stock.counts.submit');
+        Route::post('/stock/counts/{stockCount}/approve', [StockCountController::class, 'approve'])->name('stock.counts.approve');
+        Route::post('/stock/counts/{stockCount}/reject', [StockCountController::class, 'reject'])->name('stock.counts.reject');
+        Route::post('/stock/counts/{stockCount}/refresh', [StockCountController::class, 'refresh'])->name('stock.counts.refresh');
+        Route::post('/stock/counts/{stockCount}/cancel', [StockCountController::class, 'cancel'])->name('stock.counts.cancel');
 
         // Packaging Lists — printable carton/item manifests linked to shipments.
         Route::patch('/packaging-lists/{packagingList}/print-settings', [PackagingListController::class, 'updatePrintSettings'])->name('packaging-lists.print-settings');
@@ -390,12 +446,21 @@ Route::middleware('auth')->group(function () {
         /* one action, many rows — the row menu's own actions, in a loop */
         Route::post('/sales-invoices/bulk', [SalesInvoiceController::class, 'bulk'])->name('sales-invoices.bulk');
         Route::post('/sales-invoices/{salesInvoice}/reminders', [SalesInvoiceController::class, 'logReminder'])->name('sales-invoices.reminders.store');
+        Route::post('/sales-invoices/{salesInvoice}/email', [SalesInvoiceController::class, 'emailClient'])->name('sales-invoices.email');
         Route::post('/sales-invoices/saved-views', [SalesInvoiceController::class, 'storeSavedView'])->name('sales-invoices.saved-views.store');
         Route::delete('/sales-invoices/saved-views/{savedView}', [SalesInvoiceController::class, 'destroySavedView'])->name('sales-invoices.saved-views.destroy');
+        Route::post('/sales-invoices/{salesInvoice}/e-invoice', [SalesInvoiceEInvoiceController::class, 'generate'])->name('sales-invoices.einvoice.generate');
+        Route::post('/sales-invoices/{salesInvoice}/e-invoice/acknowledgement', [SalesInvoiceEInvoiceController::class, 'record'])->name('sales-invoices.einvoice.record');
+        Route::post('/sales-invoices/{salesInvoice}/e-invoice/cancel', [SalesInvoiceEInvoiceController::class, 'cancel'])->name('sales-invoices.einvoice.cancel');
         Route::get('/sales-invoices/{salesInvoice}/print', [SalesInvoiceController::class, 'print'])->name('sales-invoices.print');
         Route::patch('/sales-invoices/{salesInvoice}/mark-sent', [SalesInvoiceController::class, 'markSent'])->name('sales-invoices.markSent');
         Route::patch('/sales-invoices/{salesInvoice}/portal', [SalesInvoiceController::class, 'togglePortal'])->name('sales-invoices.portal');
         Route::post('/sales-invoices/{salesInvoice}/payments', [SalesInvoiceController::class, 'recordPayment'])->name('sales-invoices.payments.store');
+        /* Corrections to an issued tax invoice are documents of their own. */
+        Route::post('/sales-invoices/{salesInvoice}/notes', [SalesInvoiceNoteController::class, 'store'])->name('sales-invoices.notes.store');
+        Route::post('/sales-invoices/{salesInvoice}/returns', [SalesInvoiceNoteController::class, 'storeReturn'])->name('sales-invoices.returns.store');
+        Route::get('/sales-invoice-notes/{note}/print', [SalesInvoiceNoteController::class, 'print'])->name('sales-invoice-notes.print');
+        Route::patch('/sales-invoice-notes/{note}/cancel', [SalesInvoiceNoteController::class, 'cancel'])->name('sales-invoice-notes.cancel');
         Route::post('/sales-invoices/{salesInvoice}/duplicate', [SalesInvoiceController::class, 'duplicate'])->name('sales-invoices.duplicate');
         Route::post('/sales-invoices/{salesInvoice}/convert-cash', [SalesInvoiceController::class, 'convertCash'])->name('sales-invoices.convert-cash');
         Route::post('/sales-invoices/{salesInvoice}/convert', [SalesInvoiceController::class, 'convert'])->name('sales-invoices.convert');
@@ -409,6 +474,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/purchase-invoices/{purchaseInvoice}/status', [PurchaseInvoiceController::class, 'updateStatus'])->name('purchase-invoices.status');
         Route::get('/purchase-invoices/{purchaseInvoice}/print', [PurchaseInvoiceController::class, 'print'])->name('purchase-invoices.print');
         Route::post('/purchase-invoices/{purchaseInvoice}/convert', [PurchaseInvoiceController::class, 'convert'])->name('purchase-invoices.convert');
+        Route::post('/purchase-invoices/{purchaseInvoice}/partial-conversions', [PurchaseInvoiceController::class, 'convertPartial'])->name('purchase-invoices.convert-partial');
+        Route::patch('/purchase-invoices/{purchaseInvoice}/conversion-reference', [PurchaseInvoiceController::class, 'updateConversionReference'])->name('purchase-invoices.conversion-reference');
         Route::post('/purchase-invoices/bulk', [PurchaseInvoiceController::class, 'bulk'])->name('purchase-invoices.bulk');
         Route::resource('purchase-invoices', PurchaseInvoiceController::class);
 
@@ -440,17 +507,20 @@ Route::middleware('auth')->group(function () {
         Route::patch('/projects/exceptions/{exception}/acknowledge', [ProjectExceptionController::class, 'acknowledge'])->name('projects.exceptions.acknowledge');
         Route::patch('/projects/exceptions/{exception}/escalate', [ProjectExceptionController::class, 'escalate'])->name('projects.exceptions.escalate');
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
+        Route::patch('/projects/{project}/admin-state', [ProjectAdminController::class, 'state'])->name('projects.admin-state');
         Route::post('/projects/{project}/workflow', [ProjectWorkflowController::class, 'start'])->name('projects.workflow.start');
         Route::patch('/projects/{project}/workflow/report', [ProjectWorkflowController::class, 'report'])->name('projects.workflow.report');
         Route::post('/projects/{project}/workflow/evaluate', [ProjectWorkflowController::class, 'evaluate'])->name('projects.workflow.evaluate');
         Route::post('/projects/{project}/workflow/financial-closure/evaluate', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'evaluate'])->name('projects.workflow.financial-closure.evaluate');
         Route::post('/projects/{project}/workflow/financial-closure/close', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'close'])->name('projects.workflow.financial-closure.close');
         Route::post('/projects/{project}/workflow/financial-closure/close-outstanding', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'closeOutstanding'])->name('projects.workflow.financial-closure.close-outstanding');
+        Route::post('/projects/{project}/workflow/financial-closure/manual-close', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'manualClose'])->name('projects.workflow.financial-closure.manual-close');
         Route::post('/projects/{project}/workflow/financial-closure/reopen', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'reopen'])->name('projects.workflow.financial-closure.reopen');
         Route::post('/projects/{project}/products/{product}/quality-inspections', [ProjectQualityInspectionController::class, 'store'])->name('projects.quality-inspections.store');
         Route::post('/projects/{project}/workflow/gates/{evaluation}/override', [ProjectWorkflowController::class, 'override'])->name('projects.workflow.gates.override');
         Route::patch('/projects/{project}/workflow/overrides/{override}/revoke', [ProjectWorkflowController::class, 'revokeOverride'])->name('projects.workflow.overrides.revoke');
         Route::patch('/projects/{project}/workflow/steps/{step}', [ProjectWorkflowController::class, 'updateStep'])->name('projects.workflow.steps.update');
+        Route::post('/projects/{project}/workflow/steps/{step}/bypass', [ProjectAdminController::class, 'bypass'])->name('projects.workflow.steps.bypass');
         Route::post('/projects/{project}/approvals', [ProjectApprovalController::class, 'store'])->name('projects.approvals.store');
         Route::post('/projects/{project}/approvals/{approval}/versions', [ProjectApprovalController::class, 'addVersion'])->name('projects.approvals.versions.store');
         Route::post('/projects/{project}/approvals/{approval}/override', [ProjectApprovalController::class, 'override'])->name('projects.approvals.override');
@@ -650,6 +720,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/account', [AccountController::class, 'index'])->name('account.index');
     Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile.update');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
+
+    /* Two-factor belongs to the account's owner, so it lives beside the
+       password change — an employee's account has the same card. Confirm is
+       throttled tight: six digits is a small space to guess in. */
+    Route::post('/account/two-factor', [TwoFactorController::class, 'store'])->name('account.two-factor.store');
+    Route::post('/account/two-factor/confirm', [TwoFactorController::class, 'confirm'])->middleware('throttle:10,1')->name('account.two-factor.confirm');
+    Route::post('/account/two-factor/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])->name('account.two-factor.recovery');
+    Route::delete('/account/two-factor', [TwoFactorController::class, 'destroy'])->name('account.two-factor.destroy');
 
     /* Notes — the sticky notes off your desk, and the one page in this file
        that belongs to the *login* rather than to a role. It sits outside the

@@ -251,7 +251,7 @@ print presentation without modifying shipment allocations.
   sender typed, a list that links a vendor is the vendor's and one that does
   not is ours.
 - **Carton labels** (`packaging_lists/label`) are A4, A5 landscape or
-  100 × 140 mm thermal, laid out on the paper in millimetres and set in points.
+  100 × 140 / 100 × 150 mm thermal, laid out on the paper in millimetres and set in points.
   The label is a flex column that fills its page: the item table takes whatever
   height the identity, parties, weights and handling bands leave, so a carton
   holding one product does not print half a page of white. A5 is set at 11 pt
@@ -309,10 +309,13 @@ Thermal labels use **100 × 140 mm** in both the CSS page size and the label fra
 single-group and all-carton selectors use that same size. A4/A5 paper sizes are unchanged.
 The heading names the **sender**, not the shipping mark or recipient. MissPack-origin
 labels use the organisation’s print logo above the sender heading; vendor-origin labels
-never carry our logo. FROM and SHIP TO labels, names and addresses are each **2 pt larger**
-than their previous format-specific size. The item band absorbs the changed height so
-weights, handling marks and continuous borders stay on the label. Batch printing waits
-for the logo image as well as fonts and QR codes before opening the print dialog.
+never carry our logo. FROM and SHIP TO labels, names and addresses previously gained
+**2 pt** on every format. Both thermal stocks now add **one further point to each text
+size**, including those party details (the thermal body is 6.6 pt, previously 5.6 pt).
+A4/A5 typography is unchanged. The item band absorbs the changed height so weights,
+handling marks and continuous borders stay on the label; as before, excess item lines
+can be clipped when a carton holds more than fits on the fixed-size stock. Batch printing
+waits for the logo image as well as fonts and QR codes before opening the print dialog.
 
 ### Global carton-label QR destination
 

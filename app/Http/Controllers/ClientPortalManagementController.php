@@ -113,7 +113,7 @@ class ClientPortalManagementController extends Controller
             'updated_by' => Auth::id(),
         ]);
 
-        app(ClientPortalNotifier::class)->notifyPortalUser($portalUser, 'Password reset', 'Your client portal password has been reset by MissPack team.', 'account', null, null, route('client-portal.login'));
+        app(ClientPortalNotifier::class)->notifyPortalUser($portalUser, 'Password reset', 'Your client portal password has been reset by MissPack team.', 'account', null, null, route('public-links.client-login'));
 
         return redirect()->route('clients.show', ['client' => $client, 'tab' => 'portal'])
             ->with('success', 'One-time password reset successfully.')
@@ -131,7 +131,7 @@ class ClientPortalManagementController extends Controller
             'password_changed_at' => null,
             'updated_by' => Auth::id(),
         ]);
-        app(ClientPortalNotifier::class)->notifyPortalUser($portalUser, 'Password reset', 'Your client portal password has been reset by MissPack team.', 'account', null, null, route('client-portal.login'));
+        app(ClientPortalNotifier::class)->notifyPortalUser($portalUser, 'Password reset', 'Your client portal password has been reset by MissPack team.', 'account', null, null, route('public-links.client-login'));
 
         return redirect()->route('clients.show', ['client' => $client, 'tab' => 'portal'])
             ->with('success', 'One-time password reset successfully.')

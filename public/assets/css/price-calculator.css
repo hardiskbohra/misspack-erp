@@ -218,3 +218,61 @@
     }
 
     .master-print-header { display: none; }
+
+/* ---------- Responsive: tablet & phone -------------------------------
+   The wizard's grids are page-local designs, so the project-wide
+   contract (resources/css/layout/responsive.css) does not know their
+   class names; their breakpoints live beside the module, on the
+   project's tablet (991px) / phone (767px) / tiny-phone (480px) grid. */
+
+@media (max-width: 991px) {
+    /* The summary side column asked for at least 360px — on a tablet that
+       traps the page into overflow, so the two regions stack instead. */
+    .master-summary-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .master-mini-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .master-step-tab {
+        padding: 14px 16px;
+    }
+}
+
+@media (max-width: 767px) {
+    /* Step tabs become a vertical stepper: full-width rows keep the tap
+       target and the step number readable. */
+    .master-step-tabs {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .master-step-tab {
+        border-right: 0;
+        border-bottom: 1px solid var(--master-border);
+        min-height: 48px;
+    }
+
+    .master-step-tab:last-child {
+        border-bottom: 0;
+    }
+
+    .master-step-text span {
+        font-size: 13px;
+    }
+
+    .master-step-content {
+        padding: 16px;
+    }
+
+    .master-summary-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .master-mini-summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

@@ -14,6 +14,7 @@ use App\Models\SavedView;
 use App\Models\User;
 use App\Services\CashflowAllocations;
 use App\Services\CashflowAnalysis;
+use App\Services\CashflowDateGroups;
 use App\Services\CashflowFilters;
 use App\Services\CashflowPickers;
 use App\Services\CashflowLedger;
@@ -58,6 +59,7 @@ class CashflowController extends Controller
         }
 
         $filters = $this->filters($request);
+        $today = DateRanges::today();
 
         /* A report opens its rows in the order it read them — oldest first — so
            a drill-down lands on the same rows the figure was summed over. Every
@@ -89,11 +91,11 @@ class CashflowController extends Controller
         // The totals row: what the rows on this page add up to, next to the
         // same figures for the whole filtered set.
         $pageTotals = [
-            'credit' => round((float) $entries->sum('credit_amount'), 2),
-            'debit' => round((float) $entries->sum('debit_amount'), 2),
+            'credit' => round((float) $entries->sum('credit_amount'), 3),
+            'debit' => round((float) $entries->sum('debit_amount'), 3),
         ];
-        $pageTotals['net'] = round($pageTotals['credit'] - $pageTotals['debit'], 2);
-        $stats['net'] = round((float) $stats['credit'] - (float) $stats['debit'], 2);
+        $pageTotals['net'] = round($pageTotals['credit'] - $pageTotals['debit'], 3);
+        $stats['net'] = round((float) $stats['credit'] - (float) $stats['debit'], 3);
 
         $shared = $this->sharedData();
 
@@ -101,15 +103,16 @@ class CashflowController extends Controller
             'entries' => $entries,
             'stats' => $stats,
             'pageTotals' => $pageTotals,
-            'chipCounts' => $this->chipCounts($filters),
+            'chipCounts' => $this->chipCounts($filters, $today),
             /* The applied strip is drawn from the same list of dimensions that
                filtered the query, so a filter that arrives by link — a report
                cell, a saved view — is always visible and always removable. */
             'appliedFilters' => app(CashflowFilters::class)->applied($filters),
             'appliedFilterLabels' => app(CashflowFilters::class)->labels($filters),
-            'dateRanges' => DateRanges::presets(),
+            'dateRanges' => DateRanges::presets($today),
             'dateRangeLabels' => DateRanges::LABELS,
-            'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null),
+            'dateGroups' => new CashflowDateGroups($today),
+            'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null, $today),
             'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'cashflows'),
             'mirroredPayments' => $mirroredPayments,
             'mirroredShipmentCosts' => $mirroredShipmentCosts,
@@ -216,7 +219,7 @@ class CashflowController extends Controller
             'invoice_bill_number' => ['nullable', 'string', 'max:255'],
             'bank_reference_number' => ['nullable', 'string', 'max:255'],
             'transaction_type' => ['required', 'in:credit,debit'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
             'currency' => ['nullable', Rule::in($this->masterKeys('currency', array_keys(CashflowEntry::currencyOptions())))],
             'account_id' => ['required', 'exists:cashflow_accounts,id'],
             'category_id' => ['nullable', 'exists:cashflow_categories,id'],
@@ -432,8 +435,8 @@ class CashflowController extends Controller
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'sales_invoice_id' => ['nullable', 'integer', 'exists:sales_invoices,id'],
             'purchase_invoice_id' => ['nullable', 'integer', 'exists:purchase_invoices,id'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'document_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'amount' => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
+            'document_amount' => ['nullable', 'numeric', 'decimal:0,3', 'min:0.001'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
     }
@@ -474,6 +477,12 @@ class CashflowController extends Controller
         $oldAccountId = $cashflow->account_id;
 
         DB::transaction(function () use ($cashflow, $data, $allocationRows, $oldAccountId) {
+            if (Schema::hasTable('purchase_payment_splits')) {
+                $payment = \App\Models\VendorPaymentEntry::where('cashflow_entry_id', $cashflow->id)->lockForUpdate()->first();
+                if ($payment && $payment->protectedByPurchaseConversion()) {
+                    throw ValidationException::withMessages(['entry' => 'This cashflow mirrors a payment linked to a partial purchase conversion. Reverse those conversions before changing it.']);
+                }
+            }
             $cashflow->update($data);
             app(CashflowAllocations::class)->sync($cashflow, $allocationRows);
             app(CashflowVendorPaymentSync::class)->sync($cashflow);
@@ -586,7 +595,7 @@ class CashflowController extends Controller
             'ifsc_code' => ['nullable', 'string', 'max:30'],
             'branch' => ['nullable', 'string', 'max:255'],
             'currency' => ['required', Rule::in($this->masterKeys('currency', array_keys(CashflowEntry::currencyOptions())))],
-            'opening_balance' => ['nullable', 'numeric'],
+            'opening_balance' => ['nullable', 'numeric', 'decimal:0,3'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -646,7 +655,7 @@ class CashflowController extends Controller
             'transaction_type' => ['required', 'in:credit,debit'],
             'credit_amount' => ['nullable', 'numeric', 'min:0'],
             'debit_amount' => ['nullable', 'numeric', 'min:0'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
             'currency' => ['required', Rule::in($this->masterKeys('currency', array_keys(CashflowEntry::currencyOptions())))],
             'account_id' => ['required', 'exists:cashflow_accounts,id'],
             'category_id' => ['nullable', 'exists:cashflow_categories,id'],
@@ -667,8 +676,8 @@ class CashflowController extends Controller
             'allocations.*.project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'allocations.*.sales_invoice_id' => ['nullable', 'integer', 'exists:sales_invoices,id'],
             'allocations.*.purchase_invoice_id' => ['nullable', 'integer', 'exists:purchase_invoices,id'],
-            'allocations.*.amount' => ['nullable', 'numeric', 'min:0.01'],
-            'allocations.*.document_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'allocations.*.amount' => ['nullable', 'numeric', 'decimal:0,3', 'min:0.001'],
+            'allocations.*.document_amount' => ['nullable', 'numeric', 'decimal:0,3', 'min:0.001'],
             'allocations.*.note' => ['nullable', 'string', 'max:500'],
         ]);
     }
@@ -697,7 +706,7 @@ class CashflowController extends Controller
      *
      * @return array<string, int>
      */
-    private function chipCounts(array $filters): array
+    private function chipCounts(array $filters, Carbon $today): array
     {
         $base = array_merge($filters, [
             'transactionType' => 'all',
@@ -723,7 +732,7 @@ class CashflowController extends Controller
         /* The period chips. The ranges come from the shared helper, so the
            number on "Last month" is the number of rows that chip would show —
            in the same month the chip is labelled with. */
-        foreach (DateRanges::presets() as $key => $range) {
+        foreach (DateRanges::presets($today) as $key => $range) {
             $counts[$key] = $count([
                 'dateFrom' => $range['from'],
                 'dateTo' => $range['to'],
@@ -760,7 +769,7 @@ class CashflowController extends Controller
     /**
      * The report as a spreadsheet.
      *
-     * A CSV is data, so the numbers are raw (two decimals, no symbols and no
+     * A CSV is data, so the numbers are raw (two or three decimals, no symbols and no
      * grouping) and the header says what was asked for — which dimension, which
      * bucket, which figure, against what. A file that leaves the app has to
      * explain itself a year later, and the columns are the periods on screen in
@@ -805,7 +814,7 @@ class CashflowController extends Controller
             $header[] = 'Net';
             $row($header);
 
-            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+            $money = fn ($value) => \App\Helpers\CommonHelper::decimal($value);
 
             foreach ($report['rows'] as $reportRow) {
                 $cells = [$data['dimensions'][$report['dimension']]['label'] ?? '', $reportRow['label']];

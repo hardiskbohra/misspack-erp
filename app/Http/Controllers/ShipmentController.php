@@ -19,6 +19,7 @@ use App\Services\ClientPortalNotifier;
 use App\Services\SavedViews;
 use App\Services\ShipmentCostCashflowSync;
 use App\Services\ShipmentCostLedger;
+use App\Services\ShipmentCommentFiles;
 use App\Services\ShipmentDocuments;
 use App\Services\ShipmentDispatchAuthorization;
 use App\Services\ShipmentPartyDirectory;
@@ -27,6 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
@@ -38,6 +40,15 @@ class ShipmentController extends Controller
 {
     /** Ceiling for the bulk sticker sheet — a 60-sticker run is already 8 A4 pages. */
     private const STICKER_SHEET_LIMIT = 60;
+
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'tracking' => 'Tracking',
+        'products' => 'Products & delivery',
+        'costs' => 'Costs',
+        'documents' => 'Documents',
+        'comments' => 'Comments',
+    ];
 
     public function index(Request $request): View
     {
@@ -111,6 +122,15 @@ class ShipmentController extends Controller
 
         $savedViews = app(SavedViews::class);
 
+        // Validation may return to a filtered page that no longer contains the
+        // submitted shipment. Reopen that exact record, not a different row.
+        $statusModalShipment = null;
+        $oldShipmentId = $request->session()->getOldInput('_list_shipment_id');
+        if ($request->session()->has('errors') && $request->session()->getOldInput('_list_status_modal') === '1'
+            && $request->user()->hasPermission('operations.manage') && is_scalar($oldShipmentId) && ctype_digit((string) $oldShipmentId)) {
+            $statusModalShipment = Shipment::find((int) $oldShipmentId);
+        }
+
         return view('shipments.index', [
             'shipments' => $shipments,
             'stats' => $stats,
@@ -122,6 +142,7 @@ class ShipmentController extends Controller
             'attention' => $attention,
             'attentionCounts' => $this->attentionCounts($request),
             'savedViews' => $savedViews->forUser(Auth::id(), 'shipments'),
+            'statusModalShipment' => $statusModalShipment,
             'documentTypes' => ShipmentDocuments::labels(),
             'search' => $search,
             'status' => $status,
@@ -237,14 +258,35 @@ class ShipmentController extends Controller
             ->with('success', 'Quick shipment created successfully. Create its packaging list from the Packaging Lists module when needed.');
     }
 
-    public function show(Shipment $shipment): View
+    public function show(Request $request, Shipment $shipment): View
     {
+        $requestedTab = $request->query('tab');
+        $tab = is_string($requestedTab) && array_key_exists($requestedTab, self::SHOW_TABS) ? $requestedTab : 'overview';
+        // Preserve existing entry points from the shipment/project lists and
+        // reopen the same receipt sheet after a failed submission.
+        if ($request->boolean('record_delivery_receipt') || old('delivery_receipt_form')) $tab = 'products';
+        if (old('shipment_comment_form')) $tab = 'comments';
+
         $shipment->load([
             'items.packingAllocations.packagingListItem.carton.packagingList', 'items.deliveryReceiptLines', 'deliveryReceipts.lines.shipmentItem', 'deliveryReceipts.recorder', 'histories', 'attachments', 'client', 'project', 'salesInvoice', 'latestPackagingList',
             'costs.vendor', 'costs.paidAccount',
         ]);
+        $commentsAvailable = Schema::hasTable('shipment_comments') && Schema::hasTable('shipment_comment_attachments');
+        $commentCount = $commentsAvailable ? $shipment->comments()->count() : 0;
+        if ($commentsAvailable && $tab === 'comments') $shipment->load(['comments.creator', 'comments.attachments']);
 
-        return view('shipments.show', $this->formData($shipment));
+        return view('shipments.show', array_merge($this->formData($shipment), [
+            'tabs' => self::SHOW_TABS,
+            'tab' => $tab,
+            'commentsAvailable' => $commentsAvailable,
+            'tabCounts' => [
+                'tracking' => $shipment->histories->count(),
+                'products' => $shipment->items->count(),
+                'costs' => $shipment->costs->count(),
+                'documents' => $shipment->attachments->count(),
+                'comments' => $commentCount,
+            ],
+        ]));
     }
 
     public function edit(Shipment $shipment): View
@@ -256,6 +298,9 @@ class ShipmentController extends Controller
 
     public function update(Request $request, Shipment $shipment): RedirectResponse
     {
+        // A missing collection is not the same as an operator clearing every
+        // row. The editable form sends a marker even when it has no rows.
+        $replaceItems = $request->has('items') || $request->boolean('items_present');
         $data = $this->validatedData($request, $shipment);
         $this->validatePhotoAttachments($request);
         $items = $data['items'] ?? [];
@@ -281,7 +326,9 @@ class ShipmentController extends Controller
         if ($dispatchTransition && $workflow) {
             $authorizationCandidate = clone $shipment;
             $authorizationCandidate->status = $data['status'];
-            $evaluation = app(ShipmentDispatchAuthorization::class)->evaluate($authorizationCandidate, $workflow, $items, Auth::id());
+            $authorization = app(ShipmentDispatchAuthorization::class);
+            $evaluationRows = $replaceItems ? $items : $authorization->rowsFromShipment($shipment);
+            $evaluation = $authorization->evaluate($authorizationCandidate, $workflow, $evaluationRows, Auth::id());
             $evaluation->loadMissing('activeOverride');
             if (! in_array($evaluation->effectiveResult(), ['passed', 'overridden'], true)) {
                 throw ValidationException::withMessages([
@@ -292,10 +339,11 @@ class ShipmentController extends Controller
 
         $oldStatus = $shipment->status;
 
-        DB::transaction(function () use ($request, $shipment, $data, $items, $oldStatus, $dispatchTransition, $workflow, $evaluation) {
+        DB::transaction(function () use ($request, $shipment, $data, $items, $replaceItems, $oldStatus, $dispatchTransition, $workflow, $evaluation) {
+            if ($dispatchTransition && $workflow) \App\Models\Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
             $data['show_client_portal'] = $request->boolean('show_client_portal');
             $shipment->update($data);
-            if ($oldStatus === Shipment::STATUS_PLANNING) {
+            if ($oldStatus === Shipment::STATUS_PLANNING && $replaceItems) {
                 $this->syncItems($shipment, $items);
             }
             if ($dispatchTransition && $workflow && $evaluation) {
@@ -341,27 +389,50 @@ class ShipmentController extends Controller
 
     public function destroy(Shipment $shipment): RedirectResponse
     {
-        abort_if(in_array($shipment->status, Shipment::dispatchedStatuses(), true), 422, 'A dispatched shipment is an operational audit record. Cancel it before deletion.');
-        abort_if($shipment->deliveryReceipts()->exists(), 422, 'A shipment with immutable delivery receipts cannot be deleted.');
-        $project = $shipment->project;
-        foreach ($shipment->attachments as $attachment) {
-            if ($attachment->file_path) {
-                Storage::disk('public')->delete($attachment->file_path);
+        $publicFiles = [];
+        $privateFiles = [];
+        $project = null;
+        DB::transaction(function () use ($shipment, &$project, &$publicFiles, &$privateFiles) {
+            // Match comment writes: hold the parent before reading its files or
+            // deleting it, and do not remove any files if the DB delete fails.
+            $locked = Shipment::query()->whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+            abort_if(in_array($locked->status, Shipment::dispatchedStatuses(), true), 422, 'A dispatched shipment is an operational audit record. Cancel it before deletion.');
+            abort_if($locked->deliveryReceipts()->exists(), 422, 'A shipment with immutable delivery receipts cannot be deleted.');
+            $project = $locked->project;
+            $publicFiles = $locked->attachments()->lockForUpdate()->pluck('file_path')->filter()->all();
+            if (Schema::hasTable('shipment_comments') && Schema::hasTable('shipment_comment_attachments')) {
+                $privateFiles = DB::table('shipment_comment_attachments as files')
+                    ->join('shipment_comments as comments', 'comments.id', '=', 'files.shipment_comment_id')
+                    ->where('comments.shipment_id', $locked->id)->lockForUpdate()->pluck('files.file_path')->all();
             }
-        }
-
-        $shipment->delete();
+            $locked->delete();
+        });
+        if ($publicFiles) Storage::disk('public')->delete($publicFiles);
+        $removed = app(ShipmentCommentFiles::class)->remove($privateFiles);
         if ($project?->workflow) {
             app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($project->workflow, Auth::id());
         }
 
-        return redirect()
-            ->route('shipments.index')
-            ->with('success', 'Shipment deleted successfully.');
+        return redirect()->route('shipments.index')->with($removed ? 'success' : 'warning', $removed
+            ? 'Shipment deleted successfully.'
+            : 'Shipment deleted, but some private comment files could not be removed. Please contact an administrator.');
     }
 
     public function storeHistory(Request $request, Shipment $shipment): RedirectResponse
     {
+        $expectedStatus = null;
+        if ($request->input('_list_status_modal') === '1') {
+            // The route-bound record, not an editable hidden field, determines
+            // which shipment is reopened when validation returns to the list.
+            $request->merge(['_list_shipment_id' => (string) $shipment->getKey()]);
+            $expectedStatus = $request->validate([
+                // A legacy status may no longer be in the current options;
+                // it still serves as a valid comparison token.
+                '_expected_status' => ['required', 'string', 'max:30'],
+            ])['_expected_status'];
+            $this->assertListStatusCurrent($shipment, $expectedStatus);
+        }
+
         $data = $this->validatedHistoryData($request);
 
         /* The delivery date belongs to the shipment, not to the history row, so
@@ -416,7 +487,14 @@ class ShipmentController extends Controller
         $oldStatus = $shipment->status;
         $notify = $request->boolean('notify_client', true);
 
-        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation) {
+        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation, $expectedStatus) {
+            if ($dispatchTransition && $workflow) \App\Models\Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            if ($expectedStatus !== null) {
+                // A competing update may have committed after the first check.
+                // Keep the established project-before-shipment lock order.
+                $current = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+                $this->assertListStatusCurrent($current, $expectedStatus);
+            }
             if ($dispatchTransition && $workflow && $dispatchEvaluation) {
                 $authorization = app(ShipmentDispatchAuthorization::class);
                 $candidate = clone $shipment; $candidate->status = $data['status'];
@@ -448,6 +526,15 @@ class ShipmentController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    private function assertListStatusCurrent(Shipment $shipment, string $expectedStatus): void
+    {
+        if ($shipment->status !== $expectedStatus) {
+            throw ValidationException::withMessages([
+                'status' => 'This shipment status changed since you opened the form. Review the current status before saving again.',
+            ]);
+        }
     }
 
     /**
@@ -500,7 +587,7 @@ class ShipmentController extends Controller
         }
 
         $label = $shipment->statusLabel();
-        $url = route('shipments.publicTrack', $shipment->public_token);
+        $url = \App\Services\PublicShareLinks::url($shipment);
 
         app(ClientPortalNotifier::class)->notifyClient(
             (int) $shipment->client_id,
@@ -551,7 +638,9 @@ class ShipmentController extends Controller
 
         $this->storePhotoAttachments($request, $shipment, $request->boolean('is_public'));
 
-        return redirect()->route('shipments.show', $shipment)->withFragment('shipmentAttachments')
+        $parameters = ['shipment' => $shipment];
+        if ($request->input('_shipment_tab') === 'documents') $parameters['tab'] = 'documents';
+        return redirect()->route('shipments.show', $parameters)->withFragment('shipmentAttachments')
             ->with('success', 'Shipment attachments uploaded successfully.');
     }
 
@@ -663,9 +752,33 @@ class ShipmentController extends Controller
 
     private function validatedData(Request $request, ?Shipment $shipment = null): array
     {
+        $items = $request->input('items', []);
+        if (! is_array($items)) {
+            throw ValidationException::withMessages(['items' => 'Shipment lines must be a list of items.']);
+        }
+        foreach ($items as $index => $item) {
+            if (! is_array($item)) {
+                throw ValidationException::withMessages(['items.'.$index => 'Each shipment line must be an item.']);
+            }
+        }
+
+        // Ignore only genuinely empty form-template rows. A partially entered
+        // line must produce an error rather than disappear when syncItems replaces
+        // the existing shipment lines.
         $request->merge([
-            'items' => collect($request->input('items', []))
-                ->filter(fn ($item) => filled($item['project_product_id'] ?? null) || filled($item['product_name'] ?? null))
+            'items' => collect($items)
+                ->filter(function (array $item): bool {
+                    foreach (['project_product_id', 'product_name', 'sku', 'hs_code', 'declared_value', 'net_weight', 'gross_weight', 'description'] as $field) {
+                        if (filled($item[$field] ?? null)) return true;
+                    }
+                    $quantity = $item['quantity'] ?? null;
+                    if (filled($quantity) && (! is_numeric($quantity) || (float) $quantity !== 1.0)) return true;
+                    if (filled($item['unit'] ?? null) && $item['unit'] !== 'pcs') return true;
+                    // A new row's dropdown defaults to INR even when the
+                    // shipment uses another currency; that alone is not data.
+                    $currency = $item['currency'] ?? null;
+                    return filled($currency) && ! in_array($currency, ['INR', 'RMB', 'USD'], true);
+                })
                 ->values()
                 ->all(),
         ]);
@@ -713,28 +826,30 @@ class ShipmentController extends Controller
             'delay_reason' => ['nullable', 'string', 'max:60'],
             'sales_invoice_id' => ['nullable', 'integer'],
             'notify_client' => ['nullable', 'boolean'],
-            'shipment_cost' => ['nullable', 'numeric', 'min:0'],
+            // Match the actual DECIMAL and unsigned integer storage limits;
+            // reject excess precision instead of depending on MySQL rounding.
+            'shipment_cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'decimal:0,2'],
             'currency' => ['required', 'in:INR,RMB,USD'],
             'cost_borne_by' => ['required', 'in:shipper,receiver,misspack'],
-            'package_count' => ['nullable', 'integer', 'min:0'],
-            'gross_weight' => ['nullable', 'numeric', 'min:0'],
-            'chargeable_weight' => ['nullable', 'numeric', 'min:0'],
+            'package_count' => ['nullable', 'integer', 'min:0', 'max:4294967295'],
+            'gross_weight' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
+            'chargeable_weight' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
             'notes' => ['nullable', 'string'],
 
             'attachment_photos' => ['nullable', 'array'],
             'attachment_photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:8192'],
 
             'items' => ['nullable', 'array'],
-            'items.*.project_product_id' => [Rule::requiredIf(fn () => filled($request->input('project_id'))), 'nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
-            'items.*.product_name' => ['nullable', 'string', 'max:255'],
+            'items.*.project_product_id' => ['bail', Rule::requiredIf(fn () => filled($request->input('project_id'))), 'nullable', 'integer', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
+            'items.*.product_name' => ['required', 'string', 'max:255'],
             'items.*.sku' => ['nullable', 'string', 'max:255'],
             'items.*.hs_code' => ['nullable', 'string', 'max:255'],
-            'items.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'items.*.quantity' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
             'items.*.unit' => ['nullable', 'string', 'max:30'],
-            'items.*.declared_value' => ['nullable', 'numeric', 'min:0'],
+            'items.*.declared_value' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'decimal:0,2'],
             'items.*.currency' => ['nullable', 'in:INR,RMB,USD'],
-            'items.*.net_weight' => ['nullable', 'numeric', 'min:0'],
-            'items.*.gross_weight' => ['nullable', 'numeric', 'min:0'],
+            'items.*.net_weight' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
+            'items.*.gross_weight' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
             'items.*.description' => ['nullable', 'string'],
         ], [
             'items.*.project_product_id.required' => 'Select the matching project product for each shipment line.',

@@ -42,7 +42,7 @@ class CashflowAllocations
             $projectId = (int) ($row['project_id'] ?? 0) ?: null;
             $salesId = (int) ($row['sales_invoice_id'] ?? 0) ?: null;
             $purchaseId = (int) ($row['purchase_invoice_id'] ?? 0) ?: null;
-            $amount = round((float) ($row['amount'] ?? 0), 2);
+            $amount = round((float) ($row['amount'] ?? 0), 3);
 
             if ($amount <= 0) {
                 $errors[$field.'.amount'] = 'Enter an allocation amount greater than zero.';
@@ -83,7 +83,7 @@ class CashflowAllocations
 
             $documentCurrency = $document ? strtoupper((string) ($document->currency ?: $entry->currency)) : null;
             $documentAmount = filled($row['document_amount'] ?? null)
-                ? round((float) $row['document_amount'], 2)
+                ? round((float) $row['document_amount'], 3)
                 : null;
 
             if ($document) {
@@ -111,9 +111,9 @@ class CashflowAllocations
             ];
         }
 
-        if ($total > $entry->amountMoved() + 0.009) {
-            $errors['allocations'] = 'Allocated amount '.number_format($total, 2)
-                .' exceeds the cashflow entry amount '.number_format($entry->amountMoved(), 2).'.';
+        if (round($total, 3) > $entry->amountMoved()) {
+            $errors['allocations'] = 'Allocated amount '.number_format($total, 3)
+                .' exceeds the cashflow entry amount '.number_format($entry->amountMoved(), 3).'.';
         }
 
         /* A vendor payment and its cashflow mirror are the same money. The
@@ -164,6 +164,24 @@ class CashflowAllocations
             return;
         }
 
+        // A converted allocation is evidence for a linked bill. Rebuilding the
+        // cashflow's rows would silently destroy that split, so serialize with
+        // conversion and require reversal before editing or deleting it.
+        $entry = CashflowEntry::query()->whereKey($entry->id)->lockForUpdate()->firstOrFail();
+        if (Schema::hasColumn('purchase_invoices', 'conversion_kind')
+            && $entry->allocations()->whereHas('purchaseInvoice', fn ($query) => $query->whereNotNull('conversion_kind'))->exists()) {
+            throw ValidationException::withMessages(['allocations' => 'This cashflow is allocated to a linked purchase conversion. Reverse the conversion before changing its allocations.']);
+        }
+
+        // Serialize new and existing purchase links with reversal/deletion.
+        // The allocation table has no foreign key to a purchase document.
+        $purchaseIds = array_merge(
+            $entry->allocations()->whereNotNull('purchase_invoice_id')->pluck('purchase_invoice_id')->all(),
+            array_filter(array_column($rows, 'purchase_invoice_id'))
+        );
+        if ($purchaseIds) {
+            PurchaseInvoice::whereIn('id', array_unique($purchaseIds))->orderBy('id')->lockForUpdate()->get();
+        }
         $prepared = $this->prepare($entry, $rows);
         $oldSales = $entry->allocations()->whereNotNull('sales_invoice_id')->pluck('sales_invoice_id')->all();
         if ($entry->sales_invoice_id) $oldSales[] = (int) $entry->sales_invoice_id;

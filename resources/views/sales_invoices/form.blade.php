@@ -39,7 +39,7 @@
            against this invoice in the ledger. The saved balance is
            `max(total − (opening received + these), 0)` — the model's rule — so
            the preview is handed the same figure the server will use. */
-        $ledgerReceived = $isEdit ? round($invoice->receivedAmount() - (float) $invoice->amount_paid, 2) : 0;
+        $ledgerReceived = $isEdit ? round($invoice->receivedAmount() - (float) $invoice->amount_paid, 3) : 0;
     @endphp
     <div class="si-form" data-si-cash="{{ old('invoice_type', $invoice->invoice_type) === 'cash' ? 'true' : 'false' }}" data-invoice-edit="{{ $isEdit ? 'true' : 'false' }}" data-default-terms="{{ $defaultTerms }}" data-cash-terms="{{ \App\Models\SalesInvoice::defaultTerms(true) }}">
         {{-- The header every office screen wears: a card, the title, the way
@@ -385,6 +385,7 @@
                         <tbody id="invoiceItemsBody"
                             data-ledger-received="{{ $ledgerReceived }}"
                             data-product-options='@json($productOptionsJson)'
+                            data-hsn-codes='@json($hsnCodes ?? [])'
                             data-initial-items='@json($initialInvoiceItems)'></tbody>
                     </table>
                 </div>
@@ -468,9 +469,18 @@
                                     Charges</label><input class="master-input" type="number" step="0.01" min="0"
                                     name="other_charges" id="otherCharges"
                                     value="{{ old('other_charges', $invoice->other_charges) }}"></div>
-                            <div class="master-field"><label class="master-label" for="roundOff">Round Off</label><input
-                                    class="master-input" type="number" step="0.01" name="round_off" id="roundOff"
-                                    value="{{ old('round_off', $invoice->round_off) }}"></div>
+                            <div class="master-field">
+                                <label class="master-label" for="roundOff">Round off</label>
+                                <input class="master-input" type="number" step="0.001" name="round_off" id="roundOff"
+                                    value="{{ old('round_off', $invoice->round_off) }}" aria-describedby="roundOffHelp">
+                                <label class="master-check">
+                                    <input type="hidden" name="auto_round_total" value="0">
+                                    <input type="checkbox" id="autoRoundTotal" name="auto_round_total" value="1"
+                                        @checked(old('auto_round_total', $invoice->auto_round_total)) aria-describedby="roundOffHelp">
+                                    <span>Automatically round the INR total</span>
+                                </label>
+                                <p class="master-help" id="roundOffHelp">For INR proforma and tax invoices, round to the nearest rupee. Uncheck to enter a manual adjustment.</p>
+                            </div>
                             {{-- The invoice's *opening* figure. Receipts recorded against
                                  it — from the list's "Record payment", or a cashflow
                                  entry linked to this invoice — are added to it, and
@@ -478,7 +488,7 @@
                                  (`SalesInvoice::receivedAmount()`). --}}
                             <div class="master-field full">
                                 <label class="master-label" for="amountPaid">Opening received</label>
-                                <input class="master-input" type="number" step="0.01" min="0" name="amount_paid"
+                                <input class="master-input" type="number" step="0.001" min="0" name="amount_paid"
                                     id="amountPaid" value="{{ old('amount_paid', $invoice->amount_paid) }}"
                                     aria-describedby="amountPaidHint">
                                 <p class="master-help" id="amountPaidHint">Money already received before it was recorded
@@ -588,6 +598,7 @@
 @endpush
 
 @push('scripts')
+    <script src="{{ $assetVer('assets/js/hsn-autofill.js') }}"></script>
     <script src="{{ $assetVer('assets/js/sales-invoices.js') }}"></script>
     <script src="{{ $assetVer('assets/js/invoice-client-create.js') }}"></script>
 @endpush

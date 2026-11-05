@@ -10,6 +10,7 @@
         <form method="POST" action="{{ route('shipments.attachments.store', $shipment) }}"
             enctype="multipart/form-data" class="ship-doc-upload">
             @csrf
+            <input type="hidden" name="_shipment_tab" value="documents">
             <div class="ship-form-field">
                 <label class="ship-form-label" for="shipmentAttachmentFiles">Upload attachments</label>
                 <input class="master-input" id="shipmentAttachmentFiles" type="file"

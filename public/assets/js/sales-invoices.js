@@ -98,26 +98,36 @@
 
         var rowIndex = 0;
         var ledgerReceived = parseFloat(body.getAttribute('data-ledger-received')) || 0;
+        var autoRound = document.getElementById('autoRoundTotal');
+        var roundOffInput = document.getElementById('roundOff');
+        var autoRoundActive = false;
+        // An automatically calculated saved value is not a manual override.
+        var manualRoundOff = autoRound && autoRound.checked ? '0.00' : (roundOffInput ? roundOffInput.value : '');
 
         function money(v) {
-            return '₹ ' + (Number(v || 0)).toLocaleString('en-IN', {
+            var code = fieldText('invoiceCurrency') || 'INR';
+            var symbol = code === 'RMB' ? '¥ ' : (code === 'USD' ? '$ ' : '₹ ');
+            return symbol + (Number(v || 0)).toLocaleString('en-IN', {
                 minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+                maximumFractionDigits: 3
             });
         }
 
         /* A figure that moves the total down is written as a subtraction, not as
            a negative amount: "− ₹ 1,000.00", never "₹ -1,000.00". */
         function minus(v) {
-            var amount = round2(Math.abs(Number(v) || 0));
+            var amount = roundCash(Math.abs(Number(v) || 0));
             return amount === 0 ? money(0) : '− ' + money(amount);
         }
 
-        /* The same rounding the server does, so a preview and a save agree to
-           the paisa. */
-        function round2(v) {
-            return Math.round((Number(v || 0) + Number.EPSILON) * 100) / 100;
+        // Match PHP half-up, including binary floating-point half cases.
+        function roundTo(v, precision) {
+            var number = Number(v || 0), absolute = Math.abs(number), factor = Math.pow(10, precision);
+            var units = Math.round((absolute + Number.EPSILON * Math.max(1, absolute)) * factor);
+            return (number < 0 ? -units : units) / factor;
         }
+        function roundDoc(v) { return roundTo(v, fieldText('invoiceType') === 'tax' ? 2 : 3); }
+        function roundCash(v) { return roundTo(v, 3); }
 
         /* Everything the office types into a field ends up inside an attribute
            or a text node: a product description with a quote in it must not be
@@ -218,16 +228,16 @@
                 var discount = parseFloat((row.querySelector('input[name$="[discount_percent]"]') || {}).value) || 0;
                 var gst = parseFloat((row.querySelector('input[name$="[gst_percent]"]') || {}).value) || 0;
 
-                var lineGross = round2(qty * rate);
-                var lineTaxable = Math.max(round2(lineGross - round2(lineGross * discount / 100)), 0);
+                var lineGross = roundDoc(qty * rate);
+                var lineTaxable = Math.max(roundDoc(lineGross - roundDoc(lineGross * discount / 100)), 0);
                 var lineTax = 0;
 
                 if (!exportSale) {
                     if (gstType === 'inter_state') {
-                        lineTax = round2(lineTaxable * gst / 100);
+                        lineTax = roundDoc(lineTaxable * gst / 100);
                     } else {
-                        var half = round2(lineTaxable * (gst / 200));
-                        lineTax = round2(half * 2);
+                        var half = roundDoc(lineTaxable * (gst / 200));
+                        lineTax = roundDoc(half * 2);
                     }
                 }
 
@@ -238,41 +248,60 @@
                     if (gstType === 'inter_state') {
                         igst += lineTax;
                     } else {
-                        cgst += round2(lineTax / 2);
-                        sgst += round2(lineTax - round2(lineTax / 2));
+                        cgst += roundDoc(lineTax / 2);
+                        sgst += roundDoc(lineTax - roundDoc(lineTax / 2));
                     }
                 }
 
                 var total = row.querySelector('.line-total');
-                if (total) total.textContent = money(round2(lineTaxable + lineTax));
+                if (total) total.textContent = money(roundDoc(lineTaxable + lineTax));
             });
 
             var discountValue = fieldValue('discountValue');
             var discountType = fieldText('discountType') || 'amount';
             var invoiceDiscount = discountType === 'percent'
-                ? round2(taxable * discountValue / 100)
+                ? roundDoc(taxable * discountValue / 100)
                 : Math.min(discountValue, taxable);
 
-            var taxableAfter = Math.max(round2(taxable - invoiceDiscount), 0);
+            var taxableAfter = Math.max(roundDoc(taxable - invoiceDiscount), 0);
             var ratio = taxable > 0 ? (taxableAfter / taxable) : 1;
 
-            cgst = round2(cgst * ratio);
-            sgst = round2(sgst * ratio);
-            igst = round2(igst * ratio);
+            cgst = roundDoc(cgst * ratio);
+            sgst = roundDoc(sgst * ratio);
+            igst = roundDoc(igst * ratio);
 
             var freight = fieldValue('freightAmount');
             var packing = fieldValue('packingAmount');
             var other = fieldValue('otherCharges');
+            var charges = roundDoc(freight + packing + other);
+            var tax = roundDoc(cgst + sgst + igst);
+            var beforeRoundOff = roundDoc(taxableAfter + tax + charges);
+            var eligible = fieldText('invoiceCurrency') === 'INR' && !cashInvoice;
+            var automatic = !!(autoRound && autoRound.checked && eligible);
+            if (autoRound) autoRound.disabled = !eligible;
+            if (roundOffInput) {
+                roundOffInput.step = fieldText('invoiceType') === 'tax' ? '0.01' : '0.001';
+                if (automatic) {
+                    // Work in the document's smallest unit before whole-INR rounding.
+                    var precision = fieldText('invoiceType') === 'tax' ? 2 : 3;
+                    var factor = Math.pow(10, precision);
+                    var units = Math.round(beforeRoundOff * factor);
+                    var roundedUnits = Math.floor((units + factor / 2) / factor) * factor;
+                    var fixed = ((roundedUnits - units) / factor).toFixed(precision);
+                    roundOffInput.value = precision === 3 && fixed.endsWith('0') ? fixed.slice(0, -1) : fixed;
+                } else if (autoRoundActive) {
+                    roundOffInput.value = manualRoundOff;
+                }
+                roundOffInput.readOnly = automatic;
+            }
+            autoRoundActive = automatic;
             var roundOff = fieldValue('roundOff');
-            var charges = round2(freight + packing + other);
-            var tax = round2(cgst + sgst + igst);
-
-            var total = round2(taxableAfter + tax + charges + roundOff);
-            var received = round2(fieldValue('amountPaid') + ledgerReceived);
-            var balance = Math.max(round2(total - received), 0);
+            var total = roundDoc(beforeRoundOff + roundOff);
+            var received = roundCash(fieldValue('amountPaid') + ledgerReceived);
+            var balance = Math.max(roundCash(total - received), 0);
 
             setRow('rowSubtotal', 'previewSubtotal', money(gross), true);
-            setRow('rowLineDiscount', 'previewLineDiscount', minus(taxable - gross), round2(taxable - gross) !== 0);
+            setRow('rowLineDiscount', 'previewLineDiscount', minus(taxable - gross), roundDoc(taxable - gross) !== 0);
             setRow('rowInvoiceDiscount', 'previewInvoiceDiscount', minus(invoiceDiscount), invoiceDiscount > 0);
             setRow('rowTaxable', 'previewTaxable', money(taxableAfter), true);
             setRow('rowCgst', 'previewCgst', money(cgst), cgst !== 0);
@@ -312,7 +341,7 @@
                 '    <td data-si-tax><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + esc(val(item.hsn_sac, '')) + '" placeholder="HSN"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.001" min="0" name="items[' + i + '][quantity]" value="' + esc(val(item.quantity, 1)) + '"></td>',
                 '    <td><input class="master-input" name="items[' + i + '][unit]" value="' + esc(val(item.unit, 'pcs')) + '"></td>',
-                '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
+                '    <td class="is-num"><input class="master-input calc" type="number" step="0.001" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][discount_percent]" value="' + esc(val(item.discount_percent, 0)) + '"></td>',
                 '    <td class="is-num" data-si-tax><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 18)) + '"></td>',
                 '    <td class="is-num"><strong class="line-total">₹ 0.00</strong>',
@@ -363,12 +392,19 @@
             }
         });
 
-        ['discountValue', 'discountType', 'freightAmount', 'packingAmount', 'otherCharges', 'roundOff',
-            'amountPaid', 'gstType'
-        ].forEach(function (id) {
+        ['discountValue', 'freightAmount', 'packingAmount', 'otherCharges', 'amountPaid'].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', calculateTotals);
         });
+        if (roundOffInput) roundOffInput.addEventListener('input', function () {
+            if (!autoRoundActive) manualRoundOff = roundOffInput.value;
+            calculateTotals();
+        });
+        if (autoRound) autoRound.addEventListener('change', function () {
+            if (autoRound.checked && !autoRoundActive && roundOffInput) manualRoundOff = roundOffInput.value;
+            calculateTotals();
+        });
+        onChange(document.getElementById('invoiceCurrency'), calculateTotals);
         onChange(document.getElementById('invoiceType'), function () {
             calculateTotals();
             var root = document.querySelector('.si-form');
@@ -379,8 +415,8 @@
             if (root && root.dataset.invoiceEdit === 'false') document.getElementById('invoiceNumber').value = '';
         });
         ['discountType', 'gstType'].forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) el.addEventListener('change', calculateTotals);
+            // Select2 announces a pick with a jQuery change, not a DOM event.
+            onChange(document.getElementById(id), calculateTotals);
         });
 
         /* ------------------------------------------ the client's own record
@@ -598,7 +634,7 @@
         function receiptMoney(value, currency) {
             return (currency || 'INR') + ' ' + (Number(value) || 0).toLocaleString('en-IN', {
                 minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+                maximumFractionDigits: 3
             });
         }
 
@@ -712,6 +748,59 @@
 
                 /* a field the office is editing is copied as it stands */
                 copyText(field.value || field.textContent || '', button);
+            });
+        });
+    });
+
+    /* --------------------------------------------------- the compose dialog
+       Same one-dialog family as the reminder: the trigger carries the defaults
+       the model wrote (`SalesInvoice::emailDefaults()`), the office edits them,
+       and whatever leaves the form is exactly what the send log stores. */
+    onReady(function () {
+        var modal = document.getElementById('emailInvoiceModal');
+        var form = modal ? modal.querySelector('[data-email-form]') : null;
+        var triggers = document.querySelectorAll('[data-open-email]');
+
+        if (!modal || !form || !triggers.length) return;
+
+        var template = form.getAttribute('data-action-template') || '';
+        var subtitle = modal.querySelector('[data-email-subtitle]');
+        var to = modal.querySelector('[data-email-to]');
+        var cc = modal.querySelector('[data-email-cc]');
+        var subject = modal.querySelector('[data-email-subject]');
+        var message = modal.querySelector('[data-email-message]');
+
+        var payloadFor = function (id) {
+            var island = document.querySelector('[data-email-payload="' + id + '"]');
+            if (!island) return { to: '', subject: '', message: '' };
+            try {
+                return JSON.parse(island.textContent) || { to: '', subject: '', message: '' };
+            } catch (e) {
+                return { to: '', subject: '', message: '' };
+            }
+        };
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                var id = trigger.getAttribute('data-invoice-id');
+                var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
+                var defaults = payloadFor(id);
+
+                form.setAttribute('action', template.replace('__INVOICE__', id));
+
+                if (subtitle) {
+                    subtitle.textContent = number + ' — the invoice as the client reads it';
+                }
+                /* fresh defaults on every open: text the office already typed in
+                   a half-closed dialog must never leak into the next invoice */
+                if (to) to.value = defaults.to || '';
+                if (cc) cc.value = '';
+                if (subject) subject.value = defaults.subject || '';
+                if (message) message.value = defaults.message || '';
+
+                if (window.MasterModal) {
+                    window.MasterModal.open(modal);
+                }
             });
         });
     });
@@ -837,14 +926,14 @@
             var remainder = Math.max(Number(card.dataset.convertible) || 0, 0);
             var amount = Number(value.value) || 0;
             if (mode.value === 'percent') amount = remainder * amount / 100;
-            amount = Math.round(Math.max(0, Math.min(amount, remainder)) * 100) / 100;
+            amount = Math.round(Math.max(0, Math.min(amount, remainder)) * 1000) / 1000;
             var limit = Math.min(amount, Math.max(Number(card.dataset.received) || 0, 0));
-            transfer.max = limit.toFixed(2);
-            if (!manualTransfer) transfer.value = limit.toFixed(2);
+            transfer.max = limit.toFixed(3);
+            if (!manualTransfer) transfer.value = limit.toFixed(3);
             var summary = document.getElementById('cashTransferSummary');
             if (summary) {
                 var chosen = Number(transfer.value);
-                var format = function (money) { return money.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + card.dataset.currency; };
+                var format = function (money) { return money.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 3 }) + ' ' + card.dataset.currency; };
                 summary.textContent = Number.isFinite(chosen) && chosen >= 0 && chosen <= limit
                     ? format(chosen) + ' to Cash Invoice; ' + format(Math.max(Number(card.dataset.received) - chosen, 0)) + ' stays with PI.'
                     : 'Choose a transfer between 0 and ' + format(limit) + '. Excess receipts stay with the PI.';

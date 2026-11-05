@@ -1,7 +1,7 @@
 @php
     $manage=app(\App\Services\PermissionMatrix::class)->allows(auth()->user(),'purchase.manage');
     $canReview=\App\Services\VendorKyc::canReview($vendor,auth()->user());
-    $kycLink=$vendor->kyc_public_token?route('vendors.publicKyc',$vendor->kyc_public_token):null;
+    $kycLink=$vendor->kyc_public_token?\App\Services\PublicShareLinks::url($vendor):null;
     $submitted=$vendor->kyc_submitted_data ?? [];
 @endphp
 <div class="vendor-kyc">

@@ -108,7 +108,9 @@ class ShipmentDeliveryReceiptController extends Controller
 
         if ($workflow = $shipment->project?->workflow) app(ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
         $message = 'Immutable delivery receipt '.$receipt->id.' recorded and delivery quantities reconciled.';
-        return redirect()->route('shipments.show', $shipment)->with($warnings ? 'warning' : 'success', $message.($warnings ? ' '.implode(' ', $warnings) : ''));
+        $parameters = ['shipment' => $shipment];
+        if ($request->input('_shipment_tab') === 'products') $parameters['tab'] = 'products';
+        return redirect()->route('shipments.show', $parameters)->with($warnings ? 'warning' : 'success', $message.($warnings ? ' '.implode(' ', $warnings) : ''));
     }
 
     /**

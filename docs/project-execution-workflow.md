@@ -181,7 +181,7 @@ Production quantity and evidence are recorded in a focused modal inside the Cont
 
 ## Workflow-owned project progress
 
-Project progress is the weighted `calculated_progress` produced by the standard workflow. The calculator publishes that value to `projects.progress_percent` only as a list/dashboard cache. Project forms, status controls, activity updates, financial closure, and coordinator reporting cannot submit or write a separate percentage. A coordinator may still report the observed stage and reason, but that narrative does not alter calculated progress.
+The standard workflow owns weighted `calculated_progress`. By default it is published to `projects.progress_percent`; an administrator with `projects.override` can separately set or clear a persistent published status and percentage with a reason. The calculated stage/progress remains visible and unchanged by that decision. Project create/edit, activity updates and coordinator reporting cannot submit execution state.
 
 The former project timeline feature has been retired. Its office and client tabs, routes, controller, model, views, scripts, styles, relationships, and source migration are removed. Deployment migration `2026_10_20_140000_remove_milestones_and_manual_progress.php` drops the obsolete table and the two manual-progress columns, then aligns existing project progress caches to their workflow values.
 
@@ -201,3 +201,13 @@ operational dispatch documents still belong to the project's Workflow Control Ce
 No migration or new permissions are needed. `ShipmentAttachmentUploadTest` covers rendered
 controls, multiple uploads, visibility, validation, unchanged shipment fields, permission
 checks and CSRF protection.
+
+## Administrator project decisions
+
+The project overview exposes manual state, closure and reopen only to a user whose role is exactly `admin` and who has `projects.override`. Status and progress overrides are independent; a blank value clears that override. Project logs keep the actor, reason, time and before/after values. Starting a workflow on a legacy project does not discard a manual value, and clearing one without a workflow restores the prior recorded value.
+
+An administrator can manually close even with unfinished work or outstanding financials after providing a reason and accepting the displayed risk. The project is labelled **Manually closed**, not financially complete. The immutable decision contains the open-work and financial snapshot at the time of closure. Invoices, bills, allocations, balances and unfinished source records remain active; no approval, receipt or settlement is fabricated. Closing a project without a workflow first starts the standard workflow to record the outstanding controls. Reopening records another immutable decision and resumes any stored manual status; status and progress overrides remain until explicitly cleared.
+
+Each workflow rule has its own reasoned, revocable administrator bypass in **History & controls**. Existing gate bypasses reference a current source evaluation; client-approval bypasses reference the exact current request and file version. Forms carry the viewed source/version, so a new or revised request requires a fresh review. Where a request or other source is missing, a separate missing-source evaluation records that limited decision, which is superseded when real source evidence appears. The commercial-closure control uses the manual-closure decision above. Revoking old evidence cannot overwrite a newer source evaluation. Production and shipment actions continue to check their current individually authorized gates and all non-project validations remain in force.
+
+Migration `2026_11_01_100000_add_project_manual_state_overrides.php` adds nullable project override columns. Downgrade refuses while active manual state or manual closures exist, including on soft-deleted projects. As with other schema changes, deploy with a backup and a coordinated migration window.

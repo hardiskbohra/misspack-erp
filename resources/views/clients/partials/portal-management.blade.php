@@ -99,8 +99,8 @@
                     <div class="cpa-empty">Create portal credentials first to share login details.</div>
                 @endif
 
-                @if(\Illuminate\Support\Facades\Route::has('client-portal.login'))
-                    <div class="client-portal-open-link"><a class="master-btn master-btn-soft" href="{{ route('client-portal.login') }}" target="_blank" rel="noopener">Open client portal</a></div>
+                @if(\Illuminate\Support\Facades\Route::has('public-links.client-login'))
+                    <div class="client-portal-open-link"><a class="master-btn master-btn-soft" href="{{ route('public-links.client-login') }}" target="_blank" rel="noopener">Open client portal</a></div>
                 @endif
             </section>
         </div>

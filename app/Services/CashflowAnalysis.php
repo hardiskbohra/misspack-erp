@@ -322,8 +322,8 @@ class CashflowAnalysis
             foreach ($bucketed['byIndex'][$index] ?? [] as $entry) {
                 $key = $ensure($definition['column'] === null ? null : $entry->getAttribute($definition['column']));
 
-                $groups[$key]['credit'] = round($groups[$key]['credit'] + (float) $entry->credit_amount, 2);
-                $groups[$key]['debit'] = round($groups[$key]['debit'] + (float) $entry->debit_amount, 2);
+                $groups[$key]['credit'] = round($groups[$key]['credit'] + (float) $entry->credit_amount, 3);
+                $groups[$key]['debit'] = round($groups[$key]['debit'] + (float) $entry->debit_amount, 3);
                 $groups[$key]['count']++;
                 $groups[$key]['cells'][$index][] = $entry;
             }
@@ -335,16 +335,16 @@ class CashflowAnalysis
             $entry = $placed['entry'];
             $key = $ensure($definition['column'] === null ? null : $entry->getAttribute($definition['column']));
 
-            $groups[$key]['compare_credit'] = round($groups[$key]['compare_credit'] + (float) $entry->credit_amount, 2);
-            $groups[$key]['compare_debit'] = round($groups[$key]['compare_debit'] + (float) $entry->debit_amount, 2);
+            $groups[$key]['compare_credit'] = round($groups[$key]['compare_credit'] + (float) $entry->credit_amount, 3);
+            $groups[$key]['compare_debit'] = round($groups[$key]['compare_debit'] + (float) $entry->debit_amount, 3);
             $groups[$key]['compare_cells'][$placed['index']][] = $entry;
         }
 
         $rows = [];
 
         foreach ($groups as $group) {
-            $group['net'] = round($group['credit'] - $group['debit'], 2);
-            $group['compare_net'] = round($group['compare_credit'] - $group['compare_debit'], 2);
+            $group['net'] = round($group['credit'] - $group['debit'], 3);
+            $group['compare_net'] = round($group['compare_credit'] - $group['compare_debit'], 3);
             $group['delta'] = $this->delta($group['net'], $group['compare_net']);
             $group['measure_value'] = $this->measureOf($group);
             $group['direction'] = $this->direction($group['measure_value']);
@@ -380,13 +380,13 @@ class CashflowAnalysis
             $entries = $raw[$index] ?? [];
             $compareEntries = $rawCompare[$index] ?? [];
 
-            $credit = round(array_sum(array_map(fn ($entry) => (float) $entry->credit_amount, $entries)), 2);
-            $debit = round(array_sum(array_map(fn ($entry) => (float) $entry->debit_amount, $entries)), 2);
-            $compareCredit = round(array_sum(array_map(fn ($entry) => (float) $entry->credit_amount, $compareEntries)), 2);
-            $compareDebit = round(array_sum(array_map(fn ($entry) => (float) $entry->debit_amount, $compareEntries)), 2);
+            $credit = round(array_sum(array_map(fn ($entry) => (float) $entry->credit_amount, $entries)), 3);
+            $debit = round(array_sum(array_map(fn ($entry) => (float) $entry->debit_amount, $entries)), 3);
+            $compareCredit = round(array_sum(array_map(fn ($entry) => (float) $entry->credit_amount, $compareEntries)), 3);
+            $compareDebit = round(array_sum(array_map(fn ($entry) => (float) $entry->debit_amount, $compareEntries)), 3);
 
-            $net = round($credit - $debit, 2);
-            $compareNet = round($compareCredit - $compareDebit, 2);
+            $net = round($credit - $debit, 3);
+            $compareNet = round($compareCredit - $compareDebit, 3);
             $measure = $this->measureOf(['credit' => $credit, 'debit' => $debit]);
             $compareMeasure = $this->measureOf(['credit' => $compareCredit, 'debit' => $compareDebit]);
 
@@ -428,15 +428,15 @@ class CashflowAnalysis
 
             $cells[$index] = [
                 'period' => $period,
-                'credit' => round(array_sum(array_map(fn ($entry) => (float) $entry->credit_amount, $rows)), 2),
-                'debit' => round(array_sum(array_map(fn ($entry) => (float) $entry->debit_amount, $rows)), 2),
+                'credit' => round(array_sum(array_map(fn ($entry) => (float) $entry->credit_amount, $rows)), 3),
+                'debit' => round(array_sum(array_map(fn ($entry) => (float) $entry->debit_amount, $rows)), 3),
                 'compare_credit' => 0.0,
                 'compare_debit' => 0.0,
                 'count' => count($rows),
             ];
 
-            $totals['credit'] = round($totals['credit'] + $cells[$index]['credit'], 2);
-            $totals['debit'] = round($totals['debit'] + $cells[$index]['debit'], 2);
+            $totals['credit'] = round($totals['credit'] + $cells[$index]['credit'], 3);
+            $totals['debit'] = round($totals['debit'] + $cells[$index]['debit'], 3);
             $totals['count'] += count($rows);
         }
 
@@ -444,15 +444,15 @@ class CashflowAnalysis
             $index = $placed['index'];
             $entry = $placed['entry'];
 
-            $cells[$index]['compare_credit'] = round($cells[$index]['compare_credit'] + (float) $entry->credit_amount, 2);
-            $cells[$index]['compare_debit'] = round($cells[$index]['compare_debit'] + (float) $entry->debit_amount, 2);
-            $totals['compare_credit'] = round($totals['compare_credit'] + (float) $entry->credit_amount, 2);
-            $totals['compare_debit'] = round($totals['compare_debit'] + (float) $entry->debit_amount, 2);
+            $cells[$index]['compare_credit'] = round($cells[$index]['compare_credit'] + (float) $entry->credit_amount, 3);
+            $cells[$index]['compare_debit'] = round($cells[$index]['compare_debit'] + (float) $entry->debit_amount, 3);
+            $totals['compare_credit'] = round($totals['compare_credit'] + (float) $entry->credit_amount, 3);
+            $totals['compare_debit'] = round($totals['compare_debit'] + (float) $entry->debit_amount, 3);
         }
 
         foreach ($cells as $index => $cell) {
-            $cell['net'] = round($cell['credit'] - $cell['debit'], 2);
-            $cell['compare_net'] = round($cell['compare_credit'] - $cell['compare_debit'], 2);
+            $cell['net'] = round($cell['credit'] - $cell['debit'], 3);
+            $cell['compare_net'] = round($cell['compare_credit'] - $cell['compare_debit'], 3);
             $cell['measure_value'] = $this->measureOf($cell);
             $cell['compare_value'] = $this->measureOf(['credit' => $cell['compare_credit'], 'debit' => $cell['compare_debit']]);
             $cell['delta'] = $this->delta($cell['measure_value'], $cell['compare_value']);
@@ -462,8 +462,8 @@ class CashflowAnalysis
             $totals['cells'][$index] = $cell;
         }
 
-        $totals['net'] = round($totals['credit'] - $totals['debit'], 2);
-        $totals['compare_net'] = round($totals['compare_credit'] - $totals['compare_debit'], 2);
+        $totals['net'] = round($totals['credit'] - $totals['debit'], 3);
+        $totals['compare_net'] = round($totals['compare_credit'] - $totals['compare_debit'], 3);
         $totals['measure_value'] = $this->measureOf($totals);
         $totals['compare_value'] = $this->measureOf(['credit' => $totals['compare_credit'], 'debit' => $totals['compare_debit']]);
         $totals['delta'] = $this->delta($totals['measure_value'], $totals['compare_value']);
@@ -742,15 +742,15 @@ class CashflowAnalysis
     private function measureOf(array $row): float
     {
         return match ($this->measure) {
-            'credit' => round((float) ($row['credit'] ?? 0), 2),
-            'debit' => round((float) ($row['debit'] ?? 0), 2),
-            default => round((float) ($row['credit'] ?? 0) - (float) ($row['debit'] ?? 0), 2),
+            'credit' => round((float) ($row['credit'] ?? 0), 3),
+            'debit' => round((float) ($row['debit'] ?? 0), 3),
+            default => round((float) ($row['credit'] ?? 0) - (float) ($row['debit'] ?? 0), 3),
         };
     }
 
     private function direction(float $amount): string
     {
-        if (abs($amount) < 0.005) {
+        if (abs($amount) < 0.0005) {
             return 'flat';
         }
 
@@ -760,7 +760,7 @@ class CashflowAnalysis
     /** Change against a comparison figure, as a percentage — null when there is nothing to compare against. */
     private function delta(float $value, float $compare): ?float
     {
-        if (abs($compare) < 0.005) {
+        if (abs($compare) < 0.0005) {
             return null;
         }
 

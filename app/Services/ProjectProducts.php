@@ -6,6 +6,7 @@ use App\Models\ProjectProduct;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -53,7 +54,7 @@ class ProjectProducts
             return 0;
         }
 
-        return $this->write($projectId, $this->lines($invoice), 'sales', $invoice);
+        return $this->materialise($projectId, $invoice, 'sales');
     }
 
     /** Materialise a purchase order or bill's lines, so a project sees what it buys. */
@@ -65,7 +66,18 @@ class ProjectProducts
             return 0;
         }
 
-        return $this->write($projectId, $this->lines($invoice), 'purchase', $invoice);
+        return $this->materialise($projectId, $invoice, 'purchase');
+    }
+
+    /** Serialize product writes with workflow synchronization in project-first order. */
+    private function materialise(int $projectId, Model $invoice, string $source): int
+    {
+        return DB::transaction(function () use ($projectId, $invoice, $source) {
+            // Include soft-deleted projects, as product materialization has
+            // historically retained their source facts as well.
+            if (Schema::hasTable('projects')) DB::table('projects')->where('id', $projectId)->lockForUpdate()->first();
+            return $this->write($projectId, $this->lines($invoice), $source, $invoice);
+        });
     }
 
     /**
@@ -107,7 +119,12 @@ class ProjectProducts
                 continue;
             }
 
-            $row = $this->resolve($projectId, $line, $name);
+            $row = $source === 'sales'
+                ? $this->resolveSales($projectId, $line, $name)
+                : $this->resolve($projectId, $line, $name);
+            // A legacy sales line with conflicting matches must stay visible as
+            // unresolved rather than changing an arbitrary product and its gates.
+            if (! $row) continue;
 
             $row->fill($source === 'sales'
                 ? $this->salesFacts($line, $invoice, $name)
@@ -123,27 +140,65 @@ class ProjectProducts
             $touched++;
         }
 
-        if ($touched > 0 && Schema::hasTable('project_workflows')) {
-            $workflow = \App\Models\ProjectWorkflow::query()->where('project_id', $projectId)->first();
-            if ($workflow) {
-                $project = $workflow->project()->with('products')->firstOrFail();
-                $execution = app(ProjectWorkflowExecution::class);
-                $execution->sync($workflow, $project);
-                $execution->recalculate($workflow);
-                if (Schema::hasTable('project_quality_inspections')) {
-                    app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), auth()->id());
-                }
-            }
-        }
+        // Removing every line or cancelling a sales invoice also changes scope.
+        if ($touched > 0 || $source === 'sales') $this->refreshWorkflow($projectId);
 
         return $touched;
     }
 
+    /** Lock affected projects in a stable order and capture the old scope before
+     * a sales source changes. This also safely initializes unmarked legacy rows. */
+    public function prepareSalesChange(array $projectIds): void
+    {
+        $ids = collect($projectIds)->map(fn ($id) => (int) $id)->filter()->unique()->sort()->values()->all();
+        if ($ids === [] || ! Schema::hasTable('projects')) return;
+        \App\Models\Project::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
+        if (! Schema::hasTable('project_workflows')) return;
+        foreach (\App\Models\ProjectWorkflow::query()->whereIn('project_id', $ids)->orderBy('project_id')->lockForUpdate()->get() as $workflow) {
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+        }
+    }
+
+    public function refreshWorkflow(int $projectId): void
+    {
+        if ($projectId <= 0 || ! Schema::hasTable('project_workflows')) return;
+        // A transaction may have taken its repeatable-read snapshot before a
+        // concurrently started workflow released the project lock.
+        $workflow = \App\Models\ProjectWorkflow::query()->where('project_id', $projectId)->lockForUpdate()->first();
+        if (! $workflow) return;
+        $execution = app(ProjectWorkflowExecution::class);
+        $execution->sync($workflow);
+        $execution->recalculate($workflow);
+        if (Schema::hasTable('project_quality_inspections')) {
+            app(ProjectOperationalReadiness::class)->evaluateAll($workflow, auth()->id());
+        }
+    }
+
     /**
-     * The row this line is about: the one it already points at, else the same
-     * product on the same project, else the same name on the same project, else
-     * a new row. Matching by product id before name keeps a rename from
-     * creating a second row for one product.
+     * Sales workflow ownership must never be inferred from a conflicting link
+     * or an ambiguous legacy catalogue/name match. Current reads are important
+     * after waiting for the project lock under MySQL repeatable read.
+     */
+    private function resolveSales(int $projectId, Model $line, string $name): ?ProjectProduct
+    {
+        $query = ProjectProduct::query()->where('project_id', $projectId);
+        if ($line->project_product_id) {
+            return (clone $query)->whereKey($line->project_product_id)->lockForUpdate()->first();
+        }
+        if ($line->product_id) {
+            $matches = (clone $query)->where('product_id', $line->product_id)->lockForUpdate()->limit(2)->get();
+            if ($matches->count() === 1) return $matches->first();
+            if ($matches->isNotEmpty()) return null;
+        }
+        $matches = (clone $query)->whereRaw('LOWER(TRIM(product_name)) = LOWER(?)', [$name])->lockForUpdate()->limit(2)->get();
+        if ($matches->count() === 1) return $matches->first();
+        if ($matches->isNotEmpty()) return null;
+        return new ProjectProduct(['project_id' => $projectId]);
+    }
+
+    /**
+     * A purchase line's existing product, catalogue ID, name, or a new row.
+     * The purchase matching behaviour remains independent of sales workflow.
      */
     private function resolve(int $projectId, Model $line, string $name): ProjectProduct
     {

@@ -136,7 +136,7 @@ class PartyStatement
 
         if ($type === 'vendor') {
             if (Schema::hasTable('vendor_payment_entries')) {
-                $found = VendorPaymentEntry::where('vendor_id', $id)
+                $found = VendorPaymentEntry::where('vendor_id', $id)->forPartyStatement()
                     ->select('foreign_currency')->distinct()->pluck('foreign_currency')->all();
             }
             /* A payment recorded in the cashflow module posts to the ledger, but
@@ -158,10 +158,12 @@ class PartyStatement
                    excludes what the project read already found — one row, one
                    credit, whichever door it arrived by. */
                 $projectReceipts = ProjectReceipts::forClient($id);
+                // Either reader may return a plain empty Support collection;
+                // pluck works for that and for Eloquent model collections.
                 $receipts = $this->clientPortalInvoiceCashflowEntries(
                     $id,
-                    $invoices->modelKeys(),
-                    $projectReceipts->modelKeys()
+                    $invoices->pluck('id')->all(),
+                    $projectReceipts->pluck('id')->all()
                 );
 
                 $found = array_merge(
@@ -227,7 +229,7 @@ class PartyStatement
         $ledgerCurrency = strtoupper((string) ($vendor?->preferred_currency ?: 'RMB'));
 
         if (Schema::hasTable('vendor_payment_entries')) {
-            $exists = VendorPaymentEntry::query()
+            $exists = VendorPaymentEntry::query()->forPartyStatement()
                 ->where('vendor_id', $vendorId)
                 ->where(function ($query) use ($currency, $ledgerCurrency) {
                     $query->where('foreign_currency', $currency);
@@ -303,12 +305,12 @@ class PartyStatement
             $movement = $type === 'vendor'
                 ? $line['credit'] - $line['debit']
                 : $line['debit'] - $line['credit'];
-            $closing = round($line['opening'] + $movement, 2);
+            $closing = round($line['opening'] + $movement, 3);
 
             /* A party with no movement this period but a balance carried into
                it still belongs on the list — that is exactly the statement
                somebody forgot to send. */
-            if ($line['count'] === 0 && abs($closing) < 0.005) {
+            if ($line['count'] === 0 && abs($closing) < 0.0005) {
                 continue;
             }
 
@@ -318,9 +320,9 @@ class PartyStatement
                 'party_id' => (int) $partyId,
                 'currency' => $line['currency'],
                 'name' => (string) ($parties[(int) $partyId] ?? 'Unknown'),
-                'opening' => round($line['opening'], 2),
-                'debit' => round($line['debit'], 2),
-                'credit' => round($line['credit'], 2),
+                'opening' => round($line['opening'], 3),
+                'debit' => round($line['debit'], 3),
+                'credit' => round($line['credit'], 3),
                 'closing' => $closing,
                 'count' => (int) $line['count'],
                 'last_date' => $line['last_date'],
@@ -331,15 +333,15 @@ class PartyStatement
                 $totals['credit'] += $line['credit'];
                 $totals['closing'] += $closing;
             }
-            $totals['balanced'] += abs($closing) >= 0.005 ? 1 : 0;
+            $totals['balanced'] += abs($closing) >= 0.0005 ? 1 : 0;
         }
 
         usort($rows, fn ($a, $b) => [$b['last_date'] ?? '', $a['name']] <=> [$a['last_date'] ?? '', $b['name']]);
 
         $totals['parties'] = count($rows);
-        $totals['debit'] = round($totals['debit'], 2);
-        $totals['credit'] = round($totals['credit'], 2);
-        $totals['closing'] = round($totals['closing'], 2);
+        $totals['debit'] = round($totals['debit'], 3);
+        $totals['credit'] = round($totals['credit'], 3);
+        $totals['closing'] = round($totals['closing'], 3);
 
         if ($currency === 'ALL') {
             $totals['debit'] = $totals['credit'] = $totals['closing'] = null;
@@ -476,7 +478,7 @@ class PartyStatement
         };
 
         if (Schema::hasTable('vendor_payment_entries')) {
-            VendorPaymentEntry::query()
+            VendorPaymentEntry::query()->forPartyStatement()
                 ->whereIn('vendor_id', $ids)
                 ->selectRaw('vendor_id, foreign_currency, transaction_date, transaction_type, foreign_amount')
                 ->chunk(500, function ($entries) use ($add) {
@@ -554,6 +556,8 @@ class PartyStatement
         [$opening, $moving] = $this->splitOpening($rows, $from, $to);
 
         $sign = $type === 'vendor' ? -1 : 1; // balance = sign × (debit − credit)
+        // Earlier rows must use the same payable/receivable sign as movement.
+        $opening *= $sign;
         $running = $opening;
         $debit = 0.0;
         $credit = 0.0;
@@ -562,7 +566,7 @@ class PartyStatement
             $running += $sign * ($row['debit'] - $row['credit']);
             $debit += $row['debit'];
             $credit += $row['credit'];
-            $moving[$index]['balance'] = round($running, 2);
+            $moving[$index]['balance'] = round($running, 3);
         }
 
         $statement = [
@@ -579,11 +583,11 @@ class PartyStatement
                 'key' => DateRanges::keyOf($from, $to, $this->today),
             ],
             'rows' => array_values($moving),
-            'opening' => round($opening, 2),
+            'opening' => round($opening, 3),
             'totals' => [
-                'debit' => round($debit, 2),
-                'credit' => round($credit, 2),
-                'closing' => round($running, 2),
+                'debit' => round($debit, 3),
+                'credit' => round($credit, 3),
+                'closing' => round($running, 3),
                 'count' => count($moving),
             ],
             'other_currencies' => $this->otherCurrencies($type, $party, $currency, $from, $to, $clientPortal),
@@ -597,7 +601,7 @@ class PartyStatement
 
         $statement['uses_vendor_ledger'] = $type === 'vendor'
             && Schema::hasTable('vendor_payment_entries')
-            && VendorPaymentEntry::where('vendor_id', $id)->exists();
+            && VendorPaymentEntry::where('vendor_id', $id)->forPartyStatement()->exists();
         /* Rupee cashflow rows no ledger row stands behind; the note says so
            rather than claiming the ledger is the whole story. */
         $statement['uses_cashflow'] = $type === 'vendor'
@@ -626,8 +630,8 @@ class PartyStatement
             $projectReceipts = ProjectReceipts::forClient($client->id);
             $entries = $this->clientPortalInvoiceCashflowEntries(
                 $client->id,
-                $invoices->modelKeys(),
-                $projectReceipts->modelKeys()
+                $invoices->pluck('id')->all(),
+                $projectReceipts->pluck('id')->all()
             );
         } else {
             $invoices = Schema::hasTable('sales_invoices')
@@ -756,50 +760,43 @@ class PartyStatement
     private function vendorStatementRows(Vendor $vendor, string $currency): array
     {
         $rows = [];
+        $ledgerCurrency = strtoupper((string) ($vendor->preferred_currency ?: 'RMB'));
+        $entries = Schema::hasTable('vendor_payment_entries')
+            ? VendorPaymentEntry::query()->forPartyStatement()
+                ->where('vendor_id', $vendor->id)->orderBy('transaction_date')->orderBy('id')->get()
+                ->filter(fn ($entry) => strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency)) === $currency)
+            : collect();
 
-        if (Schema::hasTable('vendor_payment_entries')) {
-            $entries = VendorPaymentEntry::query()
-                ->where('vendor_id', $vendor->id)
-                ->orderBy('transaction_date')->orderBy('id')
-                ->get();
-            $ledgerCurrency = strtoupper((string) ($vendor->preferred_currency ?: 'RMB'));
+        /* A mirrored cashflow row is excluded so a payment is never printed
+           twice. Name-matched, foreign or other unlinked cashflow can coexist
+           with ledger rows and is still included. */
+        $cashflows = app(CashflowVendorPaymentSync::class)->unlinkedCashflow($vendor)
+            ->filter(fn ($entry) => strtoupper((string) ($entry->currency ?: 'INR')) === $currency);
+        $projects = app(VendorStatementProjects::class)->forRows($vendor, $entries, $cashflows);
 
-            foreach ($entries as $entry) {
-                $entryCurrency = strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency));
-                if ($entryCurrency !== $currency) {
-                    continue;
-                }
+        foreach ($entries as $entry) {
+            $amount = (float) $entry->foreign_amount;
+            $isBill = $entry->transaction_type !== 'debit';
 
-                $amount = (float) $entry->foreign_amount;
-                $isBill = $entry->transaction_type !== 'debit';
-
-                $rows[] = [
-                    'date' => $entry->transaction_date,
-                    'particular' => $this->vendorParticular($entry),
-                    'reference' => $entry->invoice_number ?: $entry->bank_reference_number,
-                    'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
-                    'debit' => $isBill ? 0.0 : $amount,
-                    'credit' => $isBill ? $amount : 0.0,
-                    'kind' => $isBill ? 'bill' : 'payment',
-                    'rate' => (float) $entry->exchange_rate,
-                    'inr' => (float) $entry->amount_in_inr,
-                ];
-            }
+            $rows[] = [
+                'date' => $entry->transaction_date,
+                'particular' => $this->vendorParticular($entry),
+                'project_names' => $projects['ledger'][$entry->id] ?? [],
+                'reference' => $entry->invoice_number ?: $entry->bank_reference_number,
+                'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
+                'debit' => $isBill ? 0.0 : $amount,
+                'credit' => $isBill ? $amount : 0.0,
+                'kind' => $isBill ? 'bill' : 'payment',
+                'rate' => (float) $entry->exchange_rate,
+                'inr' => (float) $entry->amount_in_inr,
+            ];
         }
 
-        /* The cashflow rows no ledger row stands behind — a name-matched
-           vendor, a foreign-currency payment, money received back. Appended
-           always, not only when the ledger is empty: a vendor can have both a
-           currency ledger and rupee rows the ledger never received. A mirrored
-           row is not here, so a payment is never printed twice. */
-        foreach (app(CashflowVendorPaymentSync::class)->unlinkedCashflow($vendor) as $entry) {
-            if (strtoupper((string) ($entry->currency ?: 'INR')) !== $currency) {
-                continue;
-            }
-
+        foreach ($cashflows as $entry) {
             $rows[] = [
                 'date' => $entry->entry_date,
                 'particular' => (string) $entry->particular,
+                'project_names' => $projects['cashflow'][$entry->id] ?? [],
                 'reference' => $entry->invoice_bill_number ?: $entry->bank_reference_number,
                 'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
                 'debit' => (float) $entry->debit_amount,
@@ -919,7 +916,7 @@ class PartyStatement
                    as `vendorStatementRows` reads it — not in rupees. */
                 $ledgerCurrency = strtoupper((string) ($party->preferred_currency ?: 'RMB'));
 
-                $collect(VendorPaymentEntry::where('vendor_id', $party->id)->get()
+                $collect(VendorPaymentEntry::where('vendor_id', $party->id)->forPartyStatement()->get()
                     ->map(fn ($entry) => [
                         'currency' => strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency)),
                         'date' => $entry->transaction_date,
@@ -942,8 +939,8 @@ class PartyStatement
             $receipts = ProjectReceipts::forClient((int) $party->id);
             $entries = $this->clientPortalInvoiceCashflowEntries(
                 (int) $party->id,
-                $invoices->modelKeys(),
-                $receipts->modelKeys()
+                $invoices->pluck('id')->all(),
+                $receipts->pluck('id')->all()
             );
 
             $collect($invoices->map(fn ($invoice) => [
@@ -1046,7 +1043,7 @@ class PartyStatement
         }
 
         foreach ($buckets as $key => $bucket) {
-            $buckets[$key]['amount'] = round($bucket['amount'], 2);
+            $buckets[$key]['amount'] = round($bucket['amount'], 3);
         }
 
         return [
@@ -1055,7 +1052,7 @@ class PartyStatement
                 ? 'Aged from the bill date — vendor bills do not carry a due date here.'
                 : 'Aged from the due date; the amount is the invoice balance after payments.',
             'buckets' => $buckets,
-            'total' => round($total, 2),
+            'total' => round($total, 3),
             'rows' => $items,
         ];
     }
@@ -1094,7 +1091,7 @@ class PartyStatement
                 'due' => $due,
                 'reference' => $invoice->invoice_number,
                 'particular' => 'Sales invoice',
-                'amount' => round($balance, 2),
+                'amount' => round($balance, 3),
                 'days' => $days,
                 'bucket' => $bucket,
                 'bucket_label' => self::BUCKETS[$bucket],
@@ -1113,7 +1110,7 @@ class PartyStatement
         $items = [];
         $ledgerCurrency = strtoupper((string) (Vendor::find($id)?->preferred_currency ?: 'RMB'));
 
-        foreach (VendorPaymentEntry::where('vendor_id', $id)
+        foreach (VendorPaymentEntry::where('vendor_id', $id)->forPartyStatement()
             ->orderBy('transaction_date')->orderBy('id')->get() as $entry) {
             $entryCurrency = strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency));
             if ($entryCurrency !== $currency) {
@@ -1135,7 +1132,7 @@ class PartyStatement
                 'due' => null,
                 'reference' => $entry->invoice_number,
                 'particular' => $this->vendorParticular($entry),
-                'amount' => round((float) $entry->foreign_amount, 2),
+                'amount' => round((float) $entry->foreign_amount, 3),
                 'days' => max($days, 0),
                 'bucket' => $bucket,
                 'bucket_label' => self::BUCKETS[$bucket],

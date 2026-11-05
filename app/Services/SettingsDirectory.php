@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
 use App\Models\FixedAssetCategory;
+use App\Models\HsnSacCode;
 use App\Models\CashflowMasterOption;
 use App\Models\FeedbackMasterOption;
 use App\Models\LeadMasterOption;
@@ -57,6 +58,7 @@ final class SettingsDirectory
     public const WORKFLOW = 'workflow';
     public const BRIEFINGS = 'briefings';
     public const ASSETS = 'assets';
+    public const TAXES = 'taxes';
     public const PACKAGING = 'packaging';
 
     /**
@@ -103,6 +105,25 @@ final class SettingsDirectory
                     'Banks' => $this->count('organisation_banks', fn () => OrganisationBank::query()->count()),
                     'Contacts' => $this->count('organisation_contacts', fn () => OrganisationContact::query()->count()),
                     'Socials' => $this->count('organisation_socials', fn () => OrganisationSocial::query()->count()),
+                ],
+            ],
+
+            self::TAXES => [
+                'key' => self::TAXES,
+                'label' => 'Taxes & HSN',
+                'icon' => 'fas fa-percent',
+                'blurb' => 'The HSN/SAC codes and GST rates invoice forms offer, and the master the e-invoice payload is checked against.',
+                'holds' => [
+                    'HSN/SAC rate master (goods and services)',
+                    'The rate each code carries today',
+                ],
+                'route' => 'settings.taxes',
+                'active' => 'settings.taxes*',
+                'links' => [],
+                'keywords' => ['tax', 'gst', 'hsn', 'sac', 'rate', 'cgst', 'sgst', 'igst', 'e-invoice', 'irn'],
+                'counts' => fn (): array => [
+                    'Codes' => $this->count('hsn_sac_codes', fn () => HsnSacCode::query()->count()),
+                    'Offered' => $this->count('hsn_sac_codes', fn () => HsnSacCode::query()->where('is_active', true)->count()),
                 ],
             ],
 

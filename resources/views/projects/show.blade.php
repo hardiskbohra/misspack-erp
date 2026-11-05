@@ -10,7 +10,7 @@
         $statusClass = str_replace('_', '-', (string) $project->status);
         $healthWord = \Illuminate\Support\Str::before($project->healthLabel(), ' /');
         $isLate = $project->target_date
-            && ! in_array($project->status, ['completed', 'cancelled'], true)
+            && ! in_array($project->status, ['completed', 'cancelled', ...\App\Models\Project::closureStatuses()], true)
             && $project->target_date->lessThan(now()->startOfDay());
         $daysLate = $isLate ? (int) $project->target_date->diffInDays(now()->startOfDay()) : 0;
         $estimatedValue = $project->estimatedValue();
@@ -18,7 +18,7 @@
         $receivedPercent = $estimatedValue > 0
             ? min(100, (int) round($totals['inward'] / $estimatedValue * 100))
             : 0;
-        $progress = max(0, min(100, (int) ($workflow?->calculated_progress ?? 0)));
+        $progress = max(0, min(100, (int) ($project->progress_percent ?? 0)));
         /* The initials, the way the client and vendor pages compute theirs: a
            Stringable is a string, not a collection — `Str::of(...)->map()` is a
            collection method that only fails when the page is opened. */
@@ -47,6 +47,9 @@
                         <span aria-hidden="true">·</span>
                         <span>Owner: {{ $project->assignedUser?->name ?: 'Unassigned' }}</span>
                         <span class="master-badge status-{{ $statusClass }}">{{ $project->statusLabel() }}</span>
+                        @if ($project->manual_status !== null && ! in_array($project->status, \App\Models\Project::closureStatuses(), true))
+                            <span class="master-chip">Administrator-set status</span>
+                        @endif
                         <span class="master-badge health-{{ $project->health }}">{{ $healthWord }}</span>
                         <span class="master-chip">{{ $project->stageLabel() }}</span>
                         @if (in_array($project->priority, ['high', 'urgent'], true))
@@ -58,7 +61,7 @@
                             aria-label="{{ $progress }} percent complete">
                             <span style="width: {{ $progress }}%"></span>
                         </span>
-                        <span class="project-record-progress-value">{{ $progress }}% complete</span>
+                        <span class="project-record-progress-value">{{ $progress }}% complete{{ $project->manual_progress_percent !== null ? ' · Administrator-set' : '' }}</span>
                         <span class="project-record-progress-note">
                             @if ($project->target_date)
                                 Target {{ $project->target_date->format('d M Y') }}{{ $isLate ? ' — '.$daysLate.' '.\Illuminate\Support\Str::plural('day', $daysLate).' late' : '' }}
@@ -91,7 +94,7 @@
                 <span class="project-attention-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
                 <div class="project-attention-copy">
                     <strong>Target date passed {{ $daysLate }} {{ \Illuminate\Support\Str::plural('day', $daysLate) }} ago</strong>
-                    <span>{{ $workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0 }} workflow controls remain · {{ $money($totals['outstanding']) }} outstanding</span>
+                    <span>{{ $workflowOpenRuleCount }} open rules · {{ $workflowOpenCheckCount }} open checks · {{ $money($totals['outstanding']) }} outstanding</span>
                 </div>
                 <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('workflow') }}#workflow-actions">
                     <i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Open workflow
@@ -148,7 +151,7 @@
                         href="{{ $recordUrl($key) }}">
                         {{ $label }}
                         @if (($tabCounts[$key] ?? 0) > 0)
-                            <span class="master-tab-count">{{ number_format($tabCounts[$key]) }}</span>
+                            <span class="master-tab-count" @if($key === 'workflow') title="{{ $workflowOpenRuleCount }} open rules · {{ $workflowOpenCheckCount }} open checks · {{ $projectExceptions->count() }} exceptions" aria-label="{{ $workflowOpenRuleCount }} open rules, {{ $workflowOpenCheckCount }} open checks, {{ $projectExceptions->count() }} exceptions" @endif>{{ number_format($tabCounts[$key]) }}</span>
                         @endif
                     </a>
                 @endforeach

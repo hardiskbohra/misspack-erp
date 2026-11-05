@@ -910,6 +910,15 @@ body[data-ui-shell] :is(.core-alert, .master-alert, .cf-alert, .cpa-alert, .cp-a
     overflow-wrap: anywhere;
 }
 
+/* Semantic tone variants the legacy sheets never owned: an alert that bars
+   a registration must read as danger anywhere the design system loads, not
+   only on the one screen that thought of it. */
+body[data-ui-shell] .master-alert-danger {
+    color: var(--ui-danger-ink, #b42318);
+    background: var(--ui-danger-soft, #fef3f2);
+    border: 1px solid var(--ui-danger-border, #fecdca);
+}
+
 
 
 /* --- resources/css/components/dropdowns.css --- */

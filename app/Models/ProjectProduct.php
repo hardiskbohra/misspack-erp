@@ -20,8 +20,8 @@ class ProjectProduct extends Model
     protected $casts = [
         'product_snapshot' => 'array',
         'quantity' => 'decimal:3',
-        'unit_price' => 'decimal:2',
-        'total_amount' => 'decimal:2',
+        'unit_price' => \App\Casts\DecimalUpToThree::class,
+        'total_amount' => \App\Casts\DecimalUpToThree::class,
         'expected_ready_date' => 'date',
         'actual_ready_date' => 'date',
         'production_completed_quantity' => 'decimal:3',
@@ -33,7 +33,7 @@ class ProjectProduct extends Model
         static::saving(function (ProjectProduct $projectProduct) {
             $qty = (float) ($projectProduct->quantity ?: 0);
             $price = (float) ($projectProduct->unit_price ?: 0);
-            $projectProduct->total_amount = round($qty * $price, 2);
+            $projectProduct->total_amount = round($qty * $price, 3);
         });
     }
 

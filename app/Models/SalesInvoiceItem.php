@@ -18,16 +18,16 @@ class SalesInvoiceItem extends Model
 
     protected $casts = [
         'quantity' => 'decimal:3',
-        'unit_price' => 'decimal:2',
-        'gross_amount' => 'decimal:2',
+        'unit_price' => \App\Casts\DecimalUpToThree::class,
+        'gross_amount' => \App\Casts\DecimalUpToThree::class,
         'discount_percent' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'taxable_amount' => 'decimal:2',
+        'discount_amount' => \App\Casts\DecimalUpToThree::class,
+        'taxable_amount' => \App\Casts\DecimalUpToThree::class,
         'gst_percent' => 'decimal:2',
-        'cgst_amount' => 'decimal:2',
-        'sgst_amount' => 'decimal:2',
-        'igst_amount' => 'decimal:2',
-        'line_total' => 'decimal:2',
+        'cgst_amount' => \App\Casts\DecimalUpToThree::class,
+        'sgst_amount' => \App\Casts\DecimalUpToThree::class,
+        'igst_amount' => \App\Casts\DecimalUpToThree::class,
+        'line_total' => \App\Casts\DecimalUpToThree::class,
     ];
 
     public function invoice()

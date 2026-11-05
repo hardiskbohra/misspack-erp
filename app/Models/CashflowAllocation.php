@@ -23,8 +23,8 @@ class CashflowAllocation extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'document_amount' => 'decimal:2',
+        'amount' => \App\Casts\DecimalUpToThree::class,
+        'document_amount' => \App\Casts\DecimalUpToThree::class,
     ];
 
     public function cashflowEntry()

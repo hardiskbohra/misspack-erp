@@ -1,0 +1,68 @@
+/* Stock-specific layout; cards, buttons, inputs, tabs and tables remain shared. */
+.stock { display: grid; gap: 16px; min-width: 0; }
+.stock-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.stock-header > div:first-child { min-width: 0; }
+.stock-header h1 { margin: 2px 0 4px; overflow-wrap: anywhere; }
+.stock-eyebrow { margin: 0; color: var(--mc-text-2); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.stock-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.stock-nav { max-width: 100%; }
+.stock-section { min-width: 0; padding: 20px 24px; }
+.stock-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.stock-section-heading .master-section-title { margin-bottom: 4px; }
+.stock-stats, .stock-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stock-stat { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 16px; }
+.stock-stat > span { color: var(--mc-text-2); font-size: 12px; }
+.stock-stat > strong { color: var(--mc-text); font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.stock-stat small { color: var(--mc-text-2); font-size: 12px; font-weight: 500; }
+.stock-number { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stock-expiry { display: inline-block; color: var(--mc-text); border-bottom: 2px solid var(--master-orange); font-size: 12px; font-weight: 600; }
+.stock-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; color: var(--mc-text-2); font-size: 13px; line-height: 1.5; }
+.stock-note i { color: var(--master-primary); margin-top: 3px; }
+.stock-alert { padding: 12px 16px; border: 1px solid var(--mc-border); border-left: 3px solid var(--master-primary); border-radius: 10px; background: var(--mc-card-soft); color: var(--mc-text); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.stock-alert--warning { border-left-color: var(--master-orange); }
+.stock-alert ul { margin: 6px 0 0; padding-left: 20px; }
+.stock-filter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 240px) auto auto; align-items: end; gap: 12px; margin-bottom: 16px; }
+.stock .master-list-chips { margin-bottom: 16px; }
+.stock-row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.stock-decision-form { margin-top: 16px; }
+.stock-checkbox { display: flex; align-items: flex-start; gap: 8px; color: var(--mc-text); font-size: 13px; line-height: 1.5; cursor: pointer; }
+.stock-checkbox input { flex: 0 0 auto; margin-top: 3px; accent-color: var(--master-primary); }
+.stock-checkbox input:focus-visible { outline: 2px solid var(--master-primary); outline-offset: 3px; }
+.stock-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.stock-form-grid .master-field { min-width: 0; }
+.stock-field-wide { grid-column: 1 / -1; }
+.stock-form-heading { margin-top: 24px; }
+.stock-wrap, .stock-table td, .stock-count-table td { overflow-wrap: anywhere; }
+.stock-table td .master-sub, .stock-count-table td .master-sub { display: block; }
+.stock-status { display: inline-flex; padding: 5px 9px; border: 1px solid var(--mc-border); border-radius: 999px; color: var(--mc-text); font-size: 12px; font-weight: 600; }
+.stock-status--submitted { border-left: 3px solid var(--master-orange); }
+.stock-status--posted { border-left: 3px solid var(--master-green); }
+.stock-status--cancelled { border-left: 3px solid var(--master-red); }
+.stock-status--archived { border-left: 3px solid var(--mc-text-3); }
+.stock-count-input { width: min(100%, 130px); }
+.stock-count-reason { min-width: 160px; }
+.stock-review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.stock-review-form { display: grid; align-content: start; justify-items: start; gap: 8px; min-width: 0; }
+.stock-review-form textarea { width: 100%; }
+.stock-disclosure > summary, .stock-event summary { color: var(--mc-text); cursor: pointer; font-weight: 600; }
+.stock-disclosure > summary:focus-visible, .stock-event summary:focus-visible { outline: 2px solid var(--master-primary); outline-offset: 4px; }
+.stock-events { display: grid; gap: 12px; margin-top: 16px; }
+.stock-event { min-width: 0; padding: 12px 0; border-top: 1px solid var(--mc-border); color: var(--mc-text); font-size: 13px; }
+.stock-event p { margin: 6px 0; }
+.stock-event details { margin-top: 8px; }
+.stock-event details .master-table-wrap { margin-top: 8px; }
+@media (max-width: 991px) {
+    .stock-stats, .stock-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+    .stock-header { flex-direction: column; }
+    .stock-header .stock-actions { width: 100%; }
+    .stock-section { padding: 16px; }
+    /* The shared form table has an 800px minimum; card tables must fit the phone. */
+    .stock table.ui-mobile-cards { display: block; width: 100%; min-width: 0; }
+    .stock-filter, .stock-form-grid, .stock-review-grid { grid-template-columns: minmax(0, 1fr); }
+    .stock-field-wide { grid-column: auto; }
+    .stock-count-reason { min-width: 0; width: 100%; }
+    .stock-count-input { width: min(100%, 160px); }
+    .stock-filter > .master-btn { width: 100%; }
+}

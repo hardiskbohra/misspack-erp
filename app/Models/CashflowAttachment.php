@@ -19,7 +19,7 @@ class CashflowAttachment extends Model
     protected $casts = [
         'file_size' => 'integer',
         'document_date' => 'date',
-        'amount' => 'decimal:2',
+        'amount' => \App\Casts\DecimalUpToThree::class,
     ];
 
     public function cashflowEntry()

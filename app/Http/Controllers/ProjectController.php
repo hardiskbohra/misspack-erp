@@ -88,7 +88,8 @@ class ProjectController extends Controller
             'total' => (int) $statusCounts->sum(),
             'in_progress' => (int) ($statusCounts['in_progress'] ?? 0),
             'waiting' => (int) ($statusCounts['waiting_client'] ?? 0) + (int) ($statusCounts['waiting_vendor'] ?? 0),
-            'completed' => (int) ($statusCounts['completed'] ?? 0) + (int) ($statusCounts['closed'] ?? 0) + (int) ($statusCounts['closed_with_outstanding_financials'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0) + (int) ($statusCounts['closed'] ?? 0)
+                + (int) ($statusCounts['closed_with_outstanding_financials'] ?? 0) + (int) ($statusCounts['manually_closed'] ?? 0),
         ];
 
         return view('projects.index', array_merge($this->sharedData(), compact(
@@ -256,6 +257,9 @@ class ProjectController extends Controller
             $workflow = $project->workflow()->with($workflowWith)->first();
             if ($workflow) {
                 app(ProjectWorkflowExecution::class)->recalculate($workflow);
+                // Recalculation synchronizes current sales-item lanes; reload the
+                // view's relations so newly added or excluded products are accurate.
+                $workflow->load($workflowWith);
                 $publishedState = $workflow->project()->first(['status', 'stage', 'progress_percent', 'completed_at']);
                 $project->forceFill($publishedState?->only(['status', 'stage', 'progress_percent', 'completed_at']) ?? []);
                 $baselineInvoice = $workflow->commercialInvoice;
@@ -273,7 +277,21 @@ class ProjectController extends Controller
         $financialClosureSnapshot = $workflow && Schema::hasTable('project_financial_closures')
             ? app(\App\Services\ProjectFinancialClosure::class)->snapshot($project)
             : null;
-        $projectExceptions = $project->exceptions->whereIn('status', [\App\Models\ProjectException::STATUS_OPEN, \App\Models\ProjectException::STATUS_ACKNOWLEDGED])->values();
+        $salesProductIds = $workflow
+            ? app(\App\Services\ProjectWorkflowSalesScope::class)->products($project->id)->pluck('id')->map(fn ($id) => (int) $id)->all()
+            : [];
+        // Reuse the already eager-loaded product relations in the workflow view.
+        $workflowSalesProducts = $project->products->whereIn('id', $salesProductIds)->values();
+        $workflowUnmatchedSalesItems = $workflow && $tab === 'workflow'
+            ? app(\App\Services\ProjectWorkflowSalesScope::class)->unmatched($project->id)
+            : collect();
+        $projectExceptions = $project->exceptions->whereIn('status', [\App\Models\ProjectException::STATUS_OPEN, \App\Models\ProjectException::STATUS_ACKNOWLEDGED])
+            ->filter(fn ($exception) => $exception->project_product_id === null || in_array((int) $exception->project_product_id, $salesProductIds, true))->values();
+        $openWorkflowSteps = $workflow?->steps?->where('is_required', true)->whereNotIn('status', ['completed', 'skipped', 'cancelled']) ?? collect();
+        $workflowOpenCheckCount = $openWorkflowSteps->count();
+        $workflowOpenRuleCount = $openWorkflowSteps->unique('step_key')->count();
+        $workflowDuplicateGroups = $workflow?->steps?->groupBy(fn ($step) => $step->step_key.':'.($step->project_product_id ?? 'project'))
+            ->filter(fn ($steps) => $steps->count() > 1)->values() ?? collect();
         $workflowMatrix = $workflow && $tab === 'workflow'
             ? app(\App\Services\ProjectWorkflowMatrix::class)->build($workflow, $projectExceptions)
             : null;
@@ -290,13 +308,18 @@ class ProjectController extends Controller
             'financialClosureSnapshot' => $financialClosureSnapshot,
             'projectExceptions' => $projectExceptions,
             'workflowMatrix' => $workflowMatrix,
+            'workflowSalesProducts' => $workflowSalesProducts,
+            'workflowUnmatchedSalesItems' => $workflowUnmatchedSalesItems,
+            'workflowOpenCheckCount' => $workflowOpenCheckCount,
+            'workflowOpenRuleCount' => $workflowOpenRuleCount,
+            'workflowDuplicateGroups' => $workflowDuplicateGroups,
             'workflowStages' => ProjectWorkflowExecution::stageOptions(),
             'workflowStepStatuses' => \App\Models\ProjectWorkflowStep::statusOptions(),
             'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forProject($project->id),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             'tabCounts' => [
-                'workflow' => ($workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0) + $projectExceptions->count(),
+                'workflow' => $workflowOpenRuleCount + $projectExceptions->count(),
                 'products' => $project->products->count(),
                 'payments' => $cashflowCount,
                 'shipments' => $project->shipments->count(),
@@ -334,7 +357,7 @@ class ProjectController extends Controller
         DB::transaction(function () use ($project, $data) {
             $old = $project->only(['name', 'priority', 'health', 'target_date']);
             $project->update($data);
-            $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated. Status, stage and progress remain workflow-controlled.', $old, $project->fresh()->toArray(), false);
+            $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated. Execution state is managed through workflow and administrator controls.', $old, $project->fresh()->toArray(), false);
         });
 
         return redirect()->route('projects.show', $project)->with('success', 'Project updated successfully.');

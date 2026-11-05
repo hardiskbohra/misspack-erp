@@ -90,7 +90,7 @@
                 <div class="master-field">
                     <span class="master-label">Workflow status</span>
                     <div class="master-input" aria-readonly="true">{{ $isEdit ? $project->statusLabel() : 'Starts automatically' }}</div>
-                    <small class="master-help">Calculated by Workflow Control Centre.</small>
+                    <small class="master-help">Workflow-controlled unless an administrator sets a project status.</small>
                 </div>
                 <div class="master-field">
                     <span class="master-label">Workflow stage</span>

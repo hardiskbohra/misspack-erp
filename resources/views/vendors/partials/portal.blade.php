@@ -31,7 +31,7 @@
         <div class="master-facts master-facts--3">
             <div class="master-fact"><span>Portal status</span><strong>{{ $vendor->portal_enabled ? 'Enabled' : 'Disabled' }}</strong></div>
             <div class="master-fact"><span>Portal users</span><strong>{{ $portalUsers->count() }}</strong></div>
-            <div class="master-fact"><span>Login address</span><strong>{{ route('vendor-portal.login') }}</strong></div>
+            <div class="master-fact"><span>Login address</span><strong>{{ route('public-links.vendor-login') }}</strong></div>
         </div>
     </section>
 

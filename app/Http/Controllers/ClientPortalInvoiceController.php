@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Schema;
 
 class ClientPortalInvoiceController extends ClientPortalBaseController
 {
@@ -79,9 +80,16 @@ class ClientPortalInvoiceController extends ClientPortalBaseController
     public function printSales(Request $request, SalesInvoice $invoice): View
     {
         $invoice = $this->publishedSalesInvoice($request, $invoice);
-        $invoice->load(['items', 'publicAttachments']);
+        $invoice->load(array_merge(['items', 'publicAttachments'],
+            Schema::hasTable('sales_invoice_e_invoices') ? ['eInvoice'] : []));
 
-        return view('sales_invoices.print', ['invoice' => $invoice, 'publicMode' => true]);
+        return view('sales_invoices.print', [
+            'invoice' => $invoice,
+            'publicMode' => true,
+            /* The IRN + QR belong on the client-visible print too — that is
+               precisely the document a customer verifies the invoice with. */
+            'eInvoice' => $invoice->relationLoaded('eInvoice') ? $invoice->eInvoice : null,
+        ]);
     }
 
     public function storeSalesComment(Request $request, SalesInvoice $invoice): RedirectResponse

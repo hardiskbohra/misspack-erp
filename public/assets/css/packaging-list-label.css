@@ -86,23 +86,36 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .format-a5 .label-handling{margin-top:2mm}
 .format-a5 .label-parties p{font-size:calc(.84em + 2pt)}
 
-.format-thermal .carton-label{width:100mm;height:140mm;padding:3.5mm;gap:0;font-size:5.6pt}
+/* Thermal body text is one point above the previous 5.6 pt. Relative sizes
+   would otherwise grow by different amounts: a .72em key grows by .72 pt,
+   for example. Each correction below adds the remainder of the one point,
+   retaining the existing 2 pt party increase as well. The table's small text
+   used the browser's 1/1.2 small-text scale. These rules apply to both stocks. */
+.format-thermal .carton-label{width:100mm;height:140mm;padding:3.5mm;gap:0;font-size:6.6pt}
 .format-thermal .carton-label header{gap:2mm;padding-bottom:1mm;border-bottom-width:2px;margin-bottom:1.5mm}
+.format-thermal .carton-label header p{font-size:calc(.72em + .28pt)}
 .format-thermal .label-brand-logo{height:8mm;max-width:45mm;margin-bottom:1mm}
 .format-thermal .label-qr{width:19mm}
 .format-thermal .label-qr-code svg{width:19mm;height:19mm}
-.format-thermal .carton-label h1{font-size:1.35em}
+.format-thermal .label-qr small{font-size:calc(.68em + .32pt)}
+.format-thermal .carton-label h1{font-size:calc(1.35em - .35pt)}
+.format-thermal .carton-label span.label-key{font-size:calc(.72em + .28pt)}
 .format-thermal .label-identity{grid-template-columns:repeat(4,minmax(0,1fr))}
 .format-thermal .label-identity>div{padding:1.5mm 1.8mm}
-.format-thermal .label-identity strong{font-size:1.15em}
+.format-thermal .label-identity strong{font-size:calc(1.15em - .15pt)}
 .format-thermal .label-parties>div{padding:1.5mm 1.8mm}
-.format-thermal .label-parties p{font-size:calc(.8em + 2pt)}
+.format-thermal .carton-label .label-parties span.label-key{font-size:calc(.72em + 2.28pt)}
+.format-thermal .label-parties strong{font-size:calc(1.05em + 1.95pt)}
+.format-thermal .label-parties p{font-size:calc(.8em + 2.2pt)}
 .format-thermal .carton-label th,.format-thermal .carton-label td{padding:1.5mm 1.8mm}
+.format-thermal .carton-label th{font-size:calc(.82em + .18pt)}
+.format-thermal .carton-label td small{font-size:calc(.833333em + .166667pt)}
 .format-thermal .label-physical>div{padding:1.5mm 1.8mm}
-.format-thermal .label-physical strong{font-size:1.15em}
+.format-thermal .label-physical strong{font-size:calc(1.15em - .15pt)}
 .format-thermal .label-handling{grid-template-columns:repeat(4,minmax(0,1fr));gap:1mm;margin-top:1.5mm}
 .format-thermal .label-handling-symbol{height:11mm;padding:.5mm;border-width:1.5px;border-radius:0}
 .format-thermal .label-handling-symbol svg{width:6.5mm;height:6.5mm;stroke-width:5}
+.format-thermal .label-handling-symbol strong{font-size:calc(.74em + .26pt)}
 .format-thermal .label-handling-note{padding:1.5mm}
 
 /* The extra stock size shares thermal typography, branding, QR and borders.

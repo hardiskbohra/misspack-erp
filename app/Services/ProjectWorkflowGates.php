@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Project;
 use App\Models\ProjectGateEvaluation;
 use App\Models\ProjectWorkflow;
 use App\Models\ProjectWorkflowStep;
@@ -19,19 +20,21 @@ class ProjectWorkflowGates
     public function evaluateAll(ProjectWorkflow $workflow, ?int $userId = null): array
     {
         return DB::transaction(function () use ($workflow, $userId) {
+            Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->firstOrFail();
             $workflow->load('commercialInvoice.convertedInvoice');
             $baseline = $workflow->commercialInvoice;
             $invoice = $baseline?->isSuperseded() ? $baseline->convertedInvoice : $baseline;
             $documents = $baseline?->settlementDocuments() ?? collect();
             $invoiceUsable = $baseline && $baseline->status !== 'cancelled' && $documents->isNotEmpty()
                 && $documents->every(fn ($document) => $document->status !== 'cancelled');
-            $received = round((float) $documents->sum(fn ($document) => $document->clientPortalReceivedAmount()), 2);
-            $invoiceTotal = round((float) $documents->sum(fn ($document) => $document->receivableTotal()), 2);
+            $received = round((float) $documents->sum(fn ($document) => $document->clientPortalReceivedAmount()), 3);
+            $invoiceTotal = round((float) $documents->sum(fn ($document) => $document->receivableTotal()), 3);
             $tolerance = $baseline ? (float) $baseline->payment_tolerance : 0.0;
             $advancePercentage = $workflow->advance_percentage_override !== null
                 ? (float) $workflow->advance_percentage_override
                 : ($baseline && $baseline->advance_required ? (float) ($baseline->advance_percentage ?? 0) : 0.0);
-            $advanceRequired = round($invoiceTotal * $advancePercentage / 100, 2);
+            $advanceRequired = round($invoiceTotal * $advancePercentage / 100, 3);
 
             $evaluations = [];
             $evaluations[] = $this->record($workflow, self::GATE_BASELINE, [
@@ -60,13 +63,13 @@ class ProjectWorkflowGates
                 'advance_source' => $workflow->advance_percentage_override !== null ? 'project_override' : 'proforma_terms',
                 'required_amount' => $advanceRequired,
                 'received_amount' => $received,
-                'shortfall' => round(max($advanceRequired - $received, 0), 2),
+                'shortfall' => round(max($advanceRequired - $received, 0), 3),
                 'tolerance' => $tolerance,
             ], $advancePassed ? 'passed' : 'blocked', ! $invoiceUsable
                 ? ($baseline ? 'Advance cannot use a cancelled baseline Proforma or tax invoice.' : 'Advance cannot be evaluated until a baseline Proforma is selected.')
                 : ($advancePassed
                     ? 'Required production advance has been received.'
-                    : 'Production advance is short by '.number_format(max($advanceRequired - $received, 0), 2).'.'), $userId);
+                    : 'Production advance is short by '.\App\Helpers\CommonHelper::decimal(max($advanceRequired - $received, 0)).'.'), $userId);
 
             $requiresBalance = (bool) ($baseline?->balance_before_dispatch);
             $balanceRequired = $requiresBalance ? $invoiceTotal : 0.0;
@@ -81,13 +84,13 @@ class ProjectWorkflowGates
                 'complete_balance_required' => $requiresBalance,
                 'required_amount' => $balanceRequired,
                 'received_amount' => $received,
-                'shortfall' => round(max($balanceRequired - $received, 0), 2),
+                'shortfall' => round(max($balanceRequired - $received, 0), 3),
                 'tolerance' => $tolerance,
             ], $dispatchPassed ? 'passed' : 'blocked', ! $invoiceUsable
                 ? ($baseline ? 'Dispatch cannot use a cancelled baseline Proforma or tax invoice.' : 'Dispatch balance cannot be evaluated until a baseline Proforma is selected.')
                 : ($dispatchPassed
                     ? ($requiresBalance ? 'Complete pre-dispatch balance has been received.' : 'The baseline Proforma does not require a pre-dispatch balance.')
-                    : 'Dispatch is blocked by an outstanding balance of '.number_format(max($balanceRequired - $received, 0), 2).'.'), $userId);
+                    : 'Dispatch is blocked by an outstanding balance of '.\App\Helpers\CommonHelper::decimal(max($balanceRequired - $received, 0)).'.'), $userId);
 
             foreach ($evaluations as $evaluation) {
                 $this->applyToStep($evaluation);
@@ -116,7 +119,7 @@ class ProjectWorkflowGates
             'notes' => $overridden ? 'Gate continued under manager override #'.$evaluation->activeOverride->id.'.' : $evaluation->summary,
             'actual_started_at' => $step->actual_started_at ?: now(),
             'completed_at' => $passed || $overridden ? now() : null,
-            'completed_by' => $passed || $overridden ? ($evaluation->evaluated_by ?: Auth::id()) : null,
+            'completed_by' => $overridden ? $evaluation->activeOverride->approved_by : ($passed ? ($evaluation->evaluated_by ?: Auth::id()) : null),
         ]);
     }
 

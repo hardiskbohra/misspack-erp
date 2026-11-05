@@ -13,8 +13,12 @@ use App\Models\SalesInvoiceReminder;
 use App\Models\SavedView;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Mail\SalesInvoiceMail;
+use App\Models\SalesInvoiceSend;
+use App\Services\OfficeBriefing;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -29,7 +33,9 @@ use App\Services\CashInvoiceDeletion;
 use App\Services\ClientInvoiceSnapshot;
 use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
+use App\Services\SalesInvoiceAdjustment;
 use App\Services\SavedViews;
+use App\Rules\ValidGstin;
 
 class SalesInvoiceController extends Controller
 {
@@ -77,6 +83,8 @@ class SalesInvoiceController extends Controller
            tax invoice is not a receivable, and this clause is what every sum
            below says that with. */
         $invoiceTotal = SalesInvoice::RECEIVABLE_TOTAL_SQL;
+        $receivedSql = SalesInvoice::RECEIVED_SQL;
+        $payableSql = SalesInvoice::payableSql();
         $live = "(sales_invoices.invoice_type <> 'proforma' or sales_invoices.converted_invoice_id is null)";
 
         $figures = $this->filteredQuery($filters)->reorder()->selectRaw(
@@ -85,20 +93,20 @@ class SalesInvoiceController extends Controller
             .', coalesce(sum(case when sales_invoices.invoice_type = \'proforma\''
                 ." and sales_invoices.converted_invoice_id is null and sales_invoices.status <> 'cancelled'"
                 .' then '.$invoiceTotal.' else 0 end), 0) as potential'
-            .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
+            .', coalesce(sum(case when '.$live.' then '.$receivedSql.' else 0 end), 0) as received'
 
             /* What is owed is the Balance column, summed — the same rule as the
                row beside it. A draft is money the office has recorded, not money
                that vanishes: the tax invoice a conversion creates starts as one
                with the advance already on it. Only a cancellation takes a document
-               out of what is owed. */
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then {$invoiceTotal} - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+               out of what is owed. The payable spells in the model's SQL — credits
+               and debits net into it, so the tile and the card agree. */
+            .", coalesce(sum(case when {$live} and {$receivedSql} < {$payableSql} - 0.0005"
+                ." and sales_invoices.status <> 'cancelled' then {$payableSql} - {$receivedSql} else 0 end), 0) as outstanding"
             .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
                 ." and sales_invoices.status not in ('draft', 'cancelled')"
-                .' and '.$live
-                .' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
-                .' then '.$invoiceTotal.' - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
+                ." and {$live} and {$receivedSql} < {$payableSql} - 0.0005"
+                ." then {$payableSql} - {$receivedSql} else 0 end), 0) as overdue"
         )
             ->addBinding([now()->toDateString()], 'select')
             ->first();
@@ -121,10 +129,10 @@ class SalesInvoiceController extends Controller
            reads (`withReceived`, the payment count, the reminder count) never stand
            in front of it. */
         $totals = $this->filteredQuery($filters)->reorder()->selectRaw(
-            'coalesce(sum(case when '.$live.' then '.$invoiceTotal.' else 0 end), 0) as counted'
-            .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then {$invoiceTotal} - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            "coalesce(sum(case when {$live} then {$invoiceTotal} else 0 end), 0) as counted"
+            .", coalesce(sum(case when {$live} then {$receivedSql} else 0 end), 0) as received"
+            .", coalesce(sum(case when {$live} and {$receivedSql} < {$payableSql} - 0.0005"
+                ." and sales_invoices.status <> 'cancelled' then {$payableSql} - {$receivedSql} else 0 end), 0) as outstanding"
         )->first();
 
         $pageTotals = [
@@ -223,7 +231,7 @@ class SalesInvoiceController extends Controller
                 'Total', 'Received', 'Balance', 'State', 'Days late', 'Portal',
             ]);
 
-            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+            $money = fn ($value) => \App\Helpers\CommonHelper::decimal($value);
 
             foreach ($rows as $invoice) {
                 $row([
@@ -258,7 +266,7 @@ class SalesInvoiceController extends Controller
     public function recordPayment(Request $request, SalesInvoice $salesInvoice): RedirectResponse
     {
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
             'entry_date' => ['required', 'date'],
             'account_id' => ['required', 'integer', 'exists:cashflow_accounts,id'],
             'category_id' => ['nullable', 'integer', 'exists:cashflow_categories,id'],
@@ -273,7 +281,7 @@ class SalesInvoiceController extends Controller
         $entry->entry_date = $data['entry_date'];
         $entry->particular = $data['particular'] ?: 'Receipt against '.$salesInvoice->invoice_number;
         $entry->transaction_type = 'credit';
-        $entry->credit_amount = round((float) $data['amount'], 2);
+        $entry->credit_amount = round((float) $data['amount'], 3);
         $entry->debit_amount = 0;
         $entry->currency = in_array($salesInvoice->currency, array_keys(CashflowEntry::currencyOptions()), true)
             ? $salesInvoice->currency
@@ -309,7 +317,7 @@ class SalesInvoiceController extends Controller
             app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
         }
 
-        return back()->with('success', 'Receipt of '.number_format($entry->credit_amount, 2)
+        return back()->with('success', 'Receipt of '.\App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency)
             .' recorded against '.$salesInvoice->invoice_number.'.');
     }
 
@@ -332,17 +340,38 @@ class SalesInvoiceController extends Controller
      */
     public function duplicate(SalesInvoice $salesInvoice): RedirectResponse
     {
-        $copy = $this->copyInvoice($salesInvoice, [
-            'invoice_number' => $this->makeInvoiceNumber($salesInvoice->invoice_type),
-            'status' => 'draft',
-            'amount_paid' => 0,
-            'balance_amount' => (float) $salesInvoice->total_amount,
-            'public_token' => null,
-            'sent_at' => null,
-            'accepted_at' => null,
-            'cancelled_at' => null,
-            'notes' => trim('Copy of '.$salesInvoice->invoice_number.'. '.($salesInvoice->notes ?? '')),
-        ]);
+        $copy = DB::transaction(function () use ($salesInvoice) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
+            $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $salesInvoice->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before copying.']);
+            }
+            $auto = $this->eligibleForAutoRounding($salesInvoice->invoice_type, $salesInvoice->currency);
+            $copy = $this->copyInvoice($salesInvoice, [
+                'invoice_number' => $this->makeInvoiceNumber($salesInvoice->invoice_type),
+                'status' => 'draft',
+                'amount_paid' => 0,
+                'balance_amount' => (float) $salesInvoice->total_amount,
+                'auto_round_total' => $auto,
+                'public_token' => null,
+                'sent_at' => null,
+                'accepted_at' => null,
+                'cancelled_at' => null,
+                'notes' => trim('Copy of '.$salesInvoice->invoice_number.'. '.($salesInvoice->notes ?? '')),
+            ]);
+
+            if ($auto) {
+                $precision = $copy->invoice_type === 'tax' ? 2 : 3;
+                $beforeRoundOff = round((float) $copy->total_amount - (float) $copy->round_off, $precision);
+                $adjustment = $this->rupeeRoundOff($beforeRoundOff, $precision);
+                $total = round($beforeRoundOff + $adjustment, $precision);
+                $copy->update(['round_off' => $adjustment, 'total_amount' => $total, 'balance_amount' => $total,
+                    'amount_in_words' => $this->amountInWords($total, $copy->currency)]);
+            }
+
+            return $copy;
+        });
 
         return redirect()->route('sales-invoices.edit', $copy)
             ->with('success', $copy->invoice_number.' created as a draft copy of '.$salesInvoice->invoice_number.'.');
@@ -379,16 +408,30 @@ class SalesInvoiceController extends Controller
            two clicks apart at worst, and the lock is what stops the second one
            from raising a second tax invoice from the same proforma. */
         $tax = DB::transaction(function () use ($salesInvoice) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
             $proforma = SalesInvoice::query()->whereKey($salesInvoice->getKey())->lockForUpdate()->first();
+            if ($proforma && (int) $proforma->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before converting.']);
+            }
 
             if (! $proforma || $proforma->invoice_type !== 'proforma' || $proforma->converted_invoice_id
                 || $proforma->status === 'cancelled' || $proforma->cashConvertibleRemaining() <= 0) {
                 return null;
             }
 
+            // A tax invoice can only claim whole paise. Never silently change
+            // the PI's agreed claim to make it fit that legal document.
+            $claim = $proforma->receivableTotal();
+            if (abs($claim - round($claim, 2)) > 0.0005) {
+                return 'precision';
+            }
+
             $tax = $proforma->hasMonetaryConversions() ? $this->remainderTaxInvoice($proforma) : $this->copyInvoice($proforma, [
                 'invoice_type' => 'tax',
                 'invoice_number' => $this->makeInvoiceNumber('tax'),
+                // This continues an existing claim; never re-round it on conversion.
+                'auto_round_total' => false,
                 /* The conversion continues the document rather than restarting
                    it: whatever the proforma had reached — sent, accepted — the
                    tax invoice has reached too, and it is chased on the same due
@@ -402,6 +445,20 @@ class SalesInvoiceController extends Controller
                 'notes' => trim('Converted from '.$proforma->invoice_number.'. '.($proforma->notes ?? '')),
             ]);
 
+            if (! $proforma->hasMonetaryConversions()) {
+                // Recalculate the tax document at paise precision, retaining the
+                // three-place rates. Reconcile the difference in round-off, not
+                // in the claim or the receipts that are about to move across.
+                $rows = $tax->items()->orderBy('sort_order')->get()->map(fn ($item) => $item->toArray())->all();
+                $tax->round_off = 0;
+                $tax->save();
+                $this->syncItemsAndTotals($tax, $rows);
+                $tax->refresh();
+                $adjustment = round($claim - (float) $tax->total_amount, 2);
+                $tax->update(['round_off' => $adjustment, 'total_amount' => $claim,
+                    'balance_amount' => $claim, 'amount_in_words' => $this->amountInWords($claim, $tax->currency)]);
+            }
+
             $this->moveAdvanceTo($proforma, $tax);
 
             $proforma->converted_invoice_id = $tax->id;
@@ -411,6 +468,9 @@ class SalesInvoiceController extends Controller
             return $tax;
         });
 
+        if ($tax === 'precision') {
+            return back()->with('error', 'This PI has a three-decimal remaining claim that cannot be represented on a two-decimal tax invoice. Ask Accounts to review the PI or reverse a cash conversion before trying again; no invoice or receipt was changed.');
+        }
         if (! $tax) {
             return back()->with('error', 'This PI has no available remainder to tax invoice, or was already converted.');
         }
@@ -424,15 +484,20 @@ class SalesInvoiceController extends Controller
     {
         $data = $request->validate([
             'conversion_mode' => ['required', Rule::in(['amount', 'percent'])],
-            'conversion_value' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
-            'transfer_received' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'conversion_value' => ['required', 'numeric', 'gt:0', 'decimal:0,3'],
+            'transfer_received' => ['required', 'numeric', 'min:0', 'decimal:0,3'],
         ]);
         $cash = DB::transaction(function () use ($salesInvoice, $data, $conversion) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
             $pi = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $pi->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before converting.']);
+            }
             $plan = $conversion->plan($pi, $data['conversion_mode'], (float) $data['conversion_value']);
             $cash = $pi->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'cash_converted_base_amount', 'cash_converted_total_amount']);
             $cash->fill(['invoice_type' => 'cash', 'invoice_number' => $this->makeInvoiceNumber('cash'),
-                'public_token' => null, 'source_proforma_id' => $pi->id, 'conversion_base_amount' => $plan['amount'],
+                'auto_round_total' => false, 'public_token' => null, 'source_proforma_id' => $pi->id, 'conversion_base_amount' => $plan['amount'],
                 'conversion_total_amount' => $plan['gross_consumed'], 'gst_type' => 'none', 'seller_gstin' => null,
                 'seller_pan' => null, 'client_gstin' => null, 'client_pan' => null, 'place_of_supply' => null,
                 'subtotal' => $plan['amount'], 'taxable_amount' => $plan['amount'], 'total_amount' => $plan['amount'],
@@ -448,8 +513,8 @@ class SalesInvoiceController extends Controller
                 'taxable_amount' => $plan['amount'], 'line_total' => $plan['amount'], 'gst_percent' => 0,
                 'discount_percent' => 0, 'discount_amount' => 0, 'cgst_amount' => 0, 'sgst_amount' => 0, 'igst_amount' => 0, 'sort_order' => 1]);
             $conversion->transferReceipts($pi, $cash, (float) $data['transfer_received']);
-            $pi->cash_converted_base_amount = round((float) $pi->cash_converted_base_amount + $plan['amount'], 2);
-            $pi->cash_converted_total_amount = round((float) $pi->cash_converted_total_amount + $plan['gross_consumed'], 2);
+            $pi->cash_converted_base_amount = round((float) $pi->cash_converted_base_amount + $plan['amount'], 3);
+            $pi->cash_converted_total_amount = round((float) $pi->cash_converted_total_amount + $plan['gross_consumed'], 3);
             // A retained advance stays on a zero-remainder PI rather than disappearing
             // from receivables/opening-credit reports when the PI is superseded.
             if ($plan['full'] && abs($pi->receivedAmount()) < 0.001) {
@@ -475,7 +540,7 @@ class SalesInvoiceController extends Controller
         }
         $tax = $pi->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'cash_converted_base_amount', 'cash_converted_total_amount']);
         $tax->fill(['invoice_type' => 'tax', 'invoice_number' => $this->makeInvoiceNumber('tax'), 'public_token' => null,
-            'source_proforma_id' => $pi->id, 'amount_paid' => 0, 'created_by' => Auth::id()]);
+            'auto_round_total' => false, 'source_proforma_id' => $pi->id, 'amount_paid' => 0, 'created_by' => Auth::id()]);
         foreach (['discount_amount', 'cgst_amount', 'sgst_amount', 'igst_amount', 'freight_amount', 'packing_amount', 'other_charges'] as $field) {
             $tax->$field = round((float) $pi->$field * $ratio, 2);
         }
@@ -495,7 +560,7 @@ class SalesInvoiceController extends Controller
         foreach ($items as $item) {
             $line = $item->replicate(['created_at', 'updated_at']);
             $line->sales_invoice_id = $tax->id;
-            $line->unit_price = round((float) $item->unit_price * $ratio, 2);
+            $line->unit_price = round((float) $item->unit_price * $ratio, 3);
             foreach (array_keys($running) as $field) {
                 $running[$field] += (float) $item->$field;
                 $next = round($running[$field] * $ratio, 2);
@@ -503,6 +568,17 @@ class SalesInvoiceController extends Controller
                 $scaled[$field] = $next;
             }
             $line->gross_amount = round((float) $line->taxable_amount + (float) $line->discount_amount, 2);
+            // A legal tax line must still equal quantity × its three-place rate.
+            // Try the closest representable rate to the allocated gross; if even
+            // that cannot express it, abort the transaction rather than issue an
+            // internally inconsistent invoice or silently change the PI claim.
+            $quantity = (float) $line->quantity;
+            if (abs(round($quantity * (float) $line->unit_price, 2) - (float) $line->gross_amount) > 0.005 && $quantity > 0) {
+                $line->unit_price = round((float) $line->gross_amount / $quantity, 3);
+            }
+            if (abs(round($quantity * (float) $line->unit_price, 2) - (float) $line->gross_amount) > 0.005) {
+                throw ValidationException::withMessages(['invoice' => 'The remaining claim cannot be expressed by the original item quantities and three-decimal rates on a tax invoice. Review the PI or cash conversion with Accounts; no invoice or receipt was changed.']);
+            }
             $line->line_total = round((float) $line->taxable_amount + (float) $line->cgst_amount + (float) $line->sgst_amount + (float) $line->igst_amount, 2);
             $line->save();
             $subtotal += (float) $line->gross_amount;
@@ -530,10 +606,10 @@ class SalesInvoiceController extends Controller
      */
     private function moveAdvanceTo(SalesInvoice $proforma, SalesInvoice $tax): void
     {
-        $opening = round((float) $proforma->amount_paid, 2);
+        $opening = round((float) $proforma->amount_paid, 3);
 
         if ($opening > 0) {
-            $tax->amount_paid = round((float) $tax->amount_paid + $opening, 2);
+            $tax->amount_paid = round((float) $tax->amount_paid + $opening, 3);
             $proforma->amount_paid = 0;
             $tax->save();
             $proforma->save();
@@ -596,7 +672,7 @@ class SalesInvoiceController extends Controller
 
         $balance = $invoice->balanceDue();
 
-        if (abs((float) $invoice->balance_amount - $balance) > 0.001) {
+        if (abs((float) $invoice->balance_amount - $balance) > 0.0005) {
             $invoice->forceFill(['balance_amount' => $balance])->saveQuietly();
         }
     }
@@ -743,6 +819,7 @@ class SalesInvoiceController extends Controller
             'valid_until' => now()->addDays(10)->toDateString(),
             'currency' => $client ? ($client->preferred_currency ?? 'INR') : 'INR',
             'gst_type' => 'intra_state',
+            'auto_round_total' => true,
             'payment_terms' => '50% advance, balance before dispatch',
             'advance_required' => $invoiceType === 'proforma',
             'advance_percentage' => $invoiceType === 'proforma' ? 50 : null,
@@ -772,10 +849,17 @@ class SalesInvoiceController extends Controller
         unset($data['items'], $data['attachments']);
 
         $data = $this->prepareInvoiceData($request, $data);
+        // A legacy API caller supplying a non-zero round-off is deliberately
+        // using the existing manual adjustment, unless it requests auto mode.
+        $auto = array_key_exists('auto_round_total', $data)
+            ? (bool) $data['auto_round_total']
+            : (float) $data['round_off'] === 0.0;
+        $data['auto_round_total'] = $this->eligibleForAutoRounding($data['invoice_type'], $data['currency']) && $auto;
         $data['invoice_number'] = $data['invoice_number'] ?: $this->makeInvoiceNumber($data['invoice_type']);
         $data['created_by'] = Auth::id();
 
         $invoice = DB::transaction(function () use ($request, $data, $items) {
+            app(ProjectProducts::class)->prepareSalesChange([$data['project_id'] ?? null]);
             $invoice = SalesInvoice::create($data);
             $this->syncItemsAndTotals($invoice, $items);
             $this->storeAttachments($request, $invoice);
@@ -791,19 +875,44 @@ class SalesInvoiceController extends Controller
     public function show(SalesInvoice $salesInvoice): View
     {
         $salesInvoice->load(['items.product', 'attachments', 'creator', 'reminders.creator']);
+        if (Schema::hasTable('sales_invoice_sends')) {
+            $salesInvoice->load('sends.sender');
+        }
+        if (SalesInvoice::notesTableExists()) {
+            $salesInvoice->load('adjustments.creator');
+        }
         if (Schema::hasTable('cashflow_allocations')) {
             $salesInvoice->load('cashflowAllocations.cashflowEntry');
+        }
+        if (Schema::hasTable('sales_invoice_e_invoices')) {
+            $salesInvoice->load('eInvoice');
         }
         if ($this->clientAvailable()) { $salesInvoice->load('client'); }
         if ($this->projectAvailable()) { $salesInvoice->load('project'); }
 
         /* `accounts` is not decoration: the record page carries the receipt
            dialog, and a dialog whose account list is missing is a 500. */
+        /* The e-invoice card lives behind canRegister(), so a non-registered
+           invoice never looks at $eInvoice at all — but the moment an IRN
+           exists the card shows it, from this guarded hand-off (relation only
+           ever loaded when the table exists — databases predating it must not
+           touch it even here). */
+        $loaded = $salesInvoice->relationLoaded('eInvoice') ? $salesInvoice->eInvoice : null;
+        $eInvoice = $loaded && $loaded->isRegistered() ? $loaded : null;
+        $eInvoiceIssues = $salesInvoice->invoice_type === 'tax'
+            ? (new \App\Services\EInvoice\EInvoicePayload($salesInvoice))->issues()
+            : null;
+
         return view('sales_invoices.show', [
             'invoice' => $salesInvoice,
             'accounts' => $this->accounts(),
             'receiptCategories' => $this->receiptCategories(),
             'reminderChannels' => SalesInvoiceReminder::channelOptions(),
+            /* The e-invoice card's pre-flight list: the reasons registration
+               would be refused, computed while the page renders so the card
+               shows them instead of a dead "register" click. */
+            'eInvoiceIssues' => $eInvoiceIssues,
+            'eInvoice' => $eInvoice,
         ]);
     }
 
@@ -833,10 +942,42 @@ class SalesInvoiceController extends Controller
         $data = $this->prepareInvoiceData($request, $data);
 
         DB::transaction(function () use ($request, $salesInvoice, $data, $items) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId, $data['project_id'] ?? null]);
             $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $salesInvoice->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['project_id' => 'The invoice project changed. Reload before saving.']);
+            }
             $this->assertEditable($salesInvoice);
+            $previousProjectId = (int) $salesInvoice->project_id;
+            $eligible = $this->eligibleForAutoRounding($data['invoice_type'], $data['currency']);
+            if (! $request->has('round_off')) {
+                // A computed INR adjustment is not a manual foreign/cash one.
+                $data['round_off'] = ! $eligible && $salesInvoice->auto_round_total ? 0 : $salesInvoice->round_off;
+            }
+            $auto = array_key_exists('auto_round_total', $data)
+                ? (bool) $data['auto_round_total'] : (bool) $salesInvoice->auto_round_total;
+            $data['auto_round_total'] = $eligible && $auto;
+            /* An issued tax invoice is a legal document: its money and identity
+               may only move through credit/debit notes, never an edit. */
+            app(SalesInvoiceAdjustment::class)->assertMoneyFieldsUnchanged($salesInvoice, $data, $items);
             $salesInvoice->update($data);
+            if ($previousProjectId > 0 && $previousProjectId !== (int) $salesInvoice->project_id && Schema::hasTable('project_products')) {
+                // A deliberately moved invoice may still post hidden product IDs
+                // from its old project. Clear only those old-project links; the
+                // new project can match unambiguously or surface them for review.
+                $previousLinks = DB::table('project_products')->where('project_id', $previousProjectId)
+                    ->whereIn('id', collect($items)->pluck('project_product_id')->filter()->all())
+                    ->lockForUpdate()->pluck('id')->map(fn ($id) => (int) $id)->all();
+                foreach ($items as &$item) {
+                    if (in_array((int) ($item['project_product_id'] ?? 0), $previousLinks, true)) $item['project_product_id'] = null;
+                }
+                unset($item);
+            }
             $this->syncItemsAndTotals($salesInvoice, $items);
+            if ($previousProjectId !== (int) $salesInvoice->project_id) {
+                app(ProjectProducts::class)->refreshWorkflow($previousProjectId);
+            }
             $this->storeAttachments($request, $salesInvoice);
         });
 
@@ -852,9 +993,17 @@ class SalesInvoiceController extends Controller
                 'Cash Invoice deleted and conversion reversed. Its value and all linked receipts are back on '.$pi->invoice_number.'. Bank balances are unchanged.');
         }
         $this->assertEditable($salesInvoice);
+        app(SalesInvoiceAdjustment::class)->assertDeletable($salesInvoice);
         DB::transaction(function () use ($salesInvoice) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
             $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $salesInvoice->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before deleting.']);
+            }
             $this->assertEditable($salesInvoice);
+            app(SalesInvoiceAdjustment::class)->assertDeletable($salesInvoice);
+            $previousProjectId = (int) $salesInvoice->project_id;
             foreach ($salesInvoice->attachments as $attachment) {
                 if ($attachment->file_path) {
                     Storage::disk('public')->delete($attachment->file_path);
@@ -864,6 +1013,7 @@ class SalesInvoiceController extends Controller
                 DB::table('cashflow_allocations')->where('sales_invoice_id', $salesInvoice->id)->update(['sales_invoice_id' => null]);
             }
             $salesInvoice->delete();
+            app(ProjectProducts::class)->refreshWorkflow($previousProjectId);
         });
 
         return redirect()->route('sales-invoices.index')->with('success', 'Sales invoice deleted successfully.');
@@ -871,8 +1021,16 @@ class SalesInvoiceController extends Controller
 
     public function print(SalesInvoice $salesInvoice): View
     {
-        $salesInvoice->load(['items', 'attachments']);
-        return view('sales_invoices.print', ['invoice' => $salesInvoice, 'publicMode' => false]);
+        $loads = ['items', 'attachments'];
+        if (Schema::hasTable('sales_invoice_e_invoices')) {
+            $loads[] = 'eInvoice';
+        }
+        $salesInvoice->load($loads);
+        return view('sales_invoices.print', [
+            'invoice' => $salesInvoice,
+            'publicMode' => false,
+            'eInvoice' => $salesInvoice->relationLoaded('eInvoice') ? $salesInvoice->eInvoice : null,
+        ]);
     }
 
     public function publicShow(string $token): View
@@ -880,15 +1038,135 @@ class SalesInvoiceController extends Controller
         $invoice = SalesInvoice::where('public_token', $token)
             ->where('show_client_portal', true)
             ->where('status', '!=', 'draft')
-            ->with(['items', 'publicAttachments'])
+            ->with(array_merge(['items', 'publicAttachments'],
+                Schema::hasTable('sales_invoice_e_invoices') ? ['eInvoice'] : []))
             ->firstOrFail();
-        return view('sales_invoices.print', ['invoice' => $invoice, 'publicMode' => true]);
+        return view('sales_invoices.print', [
+            'invoice' => $invoice,
+            'publicMode' => true,
+            'eInvoice' => $invoice->relationLoaded('eInvoice') ? $invoice->eInvoice : null,
+        ]);
     }
 
     public function markSent(SalesInvoice $salesInvoice): RedirectResponse
     {
-        $salesInvoice->update(['status' => 'sent', 'sent_at' => now(), 'show_client_portal' => true]);
+        DB::transaction(function () use ($salesInvoice) {
+            $expectedProjectId = (int) $salesInvoice->project_id;
+            app(ProjectProducts::class)->prepareSalesChange([$expectedProjectId]);
+            $invoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ((int) $invoice->project_id !== $expectedProjectId) {
+                throw ValidationException::withMessages(['invoice' => 'The invoice project changed. Reload before marking it sent.']);
+            }
+            $invoice->update(['status' => 'sent', 'sent_at' => now(), 'show_client_portal' => true]);
+            app(ProjectProducts::class)->refreshWorkflow($expectedProjectId);
+        });
         return back()->with('success', 'Invoice marked as sent and visible to client portal.');
+    }
+
+    public function emailClient(Request $request, SalesInvoice $salesInvoice, OfficeBriefing $briefing): RedirectResponse
+    {
+        if ($salesInvoice->status === 'cancelled') {
+            return back()->with('error', 'A cancelled invoice is never emailed to the client.');
+        }
+
+        $data = $request->validate([
+            'to' => ['required', 'string', 'max:500'],
+            'cc' => ['nullable', 'string', 'max:500'],
+            'subject' => ['required', 'string', 'max:190'],
+            'message' => ['required', 'string', 'max:4000'],
+            'mark_sent' => ['nullable', 'boolean'],
+        ]);
+
+        /* comma/semicolon lists, like the contacts card already teaches people */
+        [$to, $badTo] = $this->splitEmails($data['to']);
+        [$cc, $badCc] = $this->splitEmails((string) ($data['cc'] ?? ''));
+        if (! $to || $badTo) {
+            throw ValidationException::withMessages(['to' => $badTo
+                ? 'Not an e-mail address: '.implode(', ', $badTo)
+                : 'Who does this go to?']);
+        }
+        if ($badCc) {
+            throw ValidationException::withMessages(['cc' => 'Not an e-mail address: '.implode(', ', $badCc)]);
+        }
+
+        if (! config('mail.from.address')) {
+            return back()->with('error', 'No sender address is configured — set one in Organisation settings before the office can email invoices.');
+        }
+
+        /* An unticked box in the form is an *absent* key, so no default-true:
+           the checkbox's own @checked default is what makes "mark sent" the
+           usual path. */
+        $markSent = $request->boolean('mark_sent');
+        $mail = new SalesInvoiceMail($salesInvoice, $data['subject'], $data['message'],
+            $markSent || (bool) $salesInvoice->show_client_portal);
+
+        // Reserve an honest audit entry before the external side effect. If this
+        // insert fails, no mail is attempted; if recording the result fails
+        // afterwards, the remaining pending row warns that delivery is unknown.
+        $send = SalesInvoiceSend::create([
+            'sales_invoice_id' => $salesInvoice->id,
+            'channel' => 'email',
+            'recipients' => implode(', ', $to),
+            'cc' => $cc ? implode(', ', $cc) : null,
+            'subject' => $data['subject'],
+            'message' => $data['message'],
+            'status' => SalesInvoiceSend::STATUS_PENDING,
+            'sent_by' => Auth::id(),
+            'sent_at' => now(),
+        ]);
+        $error = null;
+        try {
+            $pending = Mail::to($to);
+            if ($cc) {
+                $pending->cc($cc);
+            }
+            $pending->send($mail);
+        } catch (\Throwable $e) {
+            // Bound the provider's message before it enters the alert and flash
+            // text as well as the audit log; a very long error must not cause
+            // a second database failure after the external delivery attempt.
+            $error = Str::limit($e->getMessage(), 500, '');
+        }
+
+        $send->update([
+            'status' => $error === null ? SalesInvoiceSend::STATUS_SENT : SalesInvoiceSend::STATUS_FAILED,
+            'error' => $error === null ? null : Str::limit($error, 500, ''),
+        ]);
+
+        if ($error !== null) {
+            $briefing->workflowNotice([
+                'event_key' => 'invoice.email_failed',
+                'fingerprint' => 'invoice.email_failed:'.$salesInvoice->id,
+                'title' => 'Invoice '.$salesInvoice->invoice_number.' delivery is unconfirmed',
+                'body' => 'The mailer reported an error for '.implode(', ', $to).': '.$error.'. Check delivery before retrying.',
+                'severity' => 'attention',
+                'requires_ack' => true,
+                'team' => 'accounts',
+                'action_url' => route('sales-invoices.show', $salesInvoice),
+                'action_label' => 'Open the invoice',
+            ]);
+
+            return back()->with('error', 'The mailer reported an error ('.$error.'). Delivery is unconfirmed; check before retrying. The attempt is logged on the invoice.');
+        }
+
+        if ($markSent) {
+            $updates = ['sent_at' => now(), 'show_client_portal' => true];
+            if ($salesInvoice->status === 'draft') {
+                $updates['status'] = 'sent';
+            }
+            $salesInvoice->update($updates);
+        }
+
+        return back()->with('success', 'Emailed '.$salesInvoice->invoice_number
+            .' to '.implode(', ', $to).'. It is on the invoice\'s send log.');
+    }
+
+    private function splitEmails(string $line): array
+    {
+        $parts = array_values(array_filter(preg_split('/[\s,;]+/', trim($line))));
+        $bad = array_values(array_filter($parts, fn ($p) => ! filter_var($p, FILTER_VALIDATE_EMAIL)));
+
+        return [$bad ? [] : $parts, $bad];
     }
 
     public function destroyAttachment(SalesInvoiceAttachment $attachment): RedirectResponse
@@ -932,7 +1210,10 @@ class SalesInvoiceController extends Controller
             'seller_state' => ['nullable', 'string', 'max:255'],
             'seller_country' => ['nullable', 'string', 'max:255'],
             'seller_pincode' => ['nullable', 'string', 'max:30'],
-            'seller_gstin' => ['nullable', 'string', 'max:30'],
+            /* Cash invoices carry no GST fields (the writer nulls them), so
+               checksum-gate them only on the invoice types where GST is live. */
+            'seller_gstin' => array_filter(['nullable', 'string', 'max:30',
+                $request->input('invoice_type') === 'cash' ? null : new ValidGstin]),
             'seller_pan' => ['nullable', 'string', 'max:20'],
             'seller_email' => ['nullable', 'string', 'max:255'],
             'seller_mobile' => ['nullable', 'string', 'max:40'],
@@ -949,7 +1230,8 @@ class SalesInvoiceController extends Controller
             'client_contact_name' => ['nullable', 'string', 'max:255'],
             'client_email' => ['nullable', 'string', 'max:255'],
             'client_mobile' => ['nullable', 'string', 'max:40'],
-            'client_gstin' => ['nullable', 'string', 'max:30'],
+            'client_gstin' => array_filter(['nullable', 'string', 'max:30',
+                $request->input('invoice_type') === 'cash' ? null : new ValidGstin]),
             'client_pan' => ['nullable', 'string', 'max:20'],
             'billing_address' => ['nullable', 'string'],
             'billing_city' => ['nullable', 'string', 'max:255'],
@@ -976,8 +1258,9 @@ class SalesInvoiceController extends Controller
             'freight_amount' => ['nullable', 'numeric', 'min:0'],
             'packing_amount' => ['nullable', 'numeric', 'min:0'],
             'other_charges' => ['nullable', 'numeric', 'min:0'],
-            'round_off' => ['nullable', 'numeric'],
-            'amount_paid' => ['nullable', 'numeric', 'min:0'],
+            'round_off' => ['nullable', 'numeric', $request->input('invoice_type') === 'tax' ? 'decimal:0,2' : 'decimal:0,3'],
+            'auto_round_total' => ['sometimes', 'boolean'],
+            'amount_paid' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'terms_conditions' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
             'internal_notes' => ['nullable', 'string'],
@@ -991,7 +1274,7 @@ class SalesInvoiceController extends Controller
             'items.*.hsn_sac' => ['nullable', 'string', 'max:30'],
             'items.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'items.*.unit' => ['nullable', 'string', 'max:30'],
-            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'items.*.discount_percent' => ['nullable', 'numeric', 'min:0'],
             'items.*.gst_percent' => ['nullable', 'numeric', 'min:0'],
             'items.*.remarks' => ['nullable', 'string'],
@@ -1042,8 +1325,23 @@ class SalesInvoiceController extends Controller
         return $data;
     }
 
+    private function eligibleForAutoRounding(string $type, string $currency): bool
+    {
+        return $currency === 'INR' && in_array($type, ['proforma', 'tax'], true);
+    }
+
+    private function rupeeRoundOff(float $amount, int $precision): float
+    {
+        // The document is calculated at its own precision before whole-INR
+        // rounding. Its signed adjustment is stored at that same precision.
+        $amount = round($amount, $precision);
+
+        return round(round($amount, 0, PHP_ROUND_HALF_UP) - $amount, $precision);
+    }
+
     private function syncItemsAndTotals(SalesInvoice $invoice, array $items): void
     {
+        $precision = $invoice->invoice_type === 'tax' ? 2 : 3;
         $invoice->items()->delete();
 
         $subtotal = 0;
@@ -1061,9 +1359,9 @@ class SalesInvoiceController extends Controller
             $productName = $item['product_name'] ?: $this->productName($item['product_id'] ?? null);
             $qty = (float) ($item['quantity'] ?? 1);
             $unitPrice = (float) ($item['unit_price'] ?? 0);
-            $gross = round($qty * $unitPrice, 2);
+            $gross = round($qty * $unitPrice, $precision);
             $discountPercent = (float) ($item['discount_percent'] ?? 0);
-            $discountAmount = round($gross * ($discountPercent / 100), 2);
+            $discountAmount = round($gross * ($discountPercent / 100), $precision);
             $taxable = max($gross - $discountAmount, 0);
             $gstPercent = $invoice->isCash() ? 0 : (float) ($item['gst_percent'] ?? 18);
             $cgst = 0;
@@ -1071,13 +1369,13 @@ class SalesInvoiceController extends Controller
             $igst = 0;
 
             if ($invoice->gst_type === 'inter_state') {
-                $igst = round($taxable * ($gstPercent / 100), 2);
+                $igst = round($taxable * ($gstPercent / 100), $precision);
             } elseif ($invoice->gst_type === 'intra_state') {
-                $cgst = round($taxable * (($gstPercent / 2) / 100), 2);
-                $sgst = round($taxable * (($gstPercent / 2) / 100), 2);
+                $cgst = round($taxable * (($gstPercent / 2) / 100), $precision);
+                $sgst = round($taxable * (($gstPercent / 2) / 100), $precision);
             }
 
-            $lineTotal = round($taxable + $cgst + $sgst + $igst, 2);
+            $lineTotal = round($taxable + $cgst + $sgst + $igst, $precision);
 
             $invoice->items()->create([
                 'product_id' => $item['product_id'] ?? null,
@@ -1111,30 +1409,34 @@ class SalesInvoiceController extends Controller
 
         $invoiceDiscountValue = (float) ($invoice->discount_value ?? 0);
         $invoiceDiscount = $invoice->discount_type === 'percent'
-            ? round($taxableTotal * ($invoiceDiscountValue / 100), 2)
+            ? round($taxableTotal * ($invoiceDiscountValue / 100), $precision)
             : min($invoiceDiscountValue, $taxableTotal);
 
         $taxableAfterInvoiceDiscount = max($taxableTotal - $invoiceDiscount, 0);
         $taxAdjustmentRatio = $taxableTotal > 0 ? ($taxableAfterInvoiceDiscount / $taxableTotal) : 1;
-        $cgstTotal = round($cgstTotal * $taxAdjustmentRatio, 2);
-        $sgstTotal = round($sgstTotal * $taxAdjustmentRatio, 2);
-        $igstTotal = round($igstTotal * $taxAdjustmentRatio, 2);
+        $cgstTotal = round($cgstTotal * $taxAdjustmentRatio, $precision);
+        $sgstTotal = round($sgstTotal * $taxAdjustmentRatio, $precision);
+        $igstTotal = round($igstTotal * $taxAdjustmentRatio, $precision);
 
         $charges = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
-        $total = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges + (float) $invoice->round_off, 2);
+        $beforeRoundOff = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges, $precision);
+        $roundOff = $invoice->auto_round_total && $this->eligibleForAutoRounding($invoice->invoice_type, $invoice->currency)
+            ? $this->rupeeRoundOff($beforeRoundOff, $precision) : (float) $invoice->round_off;
+        $total = round($beforeRoundOff + $roundOff, $precision);
         /* The balance is the money rule's: what the invoice says was received
            before it was recorded in the ledger, plus every receipt filed against
            it. `PartyStatement` prints this column on a client's statement, so it
            has to agree with the list the client is chased from. */
-        $balance = max($total - round((float) $invoice->amount_paid + $invoice->ledgerReceived(), 2), 0);
+        $balance = max($total - round((float) $invoice->amount_paid + $invoice->ledgerReceived(), 3), 0);
 
         $invoice->update([
-            'subtotal' => round($subtotal, 2),
-            'discount_amount' => round($invoiceDiscount, 2),
-            'taxable_amount' => round($taxableAfterInvoiceDiscount, 2),
+            'subtotal' => round($subtotal, $precision),
+            'discount_amount' => round($invoiceDiscount, $precision),
+            'taxable_amount' => round($taxableAfterInvoiceDiscount, $precision),
             'cgst_amount' => $cgstTotal,
             'sgst_amount' => $sgstTotal,
             'igst_amount' => $igstTotal,
+            'round_off' => $roundOff,
             'total_amount' => $total,
             'balance_amount' => $balance,
             'amount_in_words' => $this->amountInWords($total, $invoice->currency),
@@ -1252,8 +1554,10 @@ class SalesInvoiceController extends Controller
 
     private function amountInWords(float $amount, string $currency): string
     {
-        $number = (int) floor($amount);
-        $paise = (int) round(($amount - $number) * 100);
+        $thousandths = (int) round($amount * 1000);
+        $number = intdiv($thousandths, 1000);
+        $paise = intdiv($thousandths % 1000, 10);
+        $tenthOfPaise = $thousandths % 10;
 
         $words = $this->numberToWords($number);
         $currencyLabel = $currency === 'INR' ? 'Rupees' : $currency;
@@ -1261,6 +1565,9 @@ class SalesInvoiceController extends Controller
         $text = $currencyLabel.' '.$words;
         if ($paise > 0) {
             $text .= ' and '.$this->numberToWords($paise).' Paise';
+        }
+        if ($tenthOfPaise > 0) {
+            $text .= ' and '.$this->numberToWords($tenthOfPaise).' '.($tenthOfPaise === 1 ? 'Tenth' : 'Tenths').' of a Paise';
         }
 
         return $text.' Only';
@@ -1372,9 +1679,13 @@ class SalesInvoiceController extends Controller
         $skipped = 0;
 
         DB::transaction(function () use ($data, $invoices, &$done, &$skipped) {
+            $expectedProjects = $invoices->mapWithKeys(fn ($invoice) => [$invoice->id => (int) $invoice->project_id]);
+            $changedProjects = [];
+            if ($data['action'] === 'delete_drafts') app(ProjectProducts::class)->prepareSalesChange($expectedProjects->values()->all());
             foreach ($invoices as $invoice) {
                 $invoice = SalesInvoice::whereKey($invoice->id)->lockForUpdate()->first();
                 if (! $invoice) { $skipped++; continue; }
+                if ($data['action'] === 'delete_drafts' && (int) $invoice->project_id !== $expectedProjects[$invoice->id]) { $skipped++; continue; }
                 switch ($data['action']) {
                     case 'mark_sent':
                         /* a cancelled document was withdrawn on purpose: it is not
@@ -1408,6 +1719,7 @@ class SalesInvoiceController extends Controller
                     case 'delete_drafts':
                         // only what never left the desk
                         if ($invoice->status === 'draft' && ! $invoice->hasMonetaryConversions()) {
+                            $changedProjects[] = (int) $invoice->project_id;
                             $invoice->delete();
                             $done++;
                         } else {
@@ -1416,6 +1728,7 @@ class SalesInvoiceController extends Controller
                         break;
                 }
             }
+            foreach (array_unique($changedProjects) as $projectId) app(ProjectProducts::class)->refreshWorkflow($projectId);
         });
 
         $message = $done.' '.Str::plural('invoice', $done).' — '
@@ -1472,7 +1785,7 @@ class SalesInvoiceController extends Controller
             fwrite($out, "\xEF\xBB\xBF");
 
             $row = fn (array $cells) => fputcsv($out, $cells);
-            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+            $money = fn ($value) => \App\Helpers\CommonHelper::decimal($value);
 
             $row(['GST summary — sales invoices']);
             $row(['Taken', now()->format('d M Y H:i')]);
@@ -1569,6 +1882,11 @@ class SalesInvoiceController extends Controller
             'gstTypeOptions' => SalesInvoice::gstTypeOptions(),
             'sellerDefaults' => SalesInvoice::defaultSellerDetails(),
             'defaultTerms' => SalesInvoice::defaultTerms(),
+            /* The HSN/SAC master the line grid offers: code pick fills the
+               rate, and the e-invoice pre-check reads the same table. */
+            'hsnCodes' => \Illuminate\Support\Facades\Schema::hasTable('hsn_sac_codes')
+                ? \App\Models\HsnSacCode::optionsForForms()
+                : [],
         ];
     }
 

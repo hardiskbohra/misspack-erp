@@ -1627,3 +1627,16 @@ a.cf-report-value:hover {
 /* Currency-separated statement summaries use existing card/type tokens. */
 .statement-currency-totals{display:flex;flex-direction:column;gap:4px}
 .statement-currency-total{display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Keep the ledger's mobile cards and their group counts inside the viewport.
+   The shared table floor is for horizontal tables, not the card layout. */
+@media (max-width:767px) {
+    .cashflow-index .master-table { min-width:0; }
+
+    /* The 44px touch control already has vertical padding. A 44px text line
+       would overflow it and cover the bulk actions immediately underneath. */
+    .cashflow-index .master-list-bulk .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height:20px;
+    }
+    .cashflow-index .master-list-bulk .master-btn { min-height:40px; }
+}

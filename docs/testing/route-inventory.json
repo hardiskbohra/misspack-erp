@@ -51,6 +51,55 @@
             ]
         },
         {
+            "name": "account.two-factor.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "account/two-factor",
+            "action": "App\\Http\\Controllers\\TwoFactorController@destroy",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "account.two-factor.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "account/two-factor",
+            "action": "App\\Http\\Controllers\\TwoFactorController@store",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "account.two-factor.confirm",
+            "methods": [
+                "POST"
+            ],
+            "uri": "account/two-factor/confirm",
+            "action": "App\\Http\\Controllers\\TwoFactorController@confirm",
+            "middleware": [
+                "web",
+                "auth",
+                "throttle:10,1"
+            ]
+        },
+        {
+            "name": "account.two-factor.recovery",
+            "methods": [
+                "POST"
+            ],
+            "uri": "account/two-factor/recovery-codes",
+            "action": "App\\Http\\Controllers\\TwoFactorController@regenerateRecoveryCodes",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
             "name": "audit.index",
             "methods": [
                 "GET",
@@ -2326,7 +2375,8 @@
             "uri": "login",
             "action": "App\\Http\\Controllers\\AuthController@login",
             "middleware": [
-                "web"
+                "web",
+                "throttle:30,1"
             ]
         },
         {
@@ -2587,6 +2637,20 @@
             ],
             "uri": "office-alerts",
             "action": "App\\Http\\Controllers\\OfficeAlertController@inbox",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-alerts.centre",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "office-alerts/centre",
+            "action": "App\\Http\\Controllers\\OfficeAlertController@centre",
             "middleware": [
                 "web",
                 "auth",
@@ -3340,6 +3404,19 @@
             ]
         },
         {
+            "name": "projects.admin-state",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/{project}/admin-state",
+            "action": "App\\Http\\Controllers\\ProjectAdminController@state",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "projects.approvals.store",
             "methods": [
                 "POST"
@@ -3549,6 +3626,19 @@
             ]
         },
         {
+            "name": "projects.workflow.financial-closure.manual-close",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/financial-closure/manual-close",
+            "action": "App\\Http\\Controllers\\ProjectFinancialClosureController@manualClose",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "projects.workflow.financial-closure.reopen",
             "methods": [
                 "POST"
@@ -3607,6 +3697,19 @@
             ],
             "uri": "projects/{project}/workflow/steps/{step}",
             "action": "App\\Http\\Controllers\\ProjectWorkflowController@updateStep",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.steps.bypass",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/steps/{step}/bypass",
+            "action": "App\\Http\\Controllers\\ProjectAdminController@bypass",
             "middleware": [
                 "web",
                 "auth",
@@ -3723,12 +3826,38 @@
             ]
         },
         {
+            "name": "purchase-invoices.conversion-reference",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "purchase-invoices/{purchaseInvoice}/conversion-reference",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@updateConversionReference",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "purchase-invoices.convert",
             "methods": [
                 "POST"
             ],
             "uri": "purchase-invoices/{purchaseInvoice}/convert",
             "action": "App\\Http\\Controllers\\PurchaseInvoiceController@convert",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.convert-partial",
+            "methods": [
+                "POST"
+            ],
+            "uri": "purchase-invoices/{purchaseInvoice}/partial-conversions",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@convertPartial",
             "middleware": [
                 "web",
                 "auth",
@@ -3850,12 +3979,88 @@
             ]
         },
         {
+            "name": "public-links.client-login",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "s/c",
+            "action": "App\\Http\\Controllers\\ClientPortalAuthController@showLogin",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "public-links.enquiry",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "s/e",
+            "action": "App\\Http\\Controllers\\PublicLeadController@create",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "public-links.vendor-login",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "s/v",
+            "action": "App\\Http\\Controllers\\VendorPortalAuthController@showLogin",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "public-links.short",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "s/{token}",
+            "action": "App\\Http\\Controllers\\PublicShortLinkController@show",
+            "middleware": [
+                "web",
+                "throttle:120,1,short-links:"
+            ]
+        },
+        {
             "name": "sales-invoices.attachments.destroy",
             "methods": [
                 "DELETE"
             ],
             "uri": "sales-invoice-attachments/{attachment}",
             "action": "App\\Http\\Controllers\\SalesInvoiceController@destroyAttachment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoice-notes.cancel",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "sales-invoice-notes/{note}/cancel",
+            "action": "App\\Http\\Controllers\\SalesInvoiceNoteController@cancel",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoice-notes.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoice-notes/{note}/print",
+            "action": "App\\Http\\Controllers\\SalesInvoiceNoteController@print",
             "middleware": [
                 "web",
                 "auth",
@@ -4010,12 +4215,77 @@
             ]
         },
         {
+            "name": "sales-invoices.einvoice.generate",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/e-invoice",
+            "action": "App\\Http\\Controllers\\SalesInvoiceEInvoiceController@generate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.einvoice.record",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/e-invoice/acknowledgement",
+            "action": "App\\Http\\Controllers\\SalesInvoiceEInvoiceController@record",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.einvoice.cancel",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/e-invoice/cancel",
+            "action": "App\\Http\\Controllers\\SalesInvoiceEInvoiceController@cancel",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.email",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/email",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@emailClient",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "sales-invoices.markSent",
             "methods": [
                 "PATCH"
             ],
             "uri": "sales-invoices/{salesInvoice}/mark-sent",
             "action": "App\\Http\\Controllers\\SalesInvoiceController@markSent",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.notes.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/notes",
+            "action": "App\\Http\\Controllers\\SalesInvoiceNoteController@store",
             "middleware": [
                 "web",
                 "auth",
@@ -4069,6 +4339,19 @@
             ],
             "uri": "sales-invoices/{salesInvoice}/reminders",
             "action": "App\\Http\\Controllers\\SalesInvoiceController@logReminder",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.returns.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/returns",
+            "action": "App\\Http\\Controllers\\SalesInvoiceNoteController@storeReturn",
             "middleware": [
                 "web",
                 "auth",
@@ -4686,6 +4969,59 @@
             ]
         },
         {
+            "name": "settings.taxes",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/taxes",
+            "action": "App\\Http\\Controllers\\TaxSettingController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.taxes.hsn.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/taxes/hsn",
+            "action": "App\\Http\\Controllers\\TaxSettingController@storeHsn",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.taxes.hsn.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/taxes/hsn/{hsnSacCode}",
+            "action": "App\\Http\\Controllers\\TaxSettingController@destroyHsn",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.taxes.hsn.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/taxes/hsn/{hsnSacCode}",
+            "action": "App\\Http\\Controllers\\TaxSettingController@updateHsn",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "settings.workflow",
             "methods": [
                 "GET",
@@ -4966,6 +5302,46 @@
             ]
         },
         {
+            "name": "shipments.comments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments/{shipment}/comments",
+            "action": "App\\Http\\Controllers\\ShipmentCommentController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.comments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "shipments/{shipment}/comments/{comment}",
+            "action": "App\\Http\\Controllers\\ShipmentCommentController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.comments.attachments.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/{shipment}/comments/{comment}/attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\ShipmentCommentController@file",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "shipments.costs.store",
             "methods": [
                 "POST"
@@ -5070,6 +5446,260 @@
             "action": "App\\Http\\Controllers\\PartyStatementController@publicShow",
             "middleware": [
                 "web"
+            ]
+        },
+        {
+            "name": "stock.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock",
+            "action": "App\\Http\\Controllers\\StockController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/counts",
+            "action": "App\\Http\\Controllers\\StockCountController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts",
+            "action": "App\\Http\\Controllers\\StockCountController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/counts/create",
+            "action": "App\\Http\\Controllers\\StockCountController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/counts/{stockCount}",
+            "action": "App\\Http\\Controllers\\StockCountController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.approve",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/approve",
+            "action": "App\\Http\\Controllers\\StockCountController@approve",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.cancel",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/cancel",
+            "action": "App\\Http\\Controllers\\StockCountController@cancel",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.update",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/draft",
+            "action": "App\\Http\\Controllers\\StockCountController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.refresh",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/refresh",
+            "action": "App\\Http\\Controllers\\StockCountController@refresh",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.reject",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/reject",
+            "action": "App\\Http\\Controllers\\StockCountController@reject",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.counts.submit",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/counts/{stockCount}/submit",
+            "action": "App\\Http\\Controllers\\StockCountController@submit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/items",
+            "action": "App\\Http\\Controllers\\StockController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/items/create",
+            "action": "App\\Http\\Controllers\\StockController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "stock/items/{stockItem}",
+            "action": "App\\Http\\Controllers\\StockController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/items/{stockItem}",
+            "action": "App\\Http\\Controllers\\StockController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "stock/items/{stockItem}",
+            "action": "App\\Http\\Controllers\\StockController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "stock/items/{stockItem}/edit",
+            "action": "App\\Http\\Controllers\\StockController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.movements.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/items/{stockItem}/movements",
+            "action": "App\\Http\\Controllers\\StockController@movement",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "stock.items.restore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "stock/items/{stockItem}/restore",
+            "action": "App\\Http\\Controllers\\StockController@restore",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
             ]
         },
         {
@@ -5241,6 +5871,30 @@
             "action": "App\\Http\\Controllers\\ShipmentController@publicTrack",
             "middleware": [
                 "web"
+            ]
+        },
+        {
+            "name": "two-factor.challenge",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "two-factor-challenge",
+            "action": "App\\Http\\Controllers\\TwoFactorChallengeController@show",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "two-factor.challenge.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "two-factor-challenge",
+            "action": "App\\Http\\Controllers\\TwoFactorChallengeController@store",
+            "middleware": [
+                "web",
+                "throttle:15,1"
             ]
         },
         {

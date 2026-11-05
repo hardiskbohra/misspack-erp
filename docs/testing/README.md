@@ -57,7 +57,7 @@ APP_ENV=testing DB_HOST=127.0.0.1 DB_USERNAME=YOUR_LOCAL_TEST_USER \
   DB_PASSWORD=YOUR_LOCAL_TEST_PASSWORD npm run test:mysql
 ```
 
-The MySQL XML forces the test database name and the test class rejects any database whose name does not end in `_test`. It creates/drops only randomly named test tables. MySQL CI also runs the **whole fresh migration chain** against its isolated service, separately from SQLite fixtures. Those MySQL checks were **not run in the local sandbox**, but the fresh migration and native aggregation CI job passed in [run40176652907](https://github.com/hardiskbohra/misspack-erp/actions/runs/40176652907).
+The MySQL XML forces the test database name and the stock test classes reject any database whose name does not end in `_test`. Tests use that disposable schema, and some create/drop randomly named fixture tables. MySQL CI also runs the **whole fresh migration chain** against its isolated service, separately from SQLite fixtures. For the original testing-pack baseline, the native aggregation CI job passed in [run40176652907](https://github.com/hardiskbohra/misspack-erp/actions/runs/40176652907); subsequent local MySQL results are recorded in the linked feature verification notes.
 
 ## Update this pack
 
@@ -90,3 +90,5 @@ user avatars, KYC textarea styling, genuine TDD/security/browser evidence and de
 
 See [detail-photo.md](detail-photo.md) for direct detail-page photo editing,
 permission/validation/storage safety tests and responsive keyboard/browser evidence.
+
+See [stock-register-edit-delete.md](stock-register-edit-delete.md) for stock correction and reversible-archive acceptance criteria, regression inventory, local verification and remaining limits.

@@ -438,6 +438,8 @@ class PackagingListController extends Controller
             'salesInvoices' => SalesInvoice::latest('invoice_date')->limit(500)->get(),
             'purchaseInvoices' => PurchaseInvoice::where('invoice_type', PurchaseInvoice::TYPE_BILL)->latest('invoice_date')->limit(500)->get(),
             'prefillCartons' => $prefillCartons,
+            'purchaseReferenceOnly' => $list->source_type === 'purchase_invoice' && $list->purchase_invoice_id
+                && $list->purchaseInvoice?->isPartialConversion(),
             'products' => Product::where('status', 'active')->orderBy('name')->get(),
             'projectProducts' => ProjectProduct::where('status', '!=', 'cancelled')->orderBy('sort_order')->orderBy('id')
                 ->get(['id', 'project_id', 'product_id', 'product_name', 'sku', 'unit']),

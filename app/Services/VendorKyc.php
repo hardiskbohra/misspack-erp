@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Rules\ValidGstin;
 
 /** Vendor KYC is staged identity data, never a public vendor-master editor. */
 class VendorKyc
@@ -54,7 +55,7 @@ class VendorKyc
             'gst_certificate' => $available['gst_certificate'] ?? false,
             'pan_document' => $available['pan_document'] ?? false,
         ]), [
-            'gstin' => ['required', 'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i'],
+            'gstin' => ['required', new ValidGstin],
             'account_number' => ['required', 'string', 'max:255'],
             'ifsc_code' => ['required', 'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/i'],
             'gst_certificate' => ['accepted'], 'pan_document' => ['accepted'],
@@ -140,7 +141,7 @@ class VendorKyc
                 $rules['vendor_type'] = ['nullable', Rule::in(array_keys(Vendor::typeOptions()))];
                 $rules['contact_person_email'] = ['nullable', 'email', 'max:255'];
                 $rules['website'] = ['nullable', 'url:http,https', 'max:255'];
-                $rules['gstin'] = ['nullable', 'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i'];
+                $rules['gstin'] = ['nullable', new ValidGstin];
                 $rules['pan'] = ['nullable', 'regex:/^[A-Z]{5}[0-9]{4}[A-Z]$/i'];
                 $rules['ifsc_code'] = ['nullable', 'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/i'];
                 if ($final) {

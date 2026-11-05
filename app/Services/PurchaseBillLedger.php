@@ -188,8 +188,8 @@ class PurchaseBillLedger
         }
 
         $carried = (float) $order->amount_paid;
-        if ($carried > 0.009) {
-            $bill->amount_paid = round((float) $bill->amount_paid + $carried, 2);
+        if ($carried >= 0.001) {
+            $bill->amount_paid = round((float) $bill->amount_paid + $carried, 3);
             $bill->save();
             $order->amount_paid = 0;
             $order->save();
@@ -203,10 +203,19 @@ class PurchaseBillLedger
             return null;
         }
 
-        return VendorPaymentEntry::query()
+        $query = VendorPaymentEntry::query()
             ->where('purchase_invoice_id', $invoice->id)
-            ->where('transaction_type', 'credit')
-            ->first();
+            ->where('transaction_type', 'credit');
+
+        if ($invoice->isOrder()) {
+            // A reopened order may still have manual credits or a real
+            // cashflow movement linked to it. Only its PO posting is ours to
+            // update/remove; never turn an adjustment into an order credit.
+            $query->where('entry_category', 'order')
+                ->whereNull('cashflow_entry_id');
+        }
+
+        return $query->first();
     }
 
     /**
@@ -226,6 +235,6 @@ class PurchaseBillLedger
 
     private function rupees(PurchaseInvoice $invoice): float
     {
-        return round((float) $invoice->total_amount * $this->rate($invoice), 2);
+        return round((float) $invoice->total_amount * $this->rate($invoice), 3);
     }
 }

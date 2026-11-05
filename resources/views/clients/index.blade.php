@@ -275,7 +275,7 @@
                                         <div class="master-dropdown-menu">
                                             <a href="{{ route('clients.show', $client) }}"><i class="fas fa-eye" aria-hidden="true"></i> View client</a>
                                             <a href="{{ route('clients.edit', $client) }}"><i class="fas fa-pen" aria-hidden="true"></i> Edit client</a>
-                                            <button type="button" class="client-copy-kyc" data-kyc-url="{{ route('clients.publicKyc', $client->public_token) }}">
+                                            <button type="button" class="client-copy-kyc" data-kyc-url="{{ \App\Services\PublicShareLinks::url($client) }}">
                                                 <i class="fas fa-link" aria-hidden="true"></i> Copy KYC link
                                             </button>
                                             <button type="button" class="danger master-delete-btn"

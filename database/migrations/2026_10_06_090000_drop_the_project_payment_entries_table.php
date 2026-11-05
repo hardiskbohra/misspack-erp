@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -31,6 +32,13 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('project_attachments') && Schema::hasColumn('project_attachments', 'project_payment_id')) {
+            // SQLite requires the obsolete index to be removed before the column.
+            if (DB::getDriverName() === 'sqlite' && Schema::hasIndex('project_attachments', 'project_attachments_project_payment_id_index')) {
+                Schema::table('project_attachments', function (Blueprint $table): void {
+                    $table->dropIndex('project_attachments_project_payment_id_index');
+                });
+            }
+
             Schema::table('project_attachments', function (Blueprint $table): void {
                 $table->dropColumn('project_payment_id');
             });

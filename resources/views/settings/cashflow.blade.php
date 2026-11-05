@@ -63,7 +63,7 @@
                                     <div><label class="master-label">Account Type</label><select class="master-select" name="account_type">@foreach($accountTypeOptions as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div>
                                     <div><label class="master-label">Bank Name</label><input class="master-input" name="bank_name" placeholder="HDFC / IDFC"></div>
                                     <div><label class="master-label">Currency</label><select class="master-select" name="currency">@foreach($currencyOptions as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div>
-                                    <div><label class="master-label">Opening Balance</label><input class="master-input" type="number" step="0.01" name="opening_balance" value="0"></div>
+                                    <div><label class="master-label">Opening Balance</label><input class="master-input" type="number" step="0.001" name="opening_balance" value="0"></div>
                                     <div><label class="master-label">Account Number</label><input class="master-input" name="account_number"></div>
                                     <div><label class="master-label">IFSC Code</label><input class="master-input" name="ifsc_code"></div>
                                     <div><label class="master-label">Branch</label><input class="master-input" name="branch"><textarea class="master-textarea" name="notes" hidden></textarea></div>
@@ -80,7 +80,7 @@
                                     <div><label class="master-label">Type</label><select class="master-select" name="account_type">@foreach($accountTypeOptions as $key => $label)<option value="{{ $key }}" @selected($account->account_type === $key)>{{ $label }}</option>@endforeach</select></div>
                                     <div><label class="master-label">Bank</label><input class="master-input" name="bank_name" value="{{ $account->bank_name }}"></div>
                                     <div><label class="master-label">Currency</label><select class="master-select" name="currency">@foreach($currencyOptions as $key => $label)<option value="{{ $key }}" @selected($account->currency === $key)>{{ $label }}</option>@endforeach</select></div>
-                                    <div><label class="master-label">Opening Balance</label><input class="master-input" type="number" step="0.01" name="opening_balance" value="{{ $account->opening_balance }}"></div>
+                                    <div><label class="master-label">Opening Balance</label><input class="master-input" type="number" step="0.001" name="opening_balance" value="{{ $account->opening_balance }}"></div>
                                     <div><label class="master-label">Current Balance</label><div class="current-balance">{{ \App\Helpers\CommonHelper::amount($account->current_balance, $account->currency) }}</div></div>
                                     <div class="cf-row-actions">
                                         <input type="checkbox" name="is_active" value="1" @checked($account->is_active) hidden>

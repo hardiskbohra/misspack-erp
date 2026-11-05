@@ -29,7 +29,7 @@ class SalesInvoice extends Model
         'advance_percentage', 'balance_before_dispatch', 'payment_tolerance', 'delivery_terms',
         'dispatch_terms', 'transport_mode', 'sales_person', 'subtotal', 'discount_type',
         'discount_value', 'discount_amount', 'taxable_amount', 'cgst_amount', 'sgst_amount',
-        'igst_amount', 'freight_amount', 'packing_amount', 'other_charges', 'round_off',
+        'igst_amount', 'freight_amount', 'packing_amount', 'other_charges', 'round_off', 'auto_round_total',
         'total_amount', 'amount_paid', 'balance_amount', 'amount_in_words', 'terms_conditions',
         'notes', 'internal_notes', 'show_client_portal', 'sent_at', 'accepted_at', 'cancelled_at',
         'created_by', 'source_proforma_id', 'conversion_base_amount', 'conversion_total_amount',
@@ -37,8 +37,8 @@ class SalesInvoice extends Model
     ];
 
     protected $casts = [
-        'conversion_base_amount' => 'decimal:2', 'conversion_total_amount' => 'decimal:2',
-        'cash_converted_base_amount' => 'decimal:2', 'cash_converted_total_amount' => 'decimal:2',
+        'conversion_base_amount' => \App\Casts\DecimalUpToThree::class, 'conversion_total_amount' => \App\Casts\DecimalUpToThree::class,
+        'cash_converted_base_amount' => \App\Casts\DecimalUpToThree::class, 'cash_converted_total_amount' => \App\Casts\DecimalUpToThree::class,
         'invoice_date' => 'date',
         'due_date' => 'date',
         'valid_until' => 'date',
@@ -47,21 +47,22 @@ class SalesInvoice extends Model
         'advance_percentage' => 'decimal:2',
         'balance_before_dispatch' => 'boolean',
         'payment_tolerance' => 'decimal:2',
-        'subtotal' => 'decimal:2',
+        'subtotal' => \App\Casts\DecimalUpToThree::class,
         'exchange_rate' => 'decimal:6',
-        'discount_value' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'taxable_amount' => 'decimal:2',
-        'cgst_amount' => 'decimal:2',
-        'sgst_amount' => 'decimal:2',
-        'igst_amount' => 'decimal:2',
-        'freight_amount' => 'decimal:2',
-        'packing_amount' => 'decimal:2',
-        'other_charges' => 'decimal:2',
-        'round_off' => 'decimal:2',
-        'total_amount' => 'decimal:2',
-        'amount_paid' => 'decimal:2',
-        'balance_amount' => 'decimal:2',
+        'discount_value' => \App\Casts\DecimalUpToThree::class,
+        'discount_amount' => \App\Casts\DecimalUpToThree::class,
+        'taxable_amount' => \App\Casts\DecimalUpToThree::class,
+        'cgst_amount' => \App\Casts\DecimalUpToThree::class,
+        'sgst_amount' => \App\Casts\DecimalUpToThree::class,
+        'igst_amount' => \App\Casts\DecimalUpToThree::class,
+        'freight_amount' => \App\Casts\DecimalUpToThree::class,
+        'packing_amount' => \App\Casts\DecimalUpToThree::class,
+        'other_charges' => \App\Casts\DecimalUpToThree::class,
+        'round_off' => \App\Casts\DecimalUpToThree::class,
+        'auto_round_total' => 'boolean',
+        'total_amount' => \App\Casts\DecimalUpToThree::class,
+        'amount_paid' => \App\Casts\DecimalUpToThree::class,
+        'balance_amount' => \App\Casts\DecimalUpToThree::class,
         'show_client_portal' => 'boolean',
         'sent_at' => 'datetime',
         'accepted_at' => 'datetime',
@@ -78,6 +79,28 @@ class SalesInvoice extends Model
     }
 
     public const RECEIVABLE_TOTAL_SQL = '(sales_invoices.total_amount - coalesce(sales_invoices.cash_converted_total_amount, 0))';
+
+    /** What the client still owes after corrections: receivable, minus live
+        credits, plus live debits — the SQL spelling of payableTotal(). A
+        CASE instead of GREATEST: the fixtures run on SQLite, and SQLite has
+        no greatest() (its max() means something else in MySQL). */
+    public const PAYABLE_TOTAL_SQL = '(case when '.self::RECEIVABLE_TOTAL_SQL
+        .' - '.self::CREDIT_NOTES_SQL.' + '.self::DEBIT_NOTES_SQL.' > 0'
+        .' then '.self::RECEIVABLE_TOTAL_SQL.' - '.self::CREDIT_NOTES_SQL.' + '.self::DEBIT_NOTES_SQL
+        .' else 0 end)';
+
+    /**
+     * The payable rule as SQL — but a database that predates the notes table
+     * has no corrections, so lists and filters on it must fall back to the
+     * receivable rather than explode on a missing table. Same guard the
+     * loaders already use (@see liveNotes()).
+     */
+    public static function payableSql(): string
+    {
+        return static::notesTableExists()
+            ? self::PAYABLE_TOTAL_SQL
+            : self::RECEIVABLE_TOTAL_SQL;
+    }
 
     public function isCash(): bool
     {
@@ -114,17 +137,17 @@ class SalesInvoice extends Model
     /** Original document less the gross value already replaced by cash invoices. */
     public function receivableTotal(): float
     {
-        return round(max((float) $this->total_amount - (float) $this->cash_converted_total_amount, 0), 2);
+        return round(max((float) $this->total_amount - (float) $this->cash_converted_total_amount, 0), 3);
     }
 
     public function cashConvertibleTotal(): float
     {
-        return round(max((float) $this->total_amount - (float) $this->cgst_amount - (float) $this->sgst_amount - (float) $this->igst_amount, 0), 2);
+        return round(max((float) $this->total_amount - (float) $this->cgst_amount - (float) $this->sgst_amount - (float) $this->igst_amount, 0), 3);
     }
 
     public function cashConvertibleRemaining(): float
     {
-        return round(max($this->cashConvertibleTotal() - (float) $this->cash_converted_base_amount, 0), 2);
+        return round(max($this->cashConvertibleTotal() - (float) $this->cash_converted_base_amount, 0), 3);
     }
 
     /** All monetary claims/credits continuing a baseline PI, each exactly once. */
@@ -151,6 +174,12 @@ class SalesInvoice extends Model
         return $this->hasMany(CashflowEntry::class)->orderBy('entry_date');
     }
 
+    /** The GST-network registration of this invoice, once it exists. */
+    public function eInvoice()
+    {
+        return $this->hasOne(SalesInvoiceEInvoice::class, 'sales_invoice_id');
+    }
+
     public function cashflowAllocations()
     {
         return $this->hasMany(CashflowAllocation::class, 'sales_invoice_id')->orderBy('id');
@@ -167,6 +196,46 @@ class SalesInvoice extends Model
         return $this->hasMany(SalesInvoiceReminder::class)
             ->orderByDesc('reminded_at')
             ->orderByDesc('id');
+    }
+
+    /** Every e-mail that went (or tried to go) to the client, newest first. */
+    public function sends()
+    {
+        return $this->hasMany(SalesInvoiceSend::class)->orderByDesc('sent_at')->orderByDesc('id');
+    }
+
+    /** The words the compose dialog opens with — a polite first send, not a chase. */
+    public function emailMessage(): string
+    {
+        $currency = fn (float $amount) => CommonHelper::amount($amount, $this->currency);
+
+        $lines = ['Dear '.($this->client_contact_name ?: $this->client_company_name ?: 'Sir/Madam').',', ''];
+        $lines[] = 'Please find invoice '.$this->invoice_number
+            .($this->invoice_date ? ' dated '.$this->invoice_date->format('d M Y') : '')
+            .' for '.$currency($this->receivableTotal())
+            .($this->due_date ? ', payable by '.$this->due_date->format('d M Y') : '').'.';
+        $lines[] = '';
+        $lines[] = 'Do come back to us if any line in it needs a query resolved.';
+        $lines[] = '';
+        $lines[] = trim(implode(' · ', array_filter([
+            $this->seller_company_name,
+            $this->seller_mobile,
+        ]))) ?: 'Thank you.';
+
+        return implode("\n", $lines);
+    }
+
+    /** The compose dialog's defaults: To is the snapshot on the invoice, else the accounts desk on the client card. */
+    public function emailDefaults(): array
+    {
+        $to = $this->client_email ?: optional($this->client)->account_person_email;
+
+        return [
+            'to' => (string) ($to ?: ''),
+            'subject' => 'Invoice '.$this->invoice_number
+                .($this->seller_company_name ? ' from '.$this->seller_company_name : ''),
+            'message' => $this->emailMessage(),
+        ];
     }
 
     public function publicAttachments()
@@ -261,6 +330,68 @@ class SalesInvoice extends Model
         .' + (select coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.sales_invoice_id = sales_invoices.id))';
 
     /**
+     * Corrections against a tax invoice — credits lower what the client owes,
+     * debits raise it; cancelled notes stop applying. Lists and tiles use
+     * these strings; a single invoice uses payableTotal(). One spelling of
+     * one rule, same as RECEIVED_SQL.
+     */
+    public const CREDIT_NOTES_SQL = "(select coalesce(sum(sales_invoice_notes.total), 0) from sales_invoice_notes where sales_invoice_notes.sales_invoice_id = sales_invoices.id and sales_invoice_notes.kind = 'credit' and sales_invoice_notes.status = 'issued')";
+    public const DEBIT_NOTES_SQL = "(select coalesce(sum(sales_invoice_notes.total), 0) from sales_invoice_notes where sales_invoice_notes.sales_invoice_id = sales_invoices.id and sales_invoice_notes.kind = 'debit' and sales_invoice_notes.status = 'issued')";
+
+    /* NOT `notes` — the invoice's own printable notes column bears that
+       name and an attribute beats a relation on read. The corrections are the
+       invoice's adjustments. */
+    public function adjustments()
+    {
+        return $this->hasMany(SalesInvoiceNote::class, 'sales_invoice_id')->latest('id');
+    }
+
+    /**
+     * Does this database even know corrections? Probed once at the places that
+     * build or load (controllers, pickers, summaries — never per row), so a
+     * ledger page's query pattern is exactly one number per figure.
+     */
+    public static function notesTableExists(): bool
+    {
+        return \Illuminate\Support\Facades\Schema::hasTable('sales_invoice_notes');
+    }
+
+    /**
+     * The live corrections, cheapest first. A loaded relation is free; an old
+     * database that predates the table gets the empty set; anything else pays
+     * one read, on the single-record paths where relations are not loaded.
+     */
+    public function liveNotes()
+    {
+        if ($this->relationLoaded('adjustments')) {
+            return $this->adjustments->where('status', SalesInvoiceNote::STATUS_ISSUED);
+        }
+
+        if (! static::notesTableExists()) {
+            return collect();
+        }
+
+        return $this->adjustments()->where('status', SalesInvoiceNote::STATUS_ISSUED)->get();
+    }
+
+    public function creditedTotal(): float
+    {
+        return round((float) $this->liveNotes()->where('kind', SalesInvoiceNote::KIND_CREDIT)->sum('total'), 3);
+    }
+
+    public function debitedTotal(): float
+    {
+        return round((float) $this->liveNotes()->where('kind', SalesInvoiceNote::KIND_DEBIT)->sum('total'), 3);
+    }
+
+    /** What the document is worth after its corrections — what the client owes. */
+    public function payableTotal(): float
+    {
+        return round(max($this->receivableTotal() - $this->creditedTotal() + $this->debitedTotal(), 0), 3);
+    }
+
+
+    /**
      * The receipts filed against this invoice in the ledger.
      *
      * Three ways in, cheapest first: a loaded relation (one query for a page of
@@ -272,7 +403,7 @@ class SalesInvoice extends Model
         if ($this->relationLoaded('payments')) {
             return round((float) $this->payments->sum(
                 fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount
-            ) + $this->allocatedReceived(), 2);
+            ) + $this->allocatedReceived(), 3);
         }
 
         if (array_key_exists('received_credit', $this->attributes) || array_key_exists('received_debit', $this->attributes)) {
@@ -280,7 +411,7 @@ class SalesInvoice extends Model
                 (float) ($this->attributes['received_credit'] ?? 0)
                     - (float) ($this->attributes['received_debit'] ?? 0)
                     + $this->allocatedReceived(),
-                2
+                3
             );
         }
 
@@ -291,7 +422,7 @@ class SalesInvoice extends Model
         return round((float) ($this->payments()
             ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
-            ->first()?->received ?? 0) + $this->allocatedReceived(), 2);
+            ->first()?->received ?? 0) + $this->allocatedReceived(), 3);
     }
 
     /**
@@ -306,7 +437,7 @@ class SalesInvoice extends Model
     {
         $attribute = $finalizedOnly ? 'client_portal_allocation_received' : 'allocation_received';
         if (array_key_exists($attribute, $this->attributes)) {
-            return round((float) ($this->attributes[$attribute] ?? 0), 2);
+            return round((float) ($this->attributes[$attribute] ?? 0), 3);
         }
         if (! $this->exists || ! Schema::hasTable('cashflow_allocations')) {
             return 0.0;
@@ -319,13 +450,13 @@ class SalesInvoice extends Model
             ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) as total")
             ->first()?->total;
 
-        return round((float) ($total ?? 0), 2);
+        return round((float) ($total ?? 0), 3);
     }
 
     /** Everything received: the invoice's opening figure plus the ledger's receipts. */
     public function receivedAmount(): float
     {
-        return round((float) $this->amount_paid + $this->ledgerReceived(), 2);
+        return round((float) $this->amount_paid + $this->ledgerReceived(), 3);
     }
 
     /** Client-safe received amount: the opening figure plus finalized receipts only. */
@@ -336,7 +467,7 @@ class SalesInvoice extends Model
                 ->whereIn('accounting_status', ['booked', 'reconciled'])
                 ->sum(fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount);
 
-            return round((float) $this->amount_paid + (float) $ledger + $this->allocatedReceived(true), 2);
+            return round((float) $this->amount_paid + (float) $ledger + $this->allocatedReceived(true), 3);
         }
 
         if (array_key_exists('client_portal_received_credit', $this->attributes)
@@ -346,7 +477,7 @@ class SalesInvoice extends Model
                     + (float) ($this->attributes['client_portal_received_credit'] ?? 0)
                     - (float) ($this->attributes['client_portal_received_debit'] ?? 0)
                     + $this->allocatedReceived(true),
-                2
+                3
             );
         }
 
@@ -360,7 +491,7 @@ class SalesInvoice extends Model
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
             ->first()?->received;
 
-        return round((float) $this->amount_paid + (float) ($ledger ?? 0) + $this->allocatedReceived(true), 2);
+        return round((float) $this->amount_paid + (float) ($ledger ?? 0) + $this->allocatedReceived(true), 3);
     }
 
     public function clientPortalBalanceDue(): float
@@ -369,7 +500,7 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max($this->receivableTotal() - $this->clientPortalReceivedAmount(), 0), 2);
+        return round(max($this->receivableTotal() - $this->clientPortalReceivedAmount(), 0), 3);
     }
 
     public function clientPortalStateKey(?\DateTimeInterface $today = null): string
@@ -383,16 +514,16 @@ class SalesInvoice extends Model
         if ($this->status === 'draft') {
             return 'draft';
         }
-        if ($this->due_date && $this->clientPortalBalanceDue() > 0.01
+        if ($this->due_date && $this->clientPortalBalanceDue() >= 0.001
             && $this->due_date->lt($today ?: Carbon::today())) {
             return 'overdue';
         }
 
         $received = $this->clientPortalReceivedAmount();
-        if ($this->receivableTotal() > 0 && $received >= $this->receivableTotal() - 0.01) {
+        if ($this->receivableTotal() > 0 && $received >= $this->receivableTotal() - 0.0005) {
             return 'paid';
         }
-        if ($received > 0.01) {
+        if ($received >= 0.001) {
             return 'partial';
         }
 
@@ -426,25 +557,30 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max($this->receivableTotal() - $this->receivedAmount(), 0), 2);
+        return round(max($this->payableTotal() - $this->receivedAmount(), 0), 3);
     }
 
     public function advanceAmount(): float
     {
-        return round(max($this->receivedAmount() - $this->receivableTotal(), 0), 2);
+        return round(max($this->receivedAmount() - $this->payableTotal(), 0), 3);
     }
 
     /** unpaid | partial | paid — read from the money, never from a stored word. */
     public function paymentState(): string
     {
-        $total = $this->receivableTotal();
+        /* After a credit note the client owes less; "paid" must be measured
+           against the note-adjusted figure or a fully credited invoice could
+           chase money nobody owes. */
+        $total = $this->payableTotal();
         $received = $this->receivedAmount();
 
-        if ($total > 0 && $received >= $total - 0.01) {
+        /* A document credited down to zero has nothing left to collect, and
+           anything already received shows as an advance — not as still owed. */
+        if ($total < 0.001 || $received >= $total - 0.0005) {
             return 'paid';
         }
 
-        return $received > 0.01 ? 'partial' : 'unpaid';
+        return $received >= 0.001 ? 'partial' : 'unpaid';
     }
 
     /**
@@ -460,7 +596,7 @@ class SalesInvoice extends Model
             return false;
         }
 
-        return $this->balanceDue() > 0.01
+        return $this->balanceDue() >= 0.001
             && $this->due_date->lt($today ?: Carbon::today());
     }
 
@@ -698,7 +834,7 @@ class SalesInvoice extends Model
             .($this->invoice_date ? ' dated '.$this->invoice_date->format('d M Y') : '')
             .' for '.$currency($this->receivableTotal()).'.';
 
-        if ($balance > 0.01) {
+        if ($balance >= 0.001) {
             $lines[] = $currency($balance).' is still outstanding'
                 .($this->due_date
                     ? ($this->isOverdue($today)
@@ -712,7 +848,7 @@ class SalesInvoice extends Model
 
         if ($this->show_client_portal && $this->public_token) {
             $lines[] = '';
-            $lines[] = 'View the invoice here: '.route('sales-invoices.public', $this->public_token);
+            $lines[] = 'View the invoice here: '.\App\Services\PublicShareLinks::url($this);
         }
 
         $lines[] = '';
