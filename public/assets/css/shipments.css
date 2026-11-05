@@ -1816,6 +1816,69 @@
 
 /* ---------------- status, type and label chips ---------------- */
 
+/* Keep the common update beside the visible status instead of hiding it in
+   the row menu. The same shared button remains a comfortable phone target. */
+.ship-index .ship-status-control {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.ship-index .ship-status-update {
+    min-height: 32px;
+    padding: 5px 9px;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.ship-list-status-modal .master-modal-subtitle {
+    overflow-wrap: anywhere;
+}
+
+.ship-list-status-current {
+    margin: 0 0 16px;
+    color: var(--mc-text-2);
+    font-size: 13px;
+}
+
+.ship-list-status-current strong {
+    color: var(--mc-text);
+}
+
+.ship-list-status-modal [data-list-status-errors] ul {
+    margin: 6px 0 0;
+    padding-left: 20px;
+}
+
+.ship-list-status-options {
+    display: grid;
+    gap: 10px;
+}
+
+.ship-list-status-modal .ship-list-status-tracking {
+    margin-right: auto;
+}
+
+@media (max-width: 767px) {
+    /* Stacked cards should use the phone width, not the desktop table's
+       1280px minimum, or the status action sits on an oversized card. */
+    .ship-index .master-table {
+        min-width: 0;
+    }
+
+    .ship-index .ship-status-update,
+    .ship-list-status-options .master-check {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ship-list-status-modal .ship-list-status-tracking {
+        margin-right: 0;
+    }
+}
+
 .ship-index .ship-status,
 .ship-index .ship-type {
     display: inline-flex;

@@ -1028,6 +1028,23 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 
 **Evidence:** `tests/Integration/ShipmentDetailTabsCommentsTest.php#test_migration_refuses_to_drop_comments_or_files_and_an_empty_rollback_leaves_the_record_usable`; `tests/Database/MySqlShipmentCommentsTest.php#test_native_schema_foreign_keys_private_files_and_lossy_rollback_guard`; `tests/Database/MySqlShipmentCommentsTest.php#test_comment_upload_waiting_for_shipment_deletion_cannot_store_a_file_or_orphan_a_comment`; `tests/Database/MySqlShipmentCommentsTest.php#test_shipment_deletion_waits_for_a_committing_comment_and_cleans_its_new_file`
 
+### IT-SHIP-014 — Shipment status from the list preserves tracking, permissions and dispatch controls
+
+**Priority:** P0 · **Requirement:** REQ-SHIP; REQ-WORKFLOW; REQ-AUTH · **Implementation:** partial evidence
+
+- **Preconditions:** Two shipments, operations manager and reader, filtered list, disposable SQLite and strict MySQL
+- **Data:** Public and private tracking updates, notification choice, delivery date, hold without explanation, stale form and blocked project dispatch
+1. Open the selected shipment's update dialog and submit through its existing history route
+2. Try invalid, stale, filtered-off-page and unauthorized submissions
+3. Exercise delivery defaults, notification/visibility choices and project dispatch safeguards
+4. Race a list update against another locked status change
+
+**Expected:** The selected shipment and history update with the same events and gates as the detail route; filters and unsaved input survive errors; stale and unauthorized changes are refused.
+
+**Note:** The SQLite cases, one ordered MySQL interleaving, and the disposable desktop/mobile browser workflow were executed; they are not exhaustive coverage or a feature-wide test-first Red. See docs/testing/shipment-list-status.md.
+
+**Evidence:** `tests/Integration/ShipmentListStatusTest.php#test_listing_shows_a_status_action_for_managers_but_not_readers`; `tests/Integration/ShipmentListStatusTest.php#test_modal_updates_the_selected_shipment_through_existing_history_and_preserves_list_filters`; `tests/Integration/ShipmentListStatusTest.php#test_public_history_and_requested_client_notification_are_preserved`; `tests/Integration/ShipmentListStatusTest.php#test_a_tracking_note_without_a_status_change_does_not_emit_a_status_change`; `tests/Integration/ShipmentListStatusTest.php#test_delivery_defaults_keep_existing_dates_and_reject_dates_before_pickup`; `tests/Integration/ShipmentListStatusTest.php#test_failed_update_reopens_the_right_shipment_with_input_even_when_filtered_off_the_page`; `tests/Integration/ShipmentListStatusTest.php#test_array_valued_old_input_cannot_break_validation_recovery`; `tests/Integration/ShipmentListStatusTest.php#test_stale_status_is_refused_and_the_operator_can_review_the_latest_value`; `tests/Integration/ShipmentListStatusTest.php#test_project_dispatch_gates_still_block_a_list_status_change`; `tests/Integration/ShipmentListStatusTest.php#test_legacy_current_status_can_be_replaced_from_the_list`; `tests/Integration/ShipmentListStatusTest.php#test_existing_tracking_form_does_not_require_the_new_list_marker_or_status_token`; `tests/Database/MySqlShipmentListStatusTest.php#test_waiting_list_update_observes_a_newer_status_under_the_shipment_lock`
+
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
 Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`, `app/Services/SalesInvoiceAdjustment.php`, `app/Models/SalesInvoiceNote.php`, `app/Http/Controllers/SalesInvoiceNoteController.php`, `tests/Feature/InvoiceAdjustmentTest.php`.

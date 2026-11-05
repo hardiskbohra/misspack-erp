@@ -31,6 +31,118 @@
         document.body.classList.remove('master-modal-open');
     }
 
+    /* ---------------- List status update ---------------- */
+
+    function initListStatusModal() {
+        var modal = document.getElementById('shipmentStatusModal');
+        var master = window.MasterModal;
+        if (!modal || !master) return; // Each row link still opens Tracking without JS.
+
+        var form = modal.querySelector('[data-list-status-form]');
+        var status = form && form.querySelector('[name="status"]');
+        var date = form && form.querySelector('[name="drop_date"]');
+        var dateField = modal.querySelector('[data-list-delivery-date]');
+        var trackingLink = modal.querySelector('[data-list-status-tracking]');
+        var number = modal.querySelector('[data-shipment-status-number]');
+        var name = modal.querySelector('[data-shipment-status-name]');
+        var current = modal.querySelector('[data-shipment-current-label]');
+        var opener = null;
+        if (!form || !status || !date || !dateField || !trackingLink || !number || !name || !current) return;
+
+        function syncDeliveryDate() {
+            var delivered = status.value === 'delivered';
+            dateField.hidden = !delivered;
+            // A date typed for Delivered must not be posted after switching away.
+            date.disabled = !delivered;
+        }
+
+        function focusable() {
+            return Array.prototype.filter.call(modal.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            ), function (element) { return element.getClientRects().length > 0; });
+        }
+
+        function openStatusModal(showErrors) {
+            syncDeliveryDate();
+            master.open(modal);
+            var errors = showErrors && modal.querySelector('[data-list-status-errors]');
+            (errors || status).focus();
+        }
+
+        function closeStatusModal() {
+            master.close(modal);
+            if (opener && opener.isConnected && opener.getClientRects().length) {
+                opener.focus();
+            } else {
+                // The shipment may have disappeared from the filtered page.
+                var main = document.querySelector('main.page-content');
+                if (main) {
+                    if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+                    main.focus();
+                }
+            }
+        }
+
+        document.querySelectorAll('[data-shipment-status-open]').forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                // Preserve new-tab and other ordinary link behaviour.
+                if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                opener = link;
+                form.setAttribute('action', link.dataset.historyUrl);
+                form.querySelector('[name="_list_shipment_id"]').value = link.dataset.shipmentId;
+                form.querySelector('[name="_expected_status"]').value = link.dataset.currentStatus;
+                status.value = link.dataset.currentStatus;
+                if (status.selectedIndex < 0) status.value = '';
+                ['location', 'event_time', 'remarks', 'drop_date'].forEach(function (field) {
+                    form.querySelector('[name="' + field + '"]').value = '';
+                });
+                form.querySelector('[name="is_public"][type="checkbox"]').checked = true;
+                form.querySelector('[name="notify_client"][type="checkbox"]').checked = link.dataset.notifyClient === '1';
+                number.textContent = link.dataset.shipmentNumber || '';
+                name.textContent = link.dataset.shipmentName || '';
+                current.textContent = link.dataset.currentLabel || '';
+                trackingLink.href = link.href;
+                var oldErrors = modal.querySelector('[data-list-status-errors]');
+                if (oldErrors) oldErrors.remove();
+                openStatusModal(false);
+            });
+        });
+
+        status.addEventListener('change', syncDeliveryDate);
+        modal.querySelectorAll('[data-list-status-close]').forEach(function (button) {
+            button.addEventListener('click', closeStatusModal);
+        });
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) closeStatusModal();
+        });
+        modal.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                closeStatusModal();
+            } else if (event.key === 'Tab') {
+                var controls = focusable();
+                if (!controls.length) return;
+                var first = controls[0];
+                var last = controls[controls.length - 1];
+                if (event.shiftKey && (document.activeElement === first || controls.indexOf(document.activeElement) === -1)) {
+                    event.preventDefault(); last.focus();
+                } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+                    event.preventDefault(); first.focus();
+                }
+            }
+        });
+
+        if (modal.dataset.openOnLoad === 'true') {
+            var id = form.querySelector('[name="_list_shipment_id"]').value;
+            opener = Array.prototype.find.call(document.querySelectorAll('[data-shipment-status-open]'), function (link) {
+                return link.dataset.shipmentId === id;
+            }) || null;
+            openStatusModal(true);
+        }
+    }
+
     /* ---------------- Delivery receipt reconciliation ----------------
        A receipt is an equation, not a second opinion: what arrived is the
        sum of what was accepted, damaged and rejected, and what is short is
@@ -394,6 +506,9 @@
 
     function bindDeliveryDateDefault() {
         document.querySelectorAll('form').forEach(function (form) {
+            // The list form leaves this blank so an existing delivery date is
+            // not silently replaced; the server supplies a missing date.
+            if (form.hasAttribute('data-list-status-form')) return;
             var status = form.querySelector('select[name="status"]');
             var date = form.querySelector('input[name="drop_date"]');
             if (!status || !date) return;
@@ -840,6 +955,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', bindDeliveryDateDefault);
+    document.addEventListener('DOMContentLoaded', initListStatusModal);
     document.addEventListener('DOMContentLoaded', initShipmentIndexExtras);
     document.addEventListener('DOMContentLoaded', initCostModal);
     document.addEventListener('DOMContentLoaded', initPartyMemory);

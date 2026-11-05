@@ -2,6 +2,11 @@
 
 @section('page-title', 'Shipment Tracking')
 
+@if ($statusModalShipment)
+    {{-- This dialog contains the validation errors; avoid a second alert overlay. --}}
+    @section('inline-validation-errors', '1')
+@endif
+
 @section('page-actions')
     {{-- The page's primary action lives in the header, so it stays reachable
          however far the list scrolls. --}}
@@ -365,7 +370,21 @@
                                 @endif
                             </td>
                             <td data-label="Status">
-                                <span class="master-badge ship-status status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span>
+                                <div class="ship-status-control">
+                                    <span class="master-badge ship-status status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span>
+                                    @if (auth()->user()->hasPermission('operations.manage'))
+                                        <a class="master-btn master-btn-soft master-btn-sm ship-status-update"
+                                            href="{{ route('shipments.show', ['shipment' => $shipment, 'tab' => 'tracking']) }}"
+                                            data-shipment-status-open data-shipment-id="{{ $shipment->id }}"
+                                            data-shipment-number="{{ $shipment->shipment_number }}" data-shipment-name="{{ $shipment->identity_name }}"
+                                            data-current-status="{{ $shipment->status }}" data-current-label="{{ $shipment->statusLabel() }}"
+                                            data-notify-client="{{ $shipment->client_id && $shipment->show_client_portal ? '1' : '0' }}"
+                                            data-history-url="{{ route('shipments.history.store', $shipment) }}"
+                                            aria-label="Update status for {{ $shipment->shipment_number }}">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i> Update status
+                                        </a>
+                                    @endif
+                                </div>
                             </td>
                             <td data-label="Action">
                                 <div class="master-row-actions">
@@ -494,6 +513,10 @@
         <x-pagination :items="$shipments" />
 
     </div>
+
+    @if (auth()->user()->hasPermission('operations.manage'))
+        @include('shipments.partials.list-status-modal')
+    @endif
 
     <div class="master-modal" id="quickShipmentModal" aria-hidden="true">
         <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="quickShipmentTitle">

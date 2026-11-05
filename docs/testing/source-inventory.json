@@ -85,6 +85,12 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlShipmentListStatusTest.php",
+      "methods": [
+        "test_waiting_list_update_observes_a_newer_status_under_the_shipment_lock"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlStockReconciliationTest.php",
       "methods": [
         "test_native_foreign_keys_exact_decimal_and_populated_rollback_guard",
@@ -829,6 +835,22 @@
         "test_missing_and_wrong_comment_attachments_are_not_downloaded_and_deletion_rules_remain",
         "test_csrf_and_employee_office_boundary_protect_comment_mutations",
         "test_client_portal_and_printouts_never_reveal_internal_comment_or_files"
+      ]
+    },
+    {
+      "file": "tests/Integration/ShipmentListStatusTest.php",
+      "methods": [
+        "test_listing_shows_a_status_action_for_managers_but_not_readers",
+        "test_modal_updates_the_selected_shipment_through_existing_history_and_preserves_list_filters",
+        "test_public_history_and_requested_client_notification_are_preserved",
+        "test_a_tracking_note_without_a_status_change_does_not_emit_a_status_change",
+        "test_delivery_defaults_keep_existing_dates_and_reject_dates_before_pickup",
+        "test_failed_update_reopens_the_right_shipment_with_input_even_when_filtered_off_the_page",
+        "test_array_valued_old_input_cannot_break_validation_recovery",
+        "test_stale_status_is_refused_and_the_operator_can_review_the_latest_value",
+        "test_project_dispatch_gates_still_block_a_list_status_change",
+        "test_legacy_current_status_can_be_replaced_from_the_list",
+        "test_existing_tracking_form_does_not_require_the_new_list_marker_or_status_token"
       ]
     },
     {
@@ -1641,6 +1663,7 @@
     "tools/checks/responsive-check.cjs",
     "tools/checks/searchable-selects-browser.cjs",
     "tools/checks/settings-check.cjs",
+    "tools/checks/shipment-list-status-browser.cjs",
     "tools/checks/shipment-tabs-comments-browser.cjs",
     "tools/checks/sidebar-navigation-check.cjs",
     "tools/checks/sql-check.cjs",

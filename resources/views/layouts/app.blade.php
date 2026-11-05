@@ -300,7 +300,7 @@
                 MasterAlert.alert(@json(session('error')), { title: 'Error', type: 'error', danger: true });
             @endif
 
-            @if($errors->any())
+            @if($errors->any() && ! \Illuminate\Support\Facades\View::hasSection('inline-validation-errors'))
                 var validationErrors = @json($errors->all());
                 MasterAlert.alert('<ul>' + validationErrors.map(function (error) {
                     return '<li>' + escapeHtml(error) + '</li>';

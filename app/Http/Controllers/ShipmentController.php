@@ -122,6 +122,15 @@ class ShipmentController extends Controller
 
         $savedViews = app(SavedViews::class);
 
+        // Validation may return to a filtered page that no longer contains the
+        // submitted shipment. Reopen that exact record, not a different row.
+        $statusModalShipment = null;
+        $oldShipmentId = $request->session()->getOldInput('_list_shipment_id');
+        if ($request->session()->has('errors') && $request->session()->getOldInput('_list_status_modal') === '1'
+            && $request->user()->hasPermission('operations.manage') && is_scalar($oldShipmentId) && ctype_digit((string) $oldShipmentId)) {
+            $statusModalShipment = Shipment::find((int) $oldShipmentId);
+        }
+
         return view('shipments.index', [
             'shipments' => $shipments,
             'stats' => $stats,
@@ -133,6 +142,7 @@ class ShipmentController extends Controller
             'attention' => $attention,
             'attentionCounts' => $this->attentionCounts($request),
             'savedViews' => $savedViews->forUser(Auth::id(), 'shipments'),
+            'statusModalShipment' => $statusModalShipment,
             'documentTypes' => ShipmentDocuments::labels(),
             'search' => $search,
             'status' => $status,
@@ -410,6 +420,19 @@ class ShipmentController extends Controller
 
     public function storeHistory(Request $request, Shipment $shipment): RedirectResponse
     {
+        $expectedStatus = null;
+        if ($request->input('_list_status_modal') === '1') {
+            // The route-bound record, not an editable hidden field, determines
+            // which shipment is reopened when validation returns to the list.
+            $request->merge(['_list_shipment_id' => (string) $shipment->getKey()]);
+            $expectedStatus = $request->validate([
+                // A legacy status may no longer be in the current options;
+                // it still serves as a valid comparison token.
+                '_expected_status' => ['required', 'string', 'max:30'],
+            ])['_expected_status'];
+            $this->assertListStatusCurrent($shipment, $expectedStatus);
+        }
+
         $data = $this->validatedHistoryData($request);
 
         /* The delivery date belongs to the shipment, not to the history row, so
@@ -464,8 +487,14 @@ class ShipmentController extends Controller
         $oldStatus = $shipment->status;
         $notify = $request->boolean('notify_client', true);
 
-        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation) {
+        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation, $expectedStatus) {
             if ($dispatchTransition && $workflow) \App\Models\Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            if ($expectedStatus !== null) {
+                // A competing update may have committed after the first check.
+                // Keep the established project-before-shipment lock order.
+                $current = Shipment::whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+                $this->assertListStatusCurrent($current, $expectedStatus);
+            }
             if ($dispatchTransition && $workflow && $dispatchEvaluation) {
                 $authorization = app(ShipmentDispatchAuthorization::class);
                 $candidate = clone $shipment; $candidate->status = $data['status'];
@@ -497,6 +526,15 @@ class ShipmentController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    private function assertListStatusCurrent(Shipment $shipment, string $expectedStatus): void
+    {
+        if ($shipment->status !== $expectedStatus) {
+            throw ValidationException::withMessages([
+                'status' => 'This shipment status changed since you opened the form. Review the current status before saving again.',
+            ]);
+        }
     }
 
     /**
