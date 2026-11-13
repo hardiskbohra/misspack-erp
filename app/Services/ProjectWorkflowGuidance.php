@@ -94,7 +94,7 @@ class ProjectWorkflowGuidance
             ),
             'dispatch_balance' => $this->recipe(
                 'Record the complete pre-dispatch balance',
-                'Allocate inward receipts until the full required balance is covered, unless a manager accepts the current risk.',
+                'Allocate inward receipts until the required balance is covered. Shipment tracking may proceed with a warning; the payment remains due.',
                 'Record receipt', $commercial,
                 ['Record the receipt against the workflow invoice.', 'The ledger entry is linked to this project automatically.', 'Workflow recalculates the dispatch shortfall after saving.'],
                 'Invoice receipt', false, 'commercial', 'receipt'

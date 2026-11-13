@@ -1041,9 +1041,26 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 
 **Expected:** The selected shipment and history update with the same events and gates as the detail route; filters and unsaved input survive errors; stale and unauthorized changes are refused.
 
-**Note:** The SQLite cases, one ordered MySQL interleaving, and the disposable desktop/mobile browser workflow were executed; they are not exhaustive coverage or a feature-wide test-first Red. See docs/testing/shipment-list-status.md.
+**Note:** The SQLite cases, one ordered MySQL interleaving, and the disposable desktop/mobile browser workflow were executed before the subsequent payment-warning change; see docs/testing/shipment-list-status.md.
 
 **Evidence:** `tests/Integration/ShipmentListStatusTest.php#test_listing_shows_a_status_action_for_managers_but_not_readers`; `tests/Integration/ShipmentListStatusTest.php#test_modal_updates_the_selected_shipment_through_existing_history_and_preserves_list_filters`; `tests/Integration/ShipmentListStatusTest.php#test_public_history_and_requested_client_notification_are_preserved`; `tests/Integration/ShipmentListStatusTest.php#test_a_tracking_note_without_a_status_change_does_not_emit_a_status_change`; `tests/Integration/ShipmentListStatusTest.php#test_delivery_defaults_keep_existing_dates_and_reject_dates_before_pickup`; `tests/Integration/ShipmentListStatusTest.php#test_failed_update_reopens_the_right_shipment_with_input_even_when_filtered_off_the_page`; `tests/Integration/ShipmentListStatusTest.php#test_array_valued_old_input_cannot_break_validation_recovery`; `tests/Integration/ShipmentListStatusTest.php#test_stale_status_is_refused_and_the_operator_can_review_the_latest_value`; `tests/Integration/ShipmentListStatusTest.php#test_project_dispatch_gates_still_block_a_list_status_change`; `tests/Integration/ShipmentListStatusTest.php#test_legacy_current_status_can_be_replaced_from_the_list`; `tests/Integration/ShipmentListStatusTest.php#test_existing_tracking_form_does_not_require_the_new_list_marker_or_status_token`; `tests/Database/MySqlShipmentListStatusTest.php#test_waiting_list_update_observes_a_newer_status_under_the_shipment_lock`
+
+### IT-SHIP-015 — Shipment tracking treats Proforma balance as a warning without bypassing independent dispatch controls
+
+**Priority:** P0 · **Requirement:** REQ-SHIP; REQ-WORKFLOW; REQ-AUTH · **Implementation:** partial evidence
+
+- **Preconditions:** Unpaid project Proforma, shipment and disposable database; real packing, QC and documents or individually authorized overrides
+- **Data:** Paid and unpaid, missing and cancelled baseline, financial override, history edit/delete, invalid inputs and unauthorized reader
+1. Submit shipment status changes from the list, tracking detail and shipment edit
+2. Compare missing financial evidence with missing packing, QC, documents or sales approvals
+3. Edit or delete tracking history and verify that a derived dispatch status is separately authorized
+4. Review the flashed warning, saved financial facts and normal validation
+
+**Expected:** An otherwise authorized status change saves with a visible, non-blocking payment warning; failed financial facts and the actual balance remain unchanged, and unrelated dispatch controls still block.
+
+**Note:** Regression cases have not been executed; see docs/testing/shipment-payment-warning.md.
+
+**Evidence:** `tests/Integration/ShipmentPaymentWarningTest.php#test_list_pickup_is_saved_with_an_accessible_warning_and_preserves_the_unpaid_evaluation`; `tests/Integration/ShipmentPaymentWarningTest.php#test_tracking_detail_and_shipment_edit_both_save_with_a_warning`; `tests/Integration/ShipmentPaymentWarningTest.php#test_paid_balance_or_no_required_balance_does_not_produce_a_warning`; `tests/Integration/ShipmentPaymentWarningTest.php#test_missing_or_cancelled_baseline_warns_that_balance_cannot_be_verified`; `tests/Integration/ShipmentPaymentWarningTest.php#test_existing_financial_override_is_preserved_but_does_not_hide_the_unpaid_warning`; `tests/Integration/ShipmentPaymentWarningTest.php#test_legacy_evaluation_text_stays_immutable_but_current_workflow_no_longer_claims_dispatch_is_blocked`; `tests/Integration/ShipmentPaymentWarningTest.php#test_unpaid_balance_does_not_bypass_packing_qc_documents_or_sales_approvals`; `tests/Integration/ShipmentPaymentWarningTest.php#test_history_edit_and_delete_apply_dispatch_safeguards_and_advisory_payment`; `tests/Integration/ShipmentPaymentWarningTest.php#test_reassigning_a_planning_shipment_while_dispatching_uses_the_target_project_safeguards`; `tests/Integration/ShipmentPaymentWarningTest.php#test_warning_uses_invoice_currency_and_escapes_html_without_hiding_other_warnings`; `tests/Integration/ShipmentPaymentWarningTest.php#test_monetary_warning_details_respect_sales_or_project_view_access`; `tests/Integration/ShipmentPaymentWarningTest.php#test_revoked_financial_view_access_is_rechecked_before_rendering_the_warning`; `tests/Integration/ShipmentPaymentWarningTest.php#test_regular_validation_permissions_and_non_transition_behaviour_are_unchanged`; `tests/Database/MySqlShipmentPaymentWarningTest.php#test_waiting_dispatch_observes_payment_committed_under_the_project_lock`
 
 ## Proformas, cash invoices and tax invoices (`SALES`)
 

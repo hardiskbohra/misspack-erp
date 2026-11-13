@@ -1338,14 +1338,15 @@
       "level": "unit",
       "priority": "P0",
       "requirement": "REQ-SHIP",
-      "title": "Dispatch gate requires full financial balance",
+      "title": "Outstanding pre-dispatch balance remains a financial fact but is advisory for shipment tracking",
       "preconditions": "F-PRODUCTS and F-MONEY; partial shipments S1/S2; fake public upload disk",
       "test_data": "Invoice due 1 versus due 0",
       "steps": [
-        "Evaluate dispatch authorization"
+        "Evaluate the pre-dispatch balance and independently evaluate dispatch authorization"
       ],
-      "expected": "Outstanding balance blocks dispatch absent authorised recorded override.",
-      "automation": []
+      "expected": "Outstanding balance remains an unpassed financial evaluation and produces a warning, not a shipment-status blocker; packing, QC, documents and approval controls remain independent.",
+      "automation": [],
+      "notes": "Designed unit case; see IT-SHIP-015 for unexecuted full-schema regression coverage."
     },
     {
       "id": "UT-SHIP-002",
@@ -6251,7 +6252,42 @@
         "tests/Database/MySqlShipmentListStatusTest.php#test_waiting_list_update_observes_a_newer_status_under_the_shipment_lock"
       ],
       "evidence_scope": "partial",
-      "notes": "The SQLite cases, one ordered MySQL interleaving, and the disposable desktop/mobile browser workflow were executed; they are not exhaustive coverage or a feature-wide test-first Red. See docs/testing/shipment-list-status.md."
+      "notes": "The SQLite cases, one ordered MySQL interleaving, and the disposable desktop/mobile browser workflow were executed before the subsequent payment-warning change; see docs/testing/shipment-list-status.md."
+    },
+    {
+      "id": "IT-SHIP-015",
+      "module": "SHIP",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SHIP; REQ-WORKFLOW; REQ-AUTH",
+      "title": "Shipment tracking treats Proforma balance as a warning without bypassing independent dispatch controls",
+      "preconditions": "Unpaid project Proforma, shipment and disposable database; real packing, QC and documents or individually authorized overrides",
+      "test_data": "Paid and unpaid, missing and cancelled baseline, financial override, history edit/delete, invalid inputs and unauthorized reader",
+      "steps": [
+        "Submit shipment status changes from the list, tracking detail and shipment edit",
+        "Compare missing financial evidence with missing packing, QC, documents or sales approvals",
+        "Edit or delete tracking history and verify that a derived dispatch status is separately authorized",
+        "Review the flashed warning, saved financial facts and normal validation"
+      ],
+      "expected": "An otherwise authorized status change saves with a visible, non-blocking payment warning; failed financial facts and the actual balance remain unchanged, and unrelated dispatch controls still block.",
+      "automation": [
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_list_pickup_is_saved_with_an_accessible_warning_and_preserves_the_unpaid_evaluation",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_tracking_detail_and_shipment_edit_both_save_with_a_warning",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_paid_balance_or_no_required_balance_does_not_produce_a_warning",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_missing_or_cancelled_baseline_warns_that_balance_cannot_be_verified",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_existing_financial_override_is_preserved_but_does_not_hide_the_unpaid_warning",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_legacy_evaluation_text_stays_immutable_but_current_workflow_no_longer_claims_dispatch_is_blocked",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_unpaid_balance_does_not_bypass_packing_qc_documents_or_sales_approvals",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_history_edit_and_delete_apply_dispatch_safeguards_and_advisory_payment",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_reassigning_a_planning_shipment_while_dispatching_uses_the_target_project_safeguards",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_warning_uses_invoice_currency_and_escapes_html_without_hiding_other_warnings",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_monetary_warning_details_respect_sales_or_project_view_access",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_revoked_financial_view_access_is_rechecked_before_rendering_the_warning",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_regular_validation_permissions_and_non_transition_behaviour_are_unchanged",
+        "tests/Database/MySqlShipmentPaymentWarningTest.php#test_waiting_dispatch_observes_payment_committed_under_the_project_lock"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Regression cases have not been executed; see docs/testing/shipment-payment-warning.md."
     },
     {
       "module": "STOCK",

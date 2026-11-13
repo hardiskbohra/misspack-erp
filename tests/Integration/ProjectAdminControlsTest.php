@@ -425,15 +425,16 @@ class ProjectAdminControlsTest extends TestCase
         $history = route('shipments.history.store', $shipment);
         $data = ['status' => 'picked_up', 'remarks' => 'Pickup for the project', 'notify_client' => false];
         $this->from('/shipments/'.$shipment->id)->post($history, $data)->assertSessionHasErrors('status');
-        $this->bypass($this->step('dispatch_balance'))->assertRedirect()->assertSessionHasNoErrors();
-        $this->post($history, $data)->assertSessionHasErrors('status');
+        $this->assertStringContainsString('Packaging List', session('errors')->first('status'));
         $this->bypass($this->step('dispatch_approved'))->assertRedirect()->assertSessionHasNoErrors();
         $item->update(['quantity' => 3]);
         $this->post($history, $data)->assertSessionHasErrors('status');
         $this->assertSame('planning', $shipment->fresh()->status);
         $this->bypass($this->step('dispatch_approved'))->assertRedirect()->assertSessionHasNoErrors();
-        $this->post($history, $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->post($history, $data)->assertRedirect()->assertSessionHasNoErrors()
+            ->assertSessionHas('shipment_balance_warning');
         $this->assertSame('picked_up', $shipment->fresh()->status);
+        $this->assertSame('blocked', $this->project->workflow->evaluations()->where('gate_key', 'dispatch_balance')->latest('id')->firstOrFail()->result);
         $this->assertSame(0, $this->project->qualityInspections()->count());
         $this->assertSame(0, $this->project->approvalRequests()->count());
     }

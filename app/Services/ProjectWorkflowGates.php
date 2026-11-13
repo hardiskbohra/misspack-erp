@@ -87,10 +87,10 @@ class ProjectWorkflowGates
                 'shortfall' => round(max($balanceRequired - $received, 0), 3),
                 'tolerance' => $tolerance,
             ], $dispatchPassed ? 'passed' : 'blocked', ! $invoiceUsable
-                ? ($baseline ? 'Dispatch cannot use a cancelled baseline Proforma or tax invoice.' : 'Dispatch balance cannot be evaluated until a baseline Proforma is selected.')
+                ? 'Pre-dispatch balance cannot be verified without a valid project Proforma. Shipment tracking may continue; please review it with Accounts.'
                 : ($dispatchPassed
                     ? ($requiresBalance ? 'Complete pre-dispatch balance has been received.' : 'The baseline Proforma does not require a pre-dispatch balance.')
-                    : 'Dispatch is blocked by an outstanding balance of '.\App\Helpers\CommonHelper::decimal(max($balanceRequired - $received, 0)).'.'), $userId);
+                    : 'Pre-dispatch balance is outstanding by '.\App\Helpers\CommonHelper::decimal(max($balanceRequired - $received, 0)).'. Shipment tracking may continue; the balance remains due.'), $userId);
 
             foreach ($evaluations as $evaluation) {
                 $this->applyToStep($evaluation);
@@ -115,8 +115,8 @@ class ProjectWorkflowGates
         $passed = $evaluation->result === 'passed';
         $step->update([
             'status' => $passed ? 'completed' : ($overridden ? 'skipped' : 'blocked'),
-            'blocked_reason' => $passed || $overridden ? null : $evaluation->summary,
-            'notes' => $overridden ? 'Gate continued under manager override #'.$evaluation->activeOverride->id.'.' : $evaluation->summary,
+            'blocked_reason' => $passed || $overridden ? null : $evaluation->displaySummary(),
+            'notes' => $overridden ? 'Gate continued under manager override #'.$evaluation->activeOverride->id.'.' : $evaluation->displaySummary(),
             'actual_started_at' => $step->actual_started_at ?: now(),
             'completed_at' => $passed || $overridden ? now() : null,
             'completed_by' => $overridden ? $evaluation->activeOverride->approved_by : ($passed ? ($evaluation->evaluated_by ?: Auth::id()) : null),

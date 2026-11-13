@@ -148,7 +148,7 @@ class ProjectWorkflowMatrix
             'owner' => $step->owner?->name,
             'due_date' => $step->planned_end_date?->format('Y-m-d'),
             'blocked_reason' => $step->blocked_reason,
-            'summary' => $evaluation?->summary,
+            'summary' => $evaluation?->displaySummary(),
             'evaluated_at' => $evaluation?->evaluated_at?->format('d M, H:i'),
             'fingerprint' => $evaluation?->content_hash,
             'metric' => $metric,

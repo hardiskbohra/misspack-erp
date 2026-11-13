@@ -9,6 +9,8 @@ use App\Models\SalesInvoice;
 use App\Models\SavedView;
 use App\Models\Project;
 use App\Models\ProjectProduct;
+use App\Models\ProjectWorkflow;
+use App\Helpers\CommonHelper;
 use App\Helpers\DateRanges;
 use App\Models\Shipment;
 use App\Models\ShipmentAttachment;
@@ -23,6 +25,7 @@ use App\Services\ShipmentCommentFiles;
 use App\Services\ShipmentDocuments;
 use App\Services\ShipmentDispatchAuthorization;
 use App\Services\ShipmentPartyDirectory;
+use App\Services\ProjectWorkflowGates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -321,11 +324,17 @@ class ShipmentController extends Controller
 
         $dispatchTransition = $shipment->status === Shipment::STATUS_PLANNING
             && in_array($data['status'], Shipment::dispatchedStatuses(), true);
-        $workflow = $shipment->project?->workflow;
+        $authorizationCandidate = clone $shipment;
+        $authorizationCandidate->status = $data['status'];
+        if (array_key_exists('project_id', $data)) {
+            $authorizationCandidate->project_id = $data['project_id'];
+            $authorizationCandidate->unsetRelation('project');
+        }
+        // If the project is changed in this same edit, its own evidence and
+        // financial facts apply, not the previous project's cached relation.
+        $workflow = $authorizationCandidate->project?->workflow;
         $evaluation = null;
         if ($dispatchTransition && $workflow) {
-            $authorizationCandidate = clone $shipment;
-            $authorizationCandidate->status = $data['status'];
             $authorization = app(ShipmentDispatchAuthorization::class);
             $evaluationRows = $replaceItems ? $items : $authorization->rowsFromShipment($shipment);
             $evaluation = $authorization->evaluate($authorizationCandidate, $workflow, $evaluationRows, Auth::id());
@@ -338,8 +347,9 @@ class ShipmentController extends Controller
         }
 
         $oldStatus = $shipment->status;
+        $balanceWarning = null;
 
-        DB::transaction(function () use ($request, $shipment, $data, $items, $replaceItems, $oldStatus, $dispatchTransition, $workflow, $evaluation) {
+        DB::transaction(function () use ($request, $shipment, $data, $items, $replaceItems, $oldStatus, $dispatchTransition, $workflow, $evaluation, &$balanceWarning) {
             if ($dispatchTransition && $workflow) \App\Models\Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
             $data['show_client_portal'] = $request->boolean('show_client_portal');
             $shipment->update($data);
@@ -353,6 +363,7 @@ class ShipmentController extends Controller
                 if (! hash_equals((string)$evaluation->content_hash, $lockedHash)) {
                     throw ValidationException::withMessages(['status' => 'Linked Packaging List details changed while dispatch was being authorized. Review the current packing evidence and retry.']);
                 }
+                $balanceWarning = $this->dispatchBalanceWarning($shipment, $workflow);
             }
             $this->storePhotoAttachments($request, $shipment, $request->boolean('is_public'));
 
@@ -384,7 +395,7 @@ class ShipmentController extends Controller
             }
         }
 
-        return $redirect;
+        return $this->withBalanceWarning($redirect, $balanceWarning);
     }
 
     public function destroy(Shipment $shipment): RedirectResponse
@@ -486,8 +497,9 @@ class ShipmentController extends Controller
 
         $oldStatus = $shipment->status;
         $notify = $request->boolean('notify_client', true);
+        $balanceWarning = null;
 
-        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation, $expectedStatus) {
+        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation, $expectedStatus, &$balanceWarning) {
             if ($dispatchTransition && $workflow) \App\Models\Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
             if ($expectedStatus !== null) {
                 // A competing update may have committed after the first check.
@@ -503,6 +515,7 @@ class ShipmentController extends Controller
                 if (! hash_equals((string)$dispatchEvaluation->content_hash, $lockedHash)) {
                     throw ValidationException::withMessages(['status' => 'Linked Packaging List details changed while dispatch was being authorized. Review the current packing evidence and retry.']);
                 }
+                $balanceWarning = $this->dispatchBalanceWarning($shipment, $workflow);
             }
             $shipment->histories()->create($data);
             $shipment->update($attributes);
@@ -525,7 +538,7 @@ class ShipmentController extends Controller
                 .' because none was given — edit the shipment to correct it.';
         }
 
-        return back()->with('success', $message);
+        return $this->withBalanceWarning(back()->with('success', $message), $balanceWarning);
     }
 
     private function assertListStatusCurrent(Shipment $shipment, string $expectedStatus): void
@@ -552,28 +565,61 @@ class ShipmentController extends Controller
             return;
         }
 
-        if ($shipment->status === Shipment::STATUS_PLANNING
-            && in_array($status, Shipment::dispatchedStatuses(), true)
-            && $shipment->project_id) {
-            $workflow = \App\Models\ProjectWorkflow::query()->where('project_id', $shipment->project_id)->first();
-            if ($workflow) {
-                $evaluations = app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
-                $dispatchGate = collect($evaluations)->firstWhere('gate_key', \App\Services\ProjectWorkflowGates::GATE_DISPATCH_BALANCE);
-                $dispatchGate?->loadMissing('activeOverride');
-                if (! $dispatchGate || ! in_array($dispatchGate->effectiveResult(), ['passed', 'overridden'], true)) {
-                    throw ValidationException::withMessages([
-                        'status' => 'Shipment pickup is blocked until the complete Proforma balance is received or a manager records a current workflow override.',
-                    ]);
-                }
-            }
-        }
-
         if (in_array($status, [Shipment::STATUS_CUSTOM_HOLD, Shipment::STATUS_DELAYED], true)
             && trim((string) ($context['remarks'] ?? '')) === '') {
             throw ValidationException::withMessages([
                 'remarks' => 'Add a remark explaining why the shipment is on hold or delayed.',
             ]);
         }
+    }
+
+    /**
+     * Capture a financial snapshot under the same project lock as the status
+     * write. Receipt writers do not all share that lock, so this is advice at
+     * evaluation time, not a reservation. A financial override never pays a debt.
+     *
+     * @return array{message: string, detail: ?string}|null
+     */
+    private function dispatchBalanceWarning(Shipment $shipment, ProjectWorkflow $workflow): ?array
+    {
+        $evaluations = app(ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
+        $balance = collect($evaluations)->firstWhere('gate_key', ProjectWorkflowGates::GATE_DISPATCH_BALANCE);
+        if ($balance?->result === 'passed') {
+            return null;
+        }
+
+        $canViewFinancials = Auth::user()?->hasPermission('sales.view') || Auth::user()?->hasPermission('projects.view');
+        if (! $balance || ! data_get($balance->details, 'invoice_usable', false)) {
+            $detail = ! $canViewFinancials ? null : (data_get($balance?->details, 'baseline_invoice_id')
+                ? 'The selected Proforma or its continuing tax invoice is cancelled or unavailable.'
+                : 'No project Proforma is selected.');
+
+            return ['message' => 'Shipment '.$shipment->shipment_number.' was saved, but its Proforma balance cannot be verified. Please review it with Accounts.',
+                'detail' => $detail];
+        }
+
+        // Operations staff can act on the warning without gaining access to
+        // invoice amounts that their sales/project permissions do not expose.
+        $detail = null;
+        if ($canViewFinancials) {
+            $currency = trim((string) $workflow->commercialInvoice()->value('currency'));
+            $shortfall = CommonHelper::decimal((float) data_get($balance->details, 'shortfall', 0));
+            $detail = 'Recorded shortfall: '.($currency !== '' ? $currency.' ' : '').$shortfall.'.';
+        }
+
+        return ['message' => 'Shipment '.$shipment->shipment_number.' was saved with an outstanding Proforma balance. Please follow up with Accounts; the amount remains due.',
+            'detail' => $detail];
+    }
+
+    /** @param array{message: string, detail: ?string}|null $warning */
+    private function withBalanceWarning(RedirectResponse $redirect, ?array $warning): RedirectResponse
+    {
+        if ($warning !== null) {
+            $redirect->with('shipment_balance_warning', $warning['message']);
+            if ($warning['detail'] !== null) $redirect->with('shipment_balance_warning_detail', $warning['detail']);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -607,23 +653,42 @@ class ShipmentController extends Controller
         $data['event_time'] = $data['event_time'] ?? $history->event_time ?? now();
         $data['is_public'] = $request->boolean('is_public');
 
-        DB::transaction(function () use ($history, $data) {
+        $balanceWarning = DB::transaction(function () use ($history, $data) {
+            $shipment = $this->lockHistoryShipment($history);
+            $history = ShipmentTrackingHistory::query()->whereKey($history->id)->lockForUpdate()->firstOrFail();
             $history->update($data);
-            $this->syncShipmentStatusFromLatestHistory($history->shipment);
+
+            return $this->syncShipmentStatusFromLatestHistory($shipment);
         });
 
-        return back()->with('success', 'Tracking history updated successfully.');
+        return $this->withBalanceWarning(back()->with('success', 'Tracking history updated successfully.'), $balanceWarning);
     }
 
     public function destroyHistory(ShipmentTrackingHistory $history): RedirectResponse
     {
-        DB::transaction(function () use ($history) {
-            $shipment = $history->shipment;
+        $balanceWarning = DB::transaction(function () use ($history) {
+            $shipment = $this->lockHistoryShipment($history);
+            $history = ShipmentTrackingHistory::query()->whereKey($history->id)->lockForUpdate()->firstOrFail();
             $history->delete();
-            $this->syncShipmentStatusFromLatestHistory($shipment);
+
+            return $this->syncShipmentStatusFromLatestHistory($shipment);
         });
 
-        return back()->with('success', 'Tracking history deleted successfully.');
+        return $this->withBalanceWarning(back()->with('success', 'Tracking history deleted successfully.'), $balanceWarning);
+    }
+
+    /** Follow the project-before-shipment lock order used by dispatch writes. */
+    private function lockHistoryShipment(ShipmentTrackingHistory $history): ?Shipment
+    {
+        $shipment = $history->shipment;
+        if (! $shipment) return null;
+        if ($shipment->project_id) Project::query()->whereKey($shipment->project_id)->lockForUpdate()->first();
+        $locked = Shipment::query()->whereKey($shipment->id)->lockForUpdate()->first();
+        if ($locked && (int) $locked->project_id !== (int) $shipment->project_id) {
+            throw ValidationException::withMessages(['status' => 'The shipment project changed. Refresh the tracking history and retry.']);
+        }
+
+        return $locked;
     }
 
     public function storeAttachment(Request $request, Shipment $shipment): RedirectResponse
@@ -714,23 +779,44 @@ class ShipmentController extends Controller
         }
     }
 
-    private function syncShipmentStatusFromLatestHistory(?Shipment $shipment): void
+    /** @return array{message: string, detail: ?string}|null */
+    private function syncShipmentStatusFromLatestHistory(?Shipment $shipment): ?array
     {
-        if (! $shipment) {
-            return;
-        }
+        if (! $shipment) return null;
 
         $latestHistory = $shipment->histories()->first();
+        if (! $latestHistory) return null;
 
-        if ($latestHistory) {
-            $this->assertStatusChangeAllowed($shipment, $latestHistory->status, ['remarks' => $latestHistory->remarks]);
-            /* the status is derived from history here, so the delivery default
-               has to follow it: a history edit can make the row delivered */
-            $shipment->update(Shipment::withDeliveryDefaults(
-                ['status' => $latestHistory->status],
-                $shipment
-            ));
+        $this->assertStatusChangeAllowed($shipment, $latestHistory->status, ['remarks' => $latestHistory->remarks]);
+        $balanceWarning = null;
+        if ($shipment->status === Shipment::STATUS_PLANNING
+            && in_array($latestHistory->status, Shipment::dispatchedStatuses(), true)
+            && ($workflow = $shipment->project?->workflow)) {
+            // History edits/deletions can derive a dispatch just like a new
+            // tracking entry. Do not let the advisory payment policy bypass
+            // the independent packing, QC, document and approval safeguards.
+            $authorization = app(ShipmentDispatchAuthorization::class);
+            $candidate = clone $shipment;
+            $candidate->status = $latestHistory->status;
+            $rows = $authorization->rowsFromShipment($shipment);
+            $evaluation = $authorization->evaluate($candidate, $workflow, $rows, Auth::id());
+            $evaluation->loadMissing('activeOverride');
+            if (! in_array($evaluation->effectiveResult(), ['passed', 'overridden'], true)) {
+                throw ValidationException::withMessages(['status' => $evaluation->summary.' Complete the named Packaging List or Project document action before dispatch.']);
+            }
+            $lockedDetails = $authorization->inspect($candidate, $workflow, $authorization->rowsFromShipment($shipment), true);
+            $lockedHash = hash('sha256', json_encode($lockedDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (! hash_equals((string) $evaluation->content_hash, $lockedHash)) {
+                throw ValidationException::withMessages(['status' => 'Linked Packaging List details changed while dispatch was being authorized. Review the current packing evidence and retry.']);
+            }
+            $balanceWarning = $this->dispatchBalanceWarning($shipment, $workflow);
         }
+
+        /* The status is derived from history here, so the delivery default
+           has to follow it: a history edit can make the row delivered. */
+        $shipment->update(Shipment::withDeliveryDefaults(['status' => $latestHistory->status], $shipment));
+
+        return $balanceWarning;
     }
 
     public function publicTrack(string $token): View

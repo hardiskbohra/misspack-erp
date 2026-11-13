@@ -261,6 +261,18 @@
         </header>
 
         <main class="page-content">
+            @if(session('shipment_balance_warning'))
+                <div class="shipment-balance-warning" role="status" aria-live="polite">
+                    <span class="shipment-balance-warning-icon" aria-hidden="true">!</span>
+                    <div>
+                        <strong>Proforma balance warning</strong>
+                        <p>{{ session('shipment_balance_warning') }}</p>
+                        @if(session('shipment_balance_warning_detail') && (auth()->user()?->hasPermission('sales.view') || auth()->user()?->hasPermission('projects.view')))
+                            <p>{{ session('shipment_balance_warning_detail') }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
             @yield('content')
         </main>
     </div>

@@ -91,6 +91,12 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlShipmentPaymentWarningTest.php",
+      "methods": [
+        "test_waiting_dispatch_observes_payment_committed_under_the_project_lock"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlStockReconciliationTest.php",
       "methods": [
         "test_native_foreign_keys_exact_decimal_and_populated_rollback_guard",
@@ -851,6 +857,24 @@
         "test_project_dispatch_gates_still_block_a_list_status_change",
         "test_legacy_current_status_can_be_replaced_from_the_list",
         "test_existing_tracking_form_does_not_require_the_new_list_marker_or_status_token"
+      ]
+    },
+    {
+      "file": "tests/Integration/ShipmentPaymentWarningTest.php",
+      "methods": [
+        "test_list_pickup_is_saved_with_an_accessible_warning_and_preserves_the_unpaid_evaluation",
+        "test_tracking_detail_and_shipment_edit_both_save_with_a_warning",
+        "test_paid_balance_or_no_required_balance_does_not_produce_a_warning",
+        "test_missing_or_cancelled_baseline_warns_that_balance_cannot_be_verified",
+        "test_existing_financial_override_is_preserved_but_does_not_hide_the_unpaid_warning",
+        "test_legacy_evaluation_text_stays_immutable_but_current_workflow_no_longer_claims_dispatch_is_blocked",
+        "test_unpaid_balance_does_not_bypass_packing_qc_documents_or_sales_approvals",
+        "test_history_edit_and_delete_apply_dispatch_safeguards_and_advisory_payment",
+        "test_reassigning_a_planning_shipment_while_dispatching_uses_the_target_project_safeguards",
+        "test_warning_uses_invoice_currency_and_escapes_html_without_hiding_other_warnings",
+        "test_monetary_warning_details_respect_sales_or_project_view_access",
+        "test_revoked_financial_view_access_is_rechecked_before_rendering_the_warning",
+        "test_regular_validation_permissions_and_non_transition_behaviour_are_unchanged"
       ]
     },
     {
@@ -1664,6 +1688,7 @@
     "tools/checks/searchable-selects-browser.cjs",
     "tools/checks/settings-check.cjs",
     "tools/checks/shipment-list-status-browser.cjs",
+    "tools/checks/shipment-payment-warning-browser.cjs",
     "tools/checks/shipment-tabs-comments-browser.cjs",
     "tools/checks/sidebar-navigation-check.cjs",
     "tools/checks/sql-check.cjs",

@@ -36,7 +36,7 @@ The coordinator explicitly selects the project's baseline Proforma Invoice. Prin
 - whether complete balance is required before dispatch;
 - payment tolerance.
 
-A project-level advance percentage overrides the baseline Proforma percentage. Receipts will be read from booked/reconciled Cashflow allocations. Complete pre-dispatch balance applies before the first shipment and is not prorated for a partial shipment.
+A project-level advance percentage overrides the baseline Proforma percentage. Receipts are read from booked/reconciled Cashflow allocations. The complete pre-dispatch balance is evaluated against the whole required amount, not prorated for a partial shipment. An outstanding or unverifiable balance warns rather than blocking an otherwise authorized shipment status change.
 
 ## Gates and overrides
 
@@ -58,7 +58,7 @@ The first foundation slice contains workflow instances, product/project steps, g
 
 ## Financial gate slice delivered
 
-Commercial baseline, production advance and complete pre-dispatch balance are calculated from the selected Proforma and finalized receipts. An unchanged set of facts reuses its immutable SHA-256 evaluation; changed terms, totals or receipts create a new current evaluation and leave earlier decisions in history. Moving a product into production enforces the current advance gate. Moving a shipment to Picked up enforces the complete-balance gate.
+Commercial baseline, production advance and complete pre-dispatch balance are calculated from the selected Proforma and finalized receipts. An unchanged set of facts reuses its immutable SHA-256 evaluation; changed terms, totals or receipts create a new current evaluation and leave earlier decisions in history. Moving a product into production enforces the current advance gate. When a shipment moves from Planning to a dispatched status, an unpaid or unverifiable pre-dispatch balance produces a visible warning without blocking that status change. The financial gate remains unresolved, and no payment or override is invented.
 
 Administrators can record or revoke manager overrides from the command centre. Each override remains attached to one exact evaluation, preserves its risk snapshot, reason, approver, time and expected resolution date, and makes the related workflow step explicitly `skipped` rather than pretending the underlying gate passed. When financial facts change, the prior override is stale and cannot release the new evaluation.
 
@@ -89,7 +89,7 @@ Shipment lines linked to a project must retain a direct `project_product_id`; sh
 
 A product's dispatched quantity is the sum of its directly linked lines on picked-up, in-transit, held, delayed, out-for-delivery and delivered shipments. Its delivered quantity counts only delivered shipments. Planning and cancelled shipments contribute nothing. Each immutable evaluation records shipment line identity, shipment number, status, quantity, pickup date and delivery date. Partial quantities remain blocked with an explicit balance; excess quantities remain visible as warnings rather than being silently discarded.
 
-Shipment creation, edits, tracking-status changes and deletion immediately recalculate readiness. Existing workflows are upgraded in place to version 2 of the same standard template, preserving their history while adding the two product steps. The project delivery reconciliation passes only when every active product is fully delivered or has a current manager override. Complete pre-dispatch financial balance remains mandatory before a project shipment can move from planning into any dispatched state.
+Shipment creation, edits, tracking-status changes and deletion immediately recalculate readiness. Existing workflows are upgraded in place to version 2 of the same standard template, preserving their history while adding the two product steps. The project delivery reconciliation passes only when every active product is fully delivered or has a current manager override. Pre-dispatch financial balance remains a tracked obligation and warning, while packing, QC, approval and paperwork authorization continue to block dispatch unless independently satisfied or explicitly overridden.
 
 ## Dispatch allocation and authorization delivered
 

@@ -451,15 +451,17 @@ Sources: `app/Http/Controllers/PackagingListController.php`, `app/Services/Packa
 
 Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`, `app/Services/PublicShareLinks.php`, `app/Http/Controllers/ShipmentCommentController.php`, `app/Services/ShipmentCommentFiles.php`.
 
-### UT-SHIP-001 — Dispatch gate requires full financial balance
+### UT-SHIP-001 — Outstanding pre-dispatch balance remains a financial fact but is advisory for shipment tracking
 
 **Priority:** P0 · **Requirement:** REQ-SHIP · **Implementation:** planned
 
 - **Preconditions:** F-PRODUCTS and F-MONEY; partial shipments S1/S2; fake public upload disk
 - **Data:** Invoice due 1 versus due 0
-1. Evaluate dispatch authorization
+1. Evaluate the pre-dispatch balance and independently evaluate dispatch authorization
 
-**Expected:** Outstanding balance blocks dispatch absent authorised recorded override.
+**Expected:** Outstanding balance remains an unpassed financial evaluation and produces a warning, not a shipment-status blocker; packing, QC, documents and approval controls remain independent.
+
+**Note:** Designed unit case; see IT-SHIP-015 for unexecuted full-schema regression coverage.
 
 ### UT-SHIP-002 — Partial delivery cannot exceed shipped balance
 
