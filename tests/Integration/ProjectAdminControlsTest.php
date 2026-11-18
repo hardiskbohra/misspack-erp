@@ -417,22 +417,22 @@ class ProjectAdminControlsTest extends TestCase
         $this->assertSame('planned', $this->product->fresh()->status);
     }
 
-    public function test_individual_dispatch_bypasses_enable_only_the_linked_shipment_with_matching_evidence(): void
+    public function test_dispatch_quantity_bypasses_remain_bound_to_matching_shipment_evidence(): void
     {
         $shipment = Shipment::create(['shipment_number' => 'ADMIN-SHIPMENT', 'identity_name' => 'Project cartons', 'project_id' => $this->project->id,
             'client_id' => $this->project->client_id, 'status' => 'planning', 'shipment_type' => 'domestic', 'shipment_mode' => 'courier', 'currency' => 'INR']);
-        $item = $shipment->items()->create(['project_product_id' => $this->product->id, 'product_name' => 'Carton', 'quantity' => 2, 'unit' => 'pcs']);
+        $item = $shipment->items()->create(['project_product_id' => $this->product->id, 'product_name' => 'Carton', 'quantity' => 11, 'unit' => 'pcs']);
         $history = route('shipments.history.store', $shipment);
         $data = ['status' => 'picked_up', 'remarks' => 'Pickup for the project', 'notify_client' => false];
         $this->from('/shipments/'.$shipment->id)->post($history, $data)->assertSessionHasErrors('status');
-        $this->assertStringContainsString('Packaging List', session('errors')->first('status'));
+        $this->assertStringContainsString('project product quantity', session('errors')->first('status'));
         $this->bypass($this->step('dispatch_approved'))->assertRedirect()->assertSessionHasNoErrors();
-        $item->update(['quantity' => 3]);
+        $item->update(['quantity' => 12]);
         $this->post($history, $data)->assertSessionHasErrors('status');
         $this->assertSame('planning', $shipment->fresh()->status);
         $this->bypass($this->step('dispatch_approved'))->assertRedirect()->assertSessionHasNoErrors();
         $this->post($history, $data)->assertRedirect()->assertSessionHasNoErrors()
-            ->assertSessionHas('shipment_balance_warning');
+            ->assertSessionHas('shipment_balance_warning')->assertSessionHas('shipment_readiness_warning');
         $this->assertSame('picked_up', $shipment->fresh()->status);
         $this->assertSame('blocked', $this->project->workflow->evaluations()->where('gate_key', 'dispatch_balance')->latest('id')->firstOrFail()->result);
         $this->assertSame(0, $this->project->qualityInspections()->count());

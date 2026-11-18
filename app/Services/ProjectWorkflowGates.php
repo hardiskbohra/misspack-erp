@@ -108,6 +108,7 @@ class ProjectWorkflowGates
             ->where('project_workflow_id', $evaluation->project_workflow_id)
             ->whereNull('project_product_id')
             ->where('step_key', $evaluation->gate_key)
+            ->when(DB::transactionLevel() > 0, fn ($query) => $query->lockForUpdate())
             ->first();
         if (! $step) return;
 

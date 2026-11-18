@@ -216,18 +216,16 @@ class ShipmentPaymentWarningTest extends TestCase
             ->assertSee('Shipment tracking may continue');
     }
 
-    public function test_unpaid_balance_does_not_bypass_packing_qc_documents_or_sales_approvals(): void
+    public function test_unpaid_balance_and_pending_sales_approvals_warn_separately_without_changing_facts(): void
     {
         $this->invoice->items()->create(['project_product_id' => $this->product->id, 'product_name' => 'Board', 'quantity' => 5]);
         $this->from(route('shipments.index'))->post(route('shipments.history.store', $this->shipment), $this->listPayload())
-            ->assertRedirect()->assertSessionHasErrors('status')->assertSessionMissing('shipment_balance_warning');
-        $message = session('errors')->first('status');
-        $this->assertStringContainsString('Packaging List', $message);
-        $this->assertStringContainsString('QC', $message);
-        $this->assertStringContainsString('dispatch documents', $message);
-        $this->assertStringContainsString('Artwork and PPS approvals', $message);
-        $this->assertSame('planning', $this->shipment->fresh()->status);
-        $this->assertSame(0, $this->shipment->histories()->count());
+            ->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('shipment_balance_warning')
+            ->assertSessionHas('shipment_readiness_warning', fn ($warning) => str_contains(implode(' ', $warning['issues']), 'Artwork and PPS approvals'));
+        $this->assertSame('picked_up', $this->shipment->fresh()->status);
+        $this->assertSame(1, $this->shipment->histories()->count());
+        $this->assertEquals(25, $this->invoice->fresh()->amount_paid);
+        $this->assertSame(0, $this->project->approvalRequests()->count());
         $this->assertDatabaseCount('project_gate_overrides', 0);
     }
 
@@ -237,36 +235,32 @@ class ShipmentPaymentWarningTest extends TestCase
         $newer = $this->shipment->histories()->create(['status' => 'planning', 'remarks' => 'Planning', 'event_time' => '2026-01-02 10:00:00']);
         $detail = route('shipments.show', ['shipment' => $this->shipment, 'tab' => 'tracking']);
         $this->from($detail)->put(route('shipments.history.update', $newer), ['status' => 'picked_up', 'remarks' => 'Pickup', 'event_time' => '2026-01-02 10:00:00'])
-            ->assertRedirect()->assertSessionHasErrors('status')->assertSessionMissing('shipment_balance_warning');
-        $this->assertSame('planning', $newer->fresh()->status);
-        $this->from($detail)->delete(route('shipments.history.destroy', $newer))
-            ->assertRedirect()->assertSessionHasErrors('status')->assertSessionMissing('shipment_balance_warning');
-        $this->assertNotNull($newer->fresh());
-        $this->assertSame('planning', $this->shipment->fresh()->status);
-
-        $this->prepareAuthorizedShipment();
-        $this->from($detail)->put(route('shipments.history.update', $newer), ['status' => 'picked_up', 'remarks' => 'Pickup', 'event_time' => '2026-01-02 10:00:00'])
-            ->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('shipment_balance_warning', fn ($warning) => $this->assertOutstandingWarning($warning));
+            ->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('shipment_readiness_warning')
+            ->assertSessionHas('shipment_balance_warning', fn ($warning) => $this->assertOutstandingWarning($warning));
+        $this->assertSame('picked_up', $newer->fresh()->status);
         $this->assertSame('picked_up', $this->shipment->fresh()->status);
         $this->shipment->refresh()->update(['status' => 'planning']);
         $this->from($detail)->delete(route('shipments.history.destroy', $newer))
-            ->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('shipment_balance_warning', fn ($warning) => $this->assertOutstandingWarning($warning));
+            ->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('shipment_readiness_warning')
+            ->assertSessionHas('shipment_balance_warning', fn ($warning) => $this->assertOutstandingWarning($warning));
         $this->assertNull($newer->fresh());
         $this->assertSame('picked_up', $older->fresh()->status);
         $this->assertSame('picked_up', $this->shipment->fresh()->status);
     }
 
-    public function test_reassigning_a_planning_shipment_while_dispatching_uses_the_target_project_safeguards(): void
+    public function test_reassigning_a_planning_shipment_while_dispatching_uses_the_target_project_warnings(): void
     {
+        // Release the fixture shipment's planned quantity before assigning it to another shipment.
+        $this->shipment->update(['status' => 'cancelled']);
         $unlinked = Shipment::create(['shipment_number' => 'WARN-UNLINKED', 'identity_name' => 'Unlinked delivery',
             'status' => 'planning', 'shipment_type' => 'domestic', 'currency' => 'INR', 'cost_borne_by' => 'misspack']);
         $payload = $this->editPayload(['shipment_number' => $unlinked->shipment_number, 'identity_name' => $unlinked->identity_name,
             'items' => [['project_product_id' => $this->product->id, 'product_name' => 'Board', 'quantity' => 5, 'unit' => 'pcs', 'currency' => 'INR']]]);
         $this->from(route('shipments.edit', $unlinked))->put(route('shipments.update', $unlinked), $payload)
-            ->assertRedirect()->assertSessionHasErrors('status')->assertSessionMissing('shipment_balance_warning');
-        $this->assertStringContainsString('Packaging List', session('errors')->first('status'));
-        $this->assertNull($unlinked->fresh()->project_id);
-        $this->assertSame('planning', $unlinked->fresh()->status);
+            ->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('shipment_readiness_warning')
+            ->assertSessionHas('shipment_balance_warning');
+        $this->assertSame($this->project->id, $unlinked->fresh()->project_id);
+        $this->assertSame('picked_up', $unlinked->fresh()->status);
     }
 
     public function test_warning_uses_invoice_currency_and_escapes_html_without_hiding_other_warnings(): void

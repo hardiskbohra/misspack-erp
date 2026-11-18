@@ -459,9 +459,9 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 - **Data:** Invoice due 1 versus due 0
 1. Evaluate the pre-dispatch balance and independently evaluate dispatch authorization
 
-**Expected:** Outstanding balance remains an unpassed financial evaluation and produces a warning, not a shipment-status blocker; packing, QC, documents and approval controls remain independent.
+**Expected:** Outstanding balance remains an unpassed financial evaluation and produces a warning. Missing packing, QC, artwork/PPS approvals and documents are separately advisory for tracking; product identity and valid-quantity controls remain independent.
 
-**Note:** Designed unit case; see IT-SHIP-015 for unexecuted full-schema regression coverage.
+**Note:** Designed unit case; full-schema payment regressions passed in the later readiness-warning verification (IT-SHIP-015), not as isolated unit coverage.
 
 ### UT-SHIP-002 — Partial delivery cannot exceed shipped balance
 

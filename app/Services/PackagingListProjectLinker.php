@@ -14,15 +14,23 @@ class PackagingListProjectLinker
      * Attach unlinked packing rows to a project product only when the identity is unambiguous.
      * Existing explicit links are never changed.
      */
-    public function reconcile(PackagingList $list): array
+    public function reconcile(PackagingList $list, bool $lockSources = false): array
     {
         if (! $list->project_id) return ['linked' => 0, 'unresolved' => 0];
 
         $products = ProjectProduct::query()
             ->where('project_id', $list->project_id)
             ->where('status', '!=', 'cancelled')
+            ->when($lockSources, fn ($query) => $query->lockForUpdate())
             ->get(['id', 'product_id', 'product_name', 'sku']);
-        $list->loadMissing('cartons.items');
+        if ($lockSources) {
+            $list->load([
+                'cartons' => fn ($query) => $query->lockForUpdate(),
+                'cartons.items' => fn ($query) => $query->lockForUpdate(),
+            ]);
+        } else {
+            $list->loadMissing('cartons.items');
+        }
 
         $linked = 0;
         $unresolved = 0;

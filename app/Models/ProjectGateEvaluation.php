@@ -37,11 +37,14 @@ class ProjectGateEvaluation extends Model
     /** Present current policy without rewriting immutable historical snapshots. */
     public function displaySummary(): string
     {
+        $details = $this->details ?: [];
+        if ($this->gate_key === 'dispatch_approved' && $this->result === 'blocked' && isset($details['issues'])) {
+            return (string) $this->summary.' Missing packing, QC, artwork/PPS approvals or documents do not prevent shipment status updates; the first dispatch still checks product identity and quantity.';
+        }
         if ($this->gate_key !== 'dispatch_balance' || $this->result !== 'blocked') {
             return (string) $this->summary;
         }
 
-        $details = $this->details ?: [];
         if (! array_key_exists('invoice_usable', $details)) {
             return 'The pre-dispatch balance needs review. Shipment tracking may continue; please follow up with Accounts.';
         }

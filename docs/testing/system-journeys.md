@@ -43,7 +43,7 @@ These are **designed release journeys**, not a claim that a complete browser sui
 5. Dispatch/deliver A40 then A60 via two shipments. Record delivery receipt without attachment once.
 6. Recalculate workflow and reopen queue/UI.
 
-**Expected:** A reaches100 delivered exactly; B remains uncompleted; no over-allocation; project not fully delivered/closed while B open; no unnecessary navigation outside Action Centre. The unpaid balance produces a shipment warning and remains due; packing, QC, approval and document blockers stay actionable. **Related:** PROJECT, WORKFLOW, QC, PACK, SHIP.
+**Expected:** A reaches100 delivered exactly; B remains uncompleted; no over-allocation; project not fully delivered/closed while B open; no unnecessary navigation outside Action Centre. The unpaid balance produces a shipment warning and remains due; missing packing, QC, artwork/PPS approvals and documents are actionable readiness warnings, while project-product identity and valid-quantity controls remain enforced. **Related:** PROJECT, WORKFLOW, QC, PACK, SHIP.
 
 ## SYS-05 — Upstream change invalidates stale readiness (P0)
 

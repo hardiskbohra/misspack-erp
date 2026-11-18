@@ -96,8 +96,8 @@
                             $blockedReason = $dispatchIssues !== []
                                 ? implode(' ', $dispatchIssues)
                                 : $actionStep->blocked_reason;
-                            $documentShipment = $guide['modal'] === 'dispatch-documents'
-                                ? $project->shipments()->where('status', \App\Models\Shipment::STATUS_PLANNING)->latest('id')->first()
+                            $documentShipment = $guide['modal'] === 'dispatch-documents' && !empty($guide['shipment_id'])
+                                ? $project->shipments()->whereKey($guide['shipment_id'])->first()
                                 : null;
                             $dispatchDocuments = $documentShipment
                                 ? app(\App\Services\ShipmentDocuments::class)->summary($documentShipment)
@@ -199,7 +199,7 @@
                             <div class="master-modal" id="workflowDispatchDocumentsModal{{ $actionStep->id }}" aria-hidden="true" aria-labelledby="workflowDispatchDocumentsTitle{{ $actionStep->id }}">
                                 <div class="master-modal-card workflow-action-modal" role="dialog" aria-modal="true" aria-labelledby="workflowDispatchDocumentsTitle{{ $actionStep->id }}">
                                     <form method="POST" enctype="multipart/form-data" action="{{ route('projects.attachments.store',$project) }}">@csrf
-                                        <div class="master-modal-header"><div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-file-circle-check"></i></span><div><h3 class="master-modal-title" id="workflowDispatchDocumentsTitle{{ $actionStep->id }}">Dispatch documents · {{ $documentShipment->shipment_number }}</h3><p class="master-modal-subtitle">Files are stored once in Project attachments and immediately re-evaluated against dispatch authorization.</p></div></div><button type="button" class="master-modal-close" data-close-modal aria-label="Close dispatch document checklist">×</button></div>
+                                        <div class="master-modal-header"><div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-file-circle-check"></i></span><div><h3 class="master-modal-title" id="workflowDispatchDocumentsTitle{{ $actionStep->id }}">Dispatch documents · {{ $documentShipment->shipment_number }}</h3><p class="master-modal-subtitle">Files are stored in Project attachments. Review this shipment's outstanding checks when updating its status.</p></div></div><button type="button" class="master-modal-close" data-close-modal aria-label="Close dispatch document checklist">×</button></div>
                                         <div class="master-modal-body">
                                             <div class="workflow-production-summary" aria-label="Dispatch document status"><div><span>Required</span><strong>{{ $dispatchDocuments['required'] }}</strong></div><div><span>Complete</span><strong>{{ $dispatchDocuments['done'] }}</strong></div><div><span>Missing</span><strong>{{ count($dispatchDocuments['missing']) }}</strong></div></div>
                                             <div class="workflow-quality-checklist"><div>
@@ -236,7 +236,7 @@
             @include('projects.partials.workflow-matrix')
 
             <section id="workflow-commercial" class="master-card master-card--flat master-section project-detail-card" data-workflow-view="commercial" role="tabpanel" aria-labelledby="workflow-tab-commercial" hidden>
-                <div class="master-section-head"><div><h2 class="master-section-title">Commercial and dispatch authorization gates</h2><p class="master-sub">Financial checks use the selected Proforma and receipts; dispatch authorization uses exact confirmed packing allocations that pass automatic checks, QC, approvals and paperwork. Material changes create a new auditable evaluation.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
+                <div class="master-section-head"><div><h2 class="master-section-title">Commercial and dispatch authorization gates</h2><p class="master-sub">Financial and dispatch readiness checks remain visible and auditable. Missing packing, QC, artwork/PPS approvals or documents produce warnings rather than blocking shipment status updates. The first dispatch still checks product identity and quantity. Run gate checks to refresh the current shipment after an approval decision.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
                 @php
                     $visibleGateKeys = array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS);
                     $currentGates = $workflow->evaluations->whereNull('project_product_id')->whereIn('gate_key', $visibleGateKeys)->unique('gate_key');

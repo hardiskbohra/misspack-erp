@@ -377,7 +377,7 @@ class ProjectWorkflowSalesScopeTest extends TestCase
         $this->assertCount(2, data_get($step->fresh()->metadata, 'sales_workflow_scope.previous_steps'));
     }
 
-    public function test_purchase_only_shipment_can_pass_only_with_real_packing_quantity_qc_and_documents(): void
+    public function test_purchase_only_readiness_remains_factual_but_missing_documents_warn_on_tracking(): void
     {
         $workflow = app(ProjectWorkflowExecution::class)->start($this->project, $this->admin->id);
         $shipment = Shipment::create(['shipment_number' => 'SCOPE-COMPLETE-SHIP', 'identity_name' => 'Fictional shipment',
@@ -410,18 +410,16 @@ class ProjectWorkflowSalesScopeTest extends TestCase
         $this->assertStringContainsString('dispatch documents', implode(' ', $missing['issues']));
         $this->assertStringNotContainsString('Artwork and PPS approvals', implode(' ', $missing['issues']));
 
-        // Exercise the actual dispatch transition too: project-level commercial
-        // controls remain in force, while purchase-only approval checks do not.
+        // Purchase-only approval checks do not apply. Missing paperwork remains
+        // visible in readiness but no longer prevents a tracking update.
         $workflow->update(['commercial_sales_invoice_id' => $this->invoice->id]);
         $history = route('shipments.history.store', $shipment);
         $pickup = ['status' => 'picked_up', 'remarks' => 'Fictional pickup', 'notify_client' => false];
-        $this->from('/shipments/'.$shipment->id)->post($history, $pickup)->assertSessionHasErrors('status');
-        $this->assertSame('planning', $shipment->fresh()->status);
-        \App\Models\ProjectAttachment::create(['project_id' => $this->project->id, 'category' => 'delivery_challan',
-            'file_path' => 'fake/challan-restored.pdf', 'original_name' => 'challan-restored.pdf']);
-        $this->post($history, $pickup)->assertRedirect()->assertSessionHasNoErrors();
+        $this->from('/shipments/'.$shipment->id)->post($history, $pickup)->assertRedirect()->assertSessionHasNoErrors()
+            ->assertSessionHas('shipment_readiness_warning');
         $this->assertSame('picked_up', $shipment->fresh()->status);
         $this->assertSame(0, $workflow->fresh()->steps()->where('project_product_id', $this->bought->id)->count());
+        $this->assertSame('blocked', $workflow->evaluations()->where('gate_key', ShipmentDispatchAuthorization::GATE_KEY)->latest('id')->firstOrFail()->result);
     }
 
     public function test_purchase_only_override_is_not_an_active_exception_or_scheduled_notification(): void

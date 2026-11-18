@@ -75,8 +75,9 @@ check('the edit form applies it',
     /public function update\(Request \$request, Shipment \$shipment\)[\s\S]{0,900}Shipment::withDeliveryDefaults\(\$data, \$shipment\)/.test(controller));
 check('creating a shipment that is already delivered applies it',
     /Shipment::withDeliveryDefaults\(\$data\)/.test(controller));
+const derivedHistoryMethod = /private function syncShipmentStatusFromLatestHistory\([^)]*\)[\s\S]*?(?=\n    (?:public|protected|private) function )/.exec(controller)?.[0] ?? '';
 check('a status derived from a history edit applies it',
-    /syncShipmentStatusFromLatestHistory[\s\S]{0,700}withDeliveryDefaults\(/.test(controller));
+    /Shipment::withDeliveryDefaults\(\['status' => \$latestHistory->status\], \$shipment\)/.test(derivedHistoryMethod));
 
 /* ------------------------------------------- 3. nothing refuses a delivery */
 

@@ -188,7 +188,7 @@ class ShipmentListStatusTest extends TestCase
         $this->assertSame(0, $this->shipment->histories()->count());
     }
 
-    public function test_project_dispatch_gates_still_block_a_list_status_change(): void
+    public function test_project_readiness_issues_warn_after_a_list_status_change(): void
     {
         $client = Client::create(['client_number' => 'LIST-GATE-CLIENT', 'company_name' => 'Fictional client']);
         $project = Project::forceCreate(['project_number' => 'LIST-GATE', 'client_id' => $client->id,
@@ -196,9 +196,10 @@ class ShipmentListStatusTest extends TestCase
         app(ProjectWorkflowExecution::class)->start($project, $this->manager->id);
         $shipment = $this->shipment('LIST-GATE-SHIP', ['status' => 'planning', 'project_id' => $project->id, 'client_id' => $client->id]);
         $this->from(route('shipments.index'))->post(route('shipments.history.store', $shipment),
-            $this->payload($shipment, ['status' => 'picked_up']))->assertRedirect()->assertSessionHasErrors('status');
-        $this->assertSame('planning', $shipment->fresh()->status);
-        $this->assertSame(0, $shipment->histories()->count());
+            $this->payload($shipment, ['status' => 'picked_up']))->assertRedirect()->assertSessionHasNoErrors()
+            ->assertSessionHas('shipment_readiness_warning');
+        $this->assertSame('picked_up', $shipment->fresh()->status);
+        $this->assertSame(1, $shipment->histories()->count());
     }
 
     public function test_legacy_current_status_can_be_replaced_from_the_list(): void

@@ -1371,7 +1371,7 @@ body.gs-open { overflow: hidden; }
 .topbar-page-actions--compact{flex:0 0 auto;margin-left:4px}
 @media(max-width:600px){.topbar-page-actions.topbar-page-actions--compact{display:flex}}
 
-/* The payment advice stays visible after navigation and needs no JavaScript. */
+/* Shipment advice stays visible after navigation and needs no JavaScript. */
 .shipment-balance-warning {
     display: flex;
     align-items: flex-start;
@@ -1397,8 +1397,10 @@ body.gs-open { overflow: hidden; }
     background: var(--master-orange, #f59e0b);
     color: #332000;
     font-size: 15px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1;
 }
 .shipment-balance-warning strong { display: block; font-weight: 700; }
 .shipment-balance-warning p { margin: 3px 0 0; }
+.shipment-balance-warning ul { margin: 6px 0 0; padding-left: 20px; }
+.shipment-balance-warning li + li { margin-top: 3px; }

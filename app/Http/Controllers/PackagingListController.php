@@ -459,11 +459,10 @@ class PackagingListController extends Controller
     {
         if ($workflow = $list->project?->workflow) {
             app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
-            $authorization = app(\App\Services\ShipmentDispatchAuthorization::class);
-            Shipment::query()->where('project_id', $list->project_id)->where('status', Shipment::STATUS_PLANNING)
-                ->with('items.packingAllocations')->get()->each(function ($shipment) use ($authorization, $workflow) {
-                    $authorization->evaluate($shipment, $workflow, $authorization->rowsFromShipment($shipment), Auth::id());
-                });
+            // Keep a represented partial shipment's gate; only initialize one
+            // from the linked Planning shipment when no shipment is represented.
+            app(\App\Services\ShipmentDispatchAuthorization::class)
+                ->refreshCurrentOrInitialize($workflow, Auth::id(), $list->shipment_id ? (int) $list->shipment_id : null);
         }
     }
 

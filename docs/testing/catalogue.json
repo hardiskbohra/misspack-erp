@@ -1344,9 +1344,9 @@
       "steps": [
         "Evaluate the pre-dispatch balance and independently evaluate dispatch authorization"
       ],
-      "expected": "Outstanding balance remains an unpassed financial evaluation and produces a warning, not a shipment-status blocker; packing, QC, documents and approval controls remain independent.",
+      "expected": "Outstanding balance remains an unpassed financial evaluation and produces a warning. Missing packing, QC, artwork/PPS approvals and documents are separately advisory for tracking; product identity and valid-quantity controls remain independent.",
       "automation": [],
-      "notes": "Designed unit case; see IT-SHIP-015 for unexecuted full-schema regression coverage."
+      "notes": "Designed unit case; full-schema payment regressions passed in the later readiness-warning verification (IT-SHIP-015), not as isolated unit coverage."
     },
     {
       "id": "UT-SHIP-002",
@@ -1416,19 +1416,20 @@
       "level": "integration",
       "priority": "P0",
       "requirement": "REQ-SHIP",
-      "title": "Dispatch denied when packing/QC/balance missing",
+      "title": "Dispatch warnings preserve the complete long readiness evaluation",
       "preconditions": "F-PRODUCTS and F-MONEY; partial shipments S1/S2; fake public upload disk",
-      "test_data": "Confirmed list missing or failed QC or amount due",
+      "test_data": "Sales approval incomplete alongside missing packing, QC and documents; paid balance",
       "steps": [
-        "Attempt dispatch for each failed prerequisite"
+        "Save a shipment edit and tracking status change with sales approval incomplete",
+        "Read the complete long readiness evaluation and saved shipment"
       ],
-      "expected": "No dispatch timestamp/stock event; actionable missing-gate details returned.",
+      "expected": "The status change saves with warnings while the readiness evaluation retains every missing issue without truncation or fabricating approval.",
       "automation": [
-        "tests/Integration/FullSchemaReliabilityTest.php#test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths",
-        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths"
+        "tests/Integration/FullSchemaReliabilityTest.php#test_full_schema_dispatch_warns_with_a_complete_long_evaluation_on_both_http_paths",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_full_schema_dispatch_warns_with_a_complete_long_evaluation_on_both_http_paths"
       ],
       "evidence_scope": "partial",
-      "notes": "Both real HTTP dispatch paths are covered with multiple simultaneous blockers and a long summary, on SQLite and strict MySQL. Individual prerequisite permutations and concurrent dispatch are not established by these links."
+      "notes": "The revised SQLite and strict-MySQL reliability scenarios passed in the local full suites; see shipment-readiness-warning.md."
     },
     {
       "id": "UT-SALES-001",
@@ -6067,7 +6068,7 @@
         "tests/Integration/ProjectAdminControlsTest.php#test_each_project_step_can_be_individually_bypassed_and_source_data_is_not_falsified",
         "tests/Integration/ProjectAdminControlsTest.php#test_a_stale_missing_request_or_approval_version_cannot_authorize_or_revoke_a_newer_client_file",
         "tests/Integration/ProjectAdminControlsTest.php#test_advance_bypass_enables_the_linked_production_action_only_until_source_facts_change",
-        "tests/Integration/ProjectAdminControlsTest.php#test_individual_dispatch_bypasses_enable_only_the_linked_shipment_with_matching_evidence",
+        "tests/Integration/ProjectAdminControlsTest.php#test_dispatch_quantity_bypasses_remain_bound_to_matching_shipment_evidence",
         "tests/Integration/ProjectAdminControlsTest.php#test_bypass_creation_and_revocation_are_atomic_when_a_later_write_fails",
         "tests/Integration/ProjectAdminControlsTest.php#test_direct_versioned_approval_override_and_revocation_roll_back_when_step_updates_fail",
         "tests/Integration/ProjectAdminControlsTest.php#test_direct_approval_override_service_requires_admin_permission_for_recording_and_revoking"
@@ -6108,7 +6109,7 @@
       "level": "integration",
       "priority": "P0",
       "requirement": "REQ-WORKFLOW",
-      "title": "Sales invoice items alone drive product workflow; purchase-only shipments retain physical safeguards",
+      "title": "Sales invoice items alone drive product workflow; shipment readiness remains visible",
       "preconditions": "Full disposable schema with sales, purchase, project workflow, shipment and historical evidence",
       "test_data": "Same-project explicit and legacy links, foreign or ambiguous links, edited, cancelled, removed and reinstated invoices, purchase-only and sales shipment items",
       "steps": [
@@ -6118,7 +6119,7 @@
         "Check real packing, quantity, QC and documents on purchase-only shipment and separate sales approvals",
         "Exercise native MySQL stale snapshots for links, legacy matching, cancellation and reentry"
       ],
-      "expected": "Purchase-only evidence is preserved but excluded from sales workflow; valid sales lanes and independent approvals remain, unmatched items are warned and physical shipment safeguards never weaken.",
+      "expected": "Purchase-only evidence is preserved but excluded from sales workflow; valid sales lanes and independent approvals remain, unmatched items are warned, and packing, QC and document readiness remains factual even when tracking can continue.",
       "automation": [
         "tests/Integration/ProjectWorkflowSalesScopeTest.php#test_only_sales_items_create_active_product_rules_and_purchase_history_remains_intact",
         "tests/Integration/ProjectWorkflowSalesScopeTest.php#test_unlinked_legacy_sales_items_match_only_an_unambiguous_same_project_product",
@@ -6131,7 +6132,7 @@
         "tests/Integration/ProjectWorkflowSalesScopeTest.php#test_first_sales_link_records_old_unmarked_purchase_scope_and_retires_its_bypass",
         "tests/Integration/ProjectWorkflowSalesScopeTest.php#test_reentry_revokes_approval_override_and_restores_real_client_decision",
         "tests/Integration/ProjectWorkflowSalesScopeTest.php#test_purchase_only_direct_actions_are_guarded_and_production_is_not_blocked_by_sales_advance",
-        "tests/Integration/ProjectWorkflowSalesScopeTest.php#test_purchase_only_shipment_can_pass_only_with_real_packing_quantity_qc_and_documents",
+        "tests/Integration/ProjectWorkflowSalesScopeTest.php#test_purchase_only_readiness_remains_factual_but_missing_documents_warn_on_tracking",
         "tests/Integration/ProjectWorkflowSalesScopeTest.php#test_out_of_scope_historical_client_approval_cannot_be_revised_overridden_or_decided",
         "tests/Database/MySqlProjectAdminControlsTest.php#test_scope_sync_uses_current_legacy_sales_rows_after_waiting_on_a_stale_snapshot",
         "tests/Database/MySqlProjectAdminControlsTest.php#test_scope_sync_does_not_reactivate_a_cancelled_source_from_a_stale_snapshot",
@@ -6229,7 +6230,7 @@
       "requirement": "REQ-SHIP; REQ-WORKFLOW; REQ-AUTH",
       "title": "Shipment status from the list preserves tracking, permissions and dispatch controls",
       "preconditions": "Two shipments, operations manager and reader, filtered list, disposable SQLite and strict MySQL",
-      "test_data": "Public and private tracking updates, notification choice, delivery date, hold without explanation, stale form and blocked project dispatch",
+      "test_data": "Public and private tracking updates, notification choice, delivery date, hold without explanation, stale form and project readiness warnings",
       "steps": [
         "Open the selected shipment's update dialog and submit through its existing history route",
         "Try invalid, stale, filtered-off-page and unauthorized submissions",
@@ -6246,13 +6247,13 @@
         "tests/Integration/ShipmentListStatusTest.php#test_failed_update_reopens_the_right_shipment_with_input_even_when_filtered_off_the_page",
         "tests/Integration/ShipmentListStatusTest.php#test_array_valued_old_input_cannot_break_validation_recovery",
         "tests/Integration/ShipmentListStatusTest.php#test_stale_status_is_refused_and_the_operator_can_review_the_latest_value",
-        "tests/Integration/ShipmentListStatusTest.php#test_project_dispatch_gates_still_block_a_list_status_change",
+        "tests/Integration/ShipmentListStatusTest.php#test_project_readiness_issues_warn_after_a_list_status_change",
         "tests/Integration/ShipmentListStatusTest.php#test_legacy_current_status_can_be_replaced_from_the_list",
         "tests/Integration/ShipmentListStatusTest.php#test_existing_tracking_form_does_not_require_the_new_list_marker_or_status_token",
         "tests/Database/MySqlShipmentListStatusTest.php#test_waiting_list_update_observes_a_newer_status_under_the_shipment_lock"
       ],
       "evidence_scope": "partial",
-      "notes": "The SQLite cases, one ordered MySQL interleaving, and the disposable desktop/mobile browser workflow were executed before the subsequent payment-warning change; see docs/testing/shipment-list-status.md."
+      "notes": "Revised portable and native-MySQL cases passed; the guarded Chromium list-status check passed at four viewport widths and without JavaScript. Coverage remains partial."
     },
     {
       "id": "IT-SHIP-015",
@@ -6261,15 +6262,15 @@
       "priority": "P0",
       "requirement": "REQ-SHIP; REQ-WORKFLOW; REQ-AUTH",
       "title": "Shipment tracking treats Proforma balance as a warning without bypassing independent dispatch controls",
-      "preconditions": "Unpaid project Proforma, shipment and disposable database; real packing, QC and documents or individually authorized overrides",
+      "preconditions": "Unpaid project Proforma and shipment in a disposable database; open sales approvals and valid shipment quantities where applicable",
       "test_data": "Paid and unpaid, missing and cancelled baseline, financial override, history edit/delete, invalid inputs and unauthorized reader",
       "steps": [
         "Submit shipment status changes from the list, tracking detail and shipment edit",
-        "Compare missing financial evidence with missing packing, QC, documents or sales approvals",
-        "Edit or delete tracking history and verify that a derived dispatch status is separately authorized",
-        "Review the flashed warning, saved financial facts and normal validation"
+        "Compare unpaid financial evidence with missing packing, QC, sales approvals and documents",
+        "Edit or delete tracking history and verify that derived status changes retain independent identity and quantity controls",
+        "Review payment and readiness warnings, saved financial facts and normal validation"
       ],
-      "expected": "An otherwise authorized status change saves with a visible, non-blocking payment warning; failed financial facts and the actual balance remain unchanged, and unrelated dispatch controls still block.",
+      "expected": "An otherwise valid status change saves with separate non-blocking payment and readiness warnings. Financial facts and approval records remain unchanged; product identity and valid-quantity controls remain independent.",
       "automation": [
         "tests/Integration/ShipmentPaymentWarningTest.php#test_list_pickup_is_saved_with_an_accessible_warning_and_preserves_the_unpaid_evaluation",
         "tests/Integration/ShipmentPaymentWarningTest.php#test_tracking_detail_and_shipment_edit_both_save_with_a_warning",
@@ -6277,9 +6278,9 @@
         "tests/Integration/ShipmentPaymentWarningTest.php#test_missing_or_cancelled_baseline_warns_that_balance_cannot_be_verified",
         "tests/Integration/ShipmentPaymentWarningTest.php#test_existing_financial_override_is_preserved_but_does_not_hide_the_unpaid_warning",
         "tests/Integration/ShipmentPaymentWarningTest.php#test_legacy_evaluation_text_stays_immutable_but_current_workflow_no_longer_claims_dispatch_is_blocked",
-        "tests/Integration/ShipmentPaymentWarningTest.php#test_unpaid_balance_does_not_bypass_packing_qc_documents_or_sales_approvals",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_unpaid_balance_and_pending_sales_approvals_warn_separately_without_changing_facts",
         "tests/Integration/ShipmentPaymentWarningTest.php#test_history_edit_and_delete_apply_dispatch_safeguards_and_advisory_payment",
-        "tests/Integration/ShipmentPaymentWarningTest.php#test_reassigning_a_planning_shipment_while_dispatching_uses_the_target_project_safeguards",
+        "tests/Integration/ShipmentPaymentWarningTest.php#test_reassigning_a_planning_shipment_while_dispatching_uses_the_target_project_warnings",
         "tests/Integration/ShipmentPaymentWarningTest.php#test_warning_uses_invoice_currency_and_escapes_html_without_hiding_other_warnings",
         "tests/Integration/ShipmentPaymentWarningTest.php#test_monetary_warning_details_respect_sales_or_project_view_access",
         "tests/Integration/ShipmentPaymentWarningTest.php#test_revoked_financial_view_access_is_rechecked_before_rendering_the_warning",
@@ -6287,7 +6288,63 @@
         "tests/Database/MySqlShipmentPaymentWarningTest.php#test_waiting_dispatch_observes_payment_committed_under_the_project_lock"
       ],
       "evidence_scope": "partial",
-      "notes": "Regression cases have not been executed; see docs/testing/shipment-payment-warning.md."
+      "notes": "Revised portable and native-MySQL cases and the guarded Chromium payment-warning check passed locally; see shipment-readiness-warning.md. Financial advice remains a point-in-time observation."
+    },
+    {
+      "id": "IT-SHIP-016",
+      "module": "SHIP",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SHIP; REQ-WORKFLOW; REQ-AUTH",
+      "title": "Shipment status saves with packing, QC, approval and document readiness warnings",
+      "preconditions": "Disposable full schema; planning shipment with sales product and open packing, QC, approvals, documents and payment; office manager and reader",
+      "test_data": "Delivered with no confirmed list, no passing QC, pending Artwork/PPS and missing challan/POD; later status, partial shipments, invalid quantity and valid override",
+      "steps": [
+        "Save from list, tracking detail and shipment edit; derive a status through history edit and deletion",
+        "Read actionable escaped warnings and the underlying unchanged readiness and financial evaluations",
+        "Verify independent product identity, quantity, validation, permissions and stale-status controls; rejected dispatch edits leave a reviewable gate without saving unsaved changes",
+        "Review later POD and evidence refresh, unavailable or stale partial shipments, changed project/workflow bindings, and matching overrides without fabricating evidence",
+        "Review native current-read designs for reservation status, packing lines, documents, workflow step state and revoked overrides after a stale snapshot"
+      ],
+      "expected": "All four pictured readiness issues warn rather than prevent a status update; identity and valid-quantity checks remain independent, actual approvals and evidence remain unresolved, and both warnings are visible without JavaScript.",
+      "automation": [
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_list_delivered_saves_with_each_screenshot_warning_and_preserves_actual_readiness",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_detail_and_shipment_edit_save_with_readiness_and_payment_warnings",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_history_edit_and_delete_show_readiness_warnings_for_derived_dispatch",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_pending_sales_approvals_warn_without_approving_or_overriding_them",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_invalid_project_identity_and_quantity_still_block_tracking",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_history_edit_and_delete_warn_about_pending_sales_approvals",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_short_confirmed_packing_is_an_explicit_warning_not_a_status_blocker",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_existing_matching_override_does_not_hide_outstanding_readiness_warnings",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_complete_readiness_has_no_readiness_warning",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_warning_is_escaped_server_rendered_and_can_coexist_with_other_alerts",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_revoked_operations_access_hides_flashed_readiness_details",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_later_delivered_status_warns_about_current_pod_and_readiness_without_new_blockers",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_later_delivery_derived_from_history_warns_about_pod",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_later_documents_qc_and_packing_refresh_the_current_dispatched_readiness",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_later_delivery_receipt_refreshes_pod_readiness_for_the_current_shipment",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_manual_workflow_refresh_rechecks_pending_approval_state_on_the_current_shipment",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_refreshing_other_partial_shipment_evidence_does_not_replace_the_current_gate",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_later_delivery_from_shipment_edit_warns_about_pod",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_post_dispatch_gate_overrides_remain_specific_to_the_current_partial_shipment",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_quantity_override_for_direct_delivery_rechecks_the_attempted_pod_state",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_quantity_override_rechecks_direct_delivery_when_existing_pod_was_removed",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_matching_legacy_override_is_preserved_without_rewriting_its_snapshot",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_matching_override_applies_to_delivery_when_pod_was_already_present",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_a_stale_shipment_gate_is_not_reassigned_to_an_unrelated_partial",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_stale_unlinked_shipment_cannot_skip_a_new_project_on_history_or_edit",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_stale_missing_workflow_cannot_skip_a_concurrently_started_workflow",
+        "tests/Database/MySqlShipmentReadinessWarningTest.php#test_current_reservation_read_observes_a_shipment_reactivated_after_the_snapshot",
+        "tests/Database/MySqlShipmentReadinessWarningTest.php#test_current_document_read_observes_a_challan_removed_after_the_snapshot",
+        "tests/Database/MySqlShipmentReadinessWarningTest.php#test_current_packing_lines_observe_quantity_changed_after_the_snapshot",
+        "tests/Database/MySqlShipmentReadinessWarningTest.php#test_current_override_read_does_not_reuse_a_bypass_revoked_after_the_snapshot",
+        "tests/Database/MySqlShipmentReadinessWarningTest.php#test_gate_application_preserves_step_start_recorded_after_the_snapshot",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_rejected_dispatch_edit_keeps_a_reviewable_gate_without_saving_shipment_changes",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_rejected_dispatch_does_not_apply_unsaved_line_edits_or_approve_them_as_current",
+        "tests/Integration/ShipmentDispatchReadinessWarningTest.php#test_stale_project_binding_does_not_record_a_gate_for_the_wrong_project"
+      ],
+      "evidence_scope": "partial",
+      "notes": "The focused case, full portable and MySQL suites, and guarded Chromium four-issue check passed locally. The specific current-read scenarios do not prove deadlock freedom. See shipment-readiness-warning.md."
     },
     {
       "module": "STOCK",

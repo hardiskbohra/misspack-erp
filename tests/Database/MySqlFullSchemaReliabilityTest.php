@@ -44,9 +44,9 @@ class MySqlFullSchemaReliabilityTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths(): void
+    public function test_full_schema_dispatch_warns_with_a_complete_long_evaluation_on_both_http_paths(): void
     {
-        $this->scenario_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths();
+        $this->scenario_full_schema_dispatch_warns_with_a_complete_long_evaluation_on_both_http_paths();
     }
 
     public function test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness(): void

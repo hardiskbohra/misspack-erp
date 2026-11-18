@@ -90,13 +90,15 @@ class ProjectWorkflowBypass
                 throw ValidationException::withMessages(['reason' => 'Use the individual step bypass so that missing-source facts are checked again.']);
             }
             if ($evaluation->gate_key === ShipmentDispatchAuthorization::GATE_KEY) {
-                $shipment = Shipment::query()->where('project_id', $project->id)->where('status', Shipment::STATUS_PLANNING)
-                    ->whereKey(data_get($evaluation->details, 'shipment_id'))->first();
+                $shipment = Shipment::query()->where('project_id', $project->id)
+                    ->whereIn('status', array_merge([Shipment::STATUS_PLANNING], Shipment::dispatchedStatuses()))
+                    ->whereKey(data_get($evaluation->details, 'shipment_id'))->lockForUpdate()->first();
                 if (! $shipment) {
-                    throw ValidationException::withMessages(['reason' => 'The planning shipment changed. Refresh the workflow before bypassing this control.']);
+                    throw ValidationException::withMessages(['reason' => 'The shipment changed. Refresh the workflow before bypassing this control.']);
                 }
                 $authorization = app(ShipmentDispatchAuthorization::class);
-                $fresh = $authorization->evaluate($shipment, $step->workflow, $authorization->rowsFromShipment($shipment), $actor->id);
+                $candidate = $authorization->candidateForSnapshot($shipment, $evaluation);
+                $fresh = $authorization->evaluateForTracking($candidate, $step->workflow, $authorization->rowsFromShipment($shipment, true), $actor->id, true)['evaluation'];
             } else {
                 $fresh = $this->evaluate($step, $actor);
             }
@@ -195,10 +197,23 @@ class ProjectWorkflowBypass
             $evaluation = app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), $actor->id, false);
             if (! $evaluation) return $this->synthetic($step->fresh(), self::EARLY_FEEDBACK, 'Final feedback is not yet eligible because commercial closure is incomplete.', $actor->id);
         } elseif ($key === ShipmentDispatchAuthorization::GATE_KEY) {
-            $shipment = $workflow->project->shipments()->where('status', Shipment::STATUS_PLANNING)->latest('id')->first();
-            if (! $shipment) return $this->synthetic($step, self::MISSING_DISPATCH, 'No planning shipment exists to evaluate for dispatch authorization.', $actor->id);
+            // The current gate may now belong to a shipment already in
+            // transit; never substitute another planning partial shipment.
+            $current = self::currentEvaluation($step);
+            $shipmentId = (int) data_get($current?->details, 'shipment_id', 0);
+            if ($shipmentId > 0) {
+                $shipment = $workflow->project->shipments()->whereKey($shipmentId)
+                    ->whereIn('status', array_merge([Shipment::STATUS_PLANNING], Shipment::dispatchedStatuses()))->lockForUpdate()->first();
+                if (! $shipment) {
+                    throw ValidationException::withMessages(['reason' => 'The shipment represented by this check is no longer active in this project. Review the project shipments before bypassing it.']);
+                }
+            } else {
+                $shipment = $workflow->project->shipments()->where('status', Shipment::STATUS_PLANNING)->latest('id')->lockForUpdate()->first();
+                if (! $shipment) return $this->synthetic($step, self::MISSING_DISPATCH, 'No planning shipment exists to evaluate for dispatch authorization.', $actor->id);
+            }
             $authorization = app(ShipmentDispatchAuthorization::class);
-            return $authorization->evaluate($shipment, $workflow, $authorization->rowsFromShipment($shipment), $actor->id);
+            $candidate = $authorization->candidateForSnapshot($shipment, $current);
+            return $authorization->evaluateForTracking($candidate, $workflow, $authorization->rowsFromShipment($shipment, true), $actor->id, true)['evaluation'];
         } else {
             return $this->synthetic($step, self::MANUAL_STEP, 'This manual workflow control has not been completed.', $actor->id);
         }

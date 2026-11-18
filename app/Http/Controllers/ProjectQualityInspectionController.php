@@ -58,7 +58,10 @@ class ProjectQualityInspectionController extends Controller
             ProjectQualityInspection::create($payload);
         });
 
-        if ($workflow = $project->workflow) $readiness->evaluateAll($workflow, Auth::id());
+        if ($workflow = $project->workflow) {
+            $readiness->evaluateAll($workflow, Auth::id());
+            app(\App\Services\ShipmentDispatchAuthorization::class)->refreshCurrent($workflow, Auth::id());
+        }
         return back()->with('success', 'Immutable QC inspection recorded and product readiness recalculated.');
     }
 }

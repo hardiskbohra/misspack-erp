@@ -34,7 +34,7 @@
 
             @if($tab === 'documents')
                 <section class="master-card master-card--flat master-section">
-                    <div class="master-section-head"><div><h2 class="master-section-title">Required dispatch evidence</h2><p class="master-sub">The Workflow Action Centre blocks authorization until each selected category exists in Project attachments. Packing List evidence is satisfied automatically by a confirmed list linked to the shipment.</p></div></div>
+                    <div class="master-section-head"><div><h2 class="master-section-title">Required dispatch evidence</h2><p class="master-sub">Missing categories remain open in the Workflow Action Centre and produce warnings when updating shipment status. Packing List evidence is satisfied automatically by a confirmed list linked to the shipment.</p></div></div>
                     <div class="master-grid is-even">
                         @foreach($shipmentTypes as $typeKey=>$typeLabel)
                             <fieldset class="master-card master-card--flat master-section">

@@ -261,6 +261,22 @@
         </header>
 
         <main class="page-content">
+            @if(is_array($shipmentReadinessWarning = session('shipment_readiness_warning')) && auth()->user()?->hasPermission('operations.view'))
+                <div class="shipment-balance-warning" role="status" aria-live="polite">
+                    <span class="shipment-balance-warning-icon" aria-hidden="true">!</span>
+                    <div>
+                        <strong>Shipment readiness warning</strong>
+                        <p>{{ $shipmentReadinessWarning['message'] ?? '' }}</p>
+                        @if(!empty($shipmentReadinessWarning['issues']))
+                            <ul>
+                                @foreach($shipmentReadinessWarning['issues'] as $issue)
+                                    <li>{{ $issue }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                </div>
+            @endif
             @if(session('shipment_balance_warning'))
                 <div class="shipment-balance-warning" role="status" aria-live="polite">
                     <span class="shipment-balance-warning-icon" aria-hidden="true">!</span>

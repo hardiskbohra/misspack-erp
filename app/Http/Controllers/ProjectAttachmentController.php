@@ -107,16 +107,9 @@ class ProjectAttachmentController extends Controller
             return;
         }
 
-        $shipment = $project->shipments()
-            ->where('status', \App\Models\Shipment::STATUS_PLANNING)
-            ->latest('id')
-            ->first();
-        if (! $shipment) {
-            return;
-        }
-
-        $authorization = app(\App\Services\ShipmentDispatchAuthorization::class);
-        $authorization->evaluate($shipment, $workflow, $authorization->rowsFromShipment($shipment), Auth::id());
+        // Recheck the represented shipment after paperwork changes; initialize
+        // a Planning gate only if no shipment has been represented yet.
+        app(\App\Services\ShipmentDispatchAuthorization::class)->refreshCurrentOrInitialize($workflow, Auth::id());
     }
 
     private function validateAllowedFile($file): void

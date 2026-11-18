@@ -80,20 +80,22 @@ class ShipmentDocuments
      *
      * @return Collection<int, array{key: string, label: string, required: bool, done: bool, attachments: Collection}>
      */
-    public function checklist(Shipment $shipment): Collection
+    public function checklist(Shipment $shipment, bool $lockSources = false): Collection
     {
         $required = $this->requiredFor($shipment);
 
         $projectGrouped = $shipment->project_id
-            ? ProjectAttachment::query()->where('project_id', $shipment->project_id)->get()->groupBy('category')
+            ? ProjectAttachment::query()->where('project_id', $shipment->project_id)
+                ->when($lockSources, fn ($query) => $query->lockForUpdate())->get()->groupBy('category')
             : collect();
-        $linkedPackingList = $shipment->exists && PackagingList::query()
-            ->where('shipment_id', $shipment->id)
-            ->whereIn('status', ['confirmed', 'dispatched'])
-            ->exists();
-        $deliveryReceiptRecorded = $shipment->relationLoaded('deliveryReceipts')
-            ? $shipment->deliveryReceipts->isNotEmpty()
-            : $shipment->deliveryReceipts()->exists();
+        $packing = PackagingList::query()->where('shipment_id', $shipment->id)->whereIn('status', ['confirmed', 'dispatched']);
+        $linkedPackingList = $shipment->exists && ($lockSources
+            ? (bool) $packing->lockForUpdate()->first(['id'])
+            : $packing->exists());
+        // Ignore cached relations for a locking recheck after a stale MySQL snapshot.
+        $deliveryReceiptRecorded = $lockSources
+            ? (bool) $shipment->deliveryReceipts()->lockForUpdate()->first(['id'])
+            : ($shipment->relationLoaded('deliveryReceipts') ? $shipment->deliveryReceipts->isNotEmpty() : $shipment->deliveryReceipts()->exists());
 
         return collect(self::TYPES)->map(function (string $label, string $key) use ($projectGrouped, $required, $linkedPackingList, $deliveryReceiptRecorded) {
             $files = collect($projectGrouped->get($key, collect()))->values();
@@ -130,9 +132,9 @@ class ShipmentDocuments
      *
      * @return array{required: int, done: int, missing: array<int, string>, complete: bool, checklist: Collection<int, array<string, mixed>>}
      */
-    public function summary(Shipment $shipment): array
+    public function summary(Shipment $shipment, bool $lockSources = false): array
     {
-        $checklist = $this->checklist($shipment);
+        $checklist = $this->checklist($shipment, $lockSources);
         $required = $checklist->where('required', true);
         $done = $required->where('done', true);
 

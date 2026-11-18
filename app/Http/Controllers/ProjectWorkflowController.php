@@ -39,6 +39,7 @@ class ProjectWorkflowController extends Controller
         $execution->recalculate($workflow);
         app(ProjectWorkflowGates::class)->evaluateAll($workflow->fresh(), Auth::id());
         app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), Auth::id());
+        app(\App\Services\ShipmentDispatchAuthorization::class)->refreshCurrent($workflow->fresh(), Auth::id());
         app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), Auth::id());
 
         return back()->with('success', 'Coordinator report and all source-controlled gates updated.');
@@ -50,6 +51,7 @@ class ProjectWorkflowController extends Controller
         abort_unless($workflow, 404);
         $gates->evaluateAll($workflow, Auth::id());
         app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), Auth::id());
+        app(\App\Services\ShipmentDispatchAuthorization::class)->refreshCurrent($workflow->fresh(), Auth::id());
         app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), Auth::id());
 
         return back()->with('success', 'Financial, product and final-feedback gates evaluated against current source records.');

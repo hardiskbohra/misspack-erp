@@ -7,7 +7,7 @@ use Illuminate\Support\Carbon;
 
 class PackagingListVerifier
 {
-    public function inspect(PackagingList $list): array
+    public function inspect(PackagingList $list, bool $lockSources = false): array
     {
         $list->loadMissing('cartons.items');
         $cartons = $list->cartons;
@@ -54,7 +54,7 @@ class PackagingListVerifier
                 : $invalidItems->count().' item line(s) need a description or positive quantity.'
         );
 
-        $comparison = app(PackagingListProjectComparison::class)->inspect($list);
+        $comparison = app(PackagingListProjectComparison::class)->inspect($list, $lockSources);
         $unmatched = collect($comparison['rows'])->where('status', 'fail');
         $checks[] = $this->check(
             'project_identity', 'Project product identity',

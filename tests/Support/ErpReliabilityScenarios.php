@@ -65,7 +65,7 @@ trait ErpReliabilityScenarios
         ], $overrides);
     }
 
-    protected function scenario_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths(): void
+    protected function scenario_full_schema_dispatch_warns_with_a_complete_long_evaluation_on_both_http_paths(): void
     {
         $user = $this->reliabilityOffice();
         $client = Client::create(['client_number' => 'RELIABILITY-CLIENT', 'company_name' => 'Acme']);
@@ -86,26 +86,29 @@ trait ErpReliabilityScenarios
         ]);
 
         $this->from('/shipments/'.$shipment->id.'/edit')->put(route('shipments.update', $shipment), $payload)
-            ->assertRedirect('/shipments/'.$shipment->id.'/edit')->assertSessionHasErrors('status');
-        $error = session('errors')->first('status');
-        $this->assertStringContainsString('Packaging List', $error);
+            ->assertRedirect(route('shipments.show', $shipment))->assertSessionHasNoErrors()->assertSessionHas('shipment_readiness_warning');
+        $warning = session('shipment_readiness_warning');
+        $this->assertStringContainsString('Artwork and PPS approvals', implode(' ', $warning['issues']));
         $evaluation = $workflow->evaluations()->where('gate_key', ShipmentDispatchAuthorization::GATE_KEY)->latest('id')->firstOrFail();
         $this->assertSame('blocked', $evaluation->result);
         $this->assertGreaterThan(255, mb_strlen($evaluation->summary));
         $this->assertStringContainsString($shipment->shipment_number, $evaluation->summary);
         $this->assertStringContainsString('Mandatory project dispatch documents', $evaluation->summary);
         $this->assertSame('text', Schema::getColumnType('project_gate_evaluations', 'summary'));
-        $this->assertSame('planning', $shipment->fresh()->status);
-        $this->assertSame('Original shipment', $shipment->fresh()->identity_name);
-        $this->assertSame(0, $shipment->histories()->count());
+        $this->assertSame('picked_up', $shipment->fresh()->status);
+        $this->assertSame('Updated shipment', $shipment->fresh()->identity_name);
+        $this->assertSame(1, $shipment->histories()->count());
         $this->assertSame(1, $shipment->items()->count());
 
+        // Exercise the tracking-history entry point with the same unresolved sources.
+        $shipment->refresh()->update(['status' => 'planning']);
         $this->from('/shipments/'.$shipment->id)->post(route('shipments.history.store', $shipment), ['status' => 'picked_up'])
-            ->assertRedirect('/shipments/'.$shipment->id)->assertSessionHasErrors('status');
-        $this->assertStringContainsString('Packaging List', session('errors')->first('status'));
-        $this->assertSame('planning', $shipment->fresh()->status);
-        $this->assertSame(0, $shipment->histories()->count());
+            ->assertRedirect('/shipments/'.$shipment->id)->assertSessionHasNoErrors()->assertSessionHas('shipment_readiness_warning');
+        $this->assertStringContainsString('Artwork and PPS approvals', implode(' ', session('shipment_readiness_warning')['issues']));
+        $this->assertSame('picked_up', $shipment->fresh()->status);
+        $this->assertSame(2, $shipment->histories()->count());
         $this->assertSame(1, $workflow->evaluations()->where('gate_key', ShipmentDispatchAuthorization::GATE_KEY)->count());
+        $this->assertSame(0, $project->approvalRequests()->count());
     }
 
     protected function scenario_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness(): void
@@ -368,13 +371,15 @@ trait ErpReliabilityScenarios
         $payload = $this->shipmentPayload($shipment, ['project_id' => $project->id, 'client_id' => $client->id, 'status' => 'picked_up']);
         unset($payload['items']);
 
+        $lineId = $shipment->items()->firstOrFail()->id;
         $this->from('/shipments/'.$shipment->id.'/edit')->put(route('shipments.update', $shipment), $payload)
-            ->assertRedirect('/shipments/'.$shipment->id.'/edit')->assertSessionHasErrors('status');
+            ->assertRedirect(route('shipments.show', $shipment))->assertSessionHasNoErrors()->assertSessionHas('shipment_readiness_warning');
         $evaluation = $workflow->evaluations()->where('gate_key', ShipmentDispatchAuthorization::GATE_KEY)->latest('id')->firstOrFail();
         $this->assertSame('Existing carton', data_get($evaluation->details, 'lines.0.product_name'));
         $this->assertSame($product->id, data_get($evaluation->details, 'lines.0.project_product_id'));
-        $this->assertSame('planning', $shipment->fresh()->status);
+        $this->assertSame('picked_up', $shipment->fresh()->status);
         $this->assertSame(1, $shipment->items()->count());
+        $this->assertSame($lineId, $shipment->items()->firstOrFail()->id);
     }
 
     protected function scenario_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items(): void

@@ -44,7 +44,7 @@
                                 <option value="{{ $key }}" @selected($selectedModalStatus === $key)>{{ $label }}</option>
                             @endforeach
                         </select>
-                        <small class="master-help" id="listStatusHelp">A new hold or delay needs a remark. Dispatch checks still apply.</small>
+                        <small class="master-help" id="listStatusHelp">A new hold or delay needs a remark. Missing packing, QC, artwork/PPS approvals or documents appear as warnings. The first dispatch still checks product identity and quantity.</small>
                     </div>
                     <div class="master-field">
                         <label class="master-label" for="listStatusLocation">Location</label>
