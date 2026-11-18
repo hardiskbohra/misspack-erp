@@ -74,12 +74,12 @@
                     </div>
                     <div class="master-field">
                         <label class="master-label" for="detailAllocationAmount">Cash amount <span class="master-required">*</span></label>
-                        <input class="master-input" id="detailAllocationAmount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" required>
+                        <input class="master-input" id="detailAllocationAmount" name="amount" type="number" min="0.001" step="0.001" value="{{ old('amount') }}" required>
                     </div>
                     @include('cashflows.partials.document-payment-summary')
                     <div class="master-field">
                         <label class="master-label" for="detailAllocationDocumentAmount">Document amount</label>
-                        <input class="master-input" id="detailAllocationDocumentAmount" name="document_amount" type="number" min="0.01" step="0.01" value="{{ old('document_amount') }}">
+                        <input class="master-input" id="detailAllocationDocumentAmount" name="document_amount" type="number" min="0.001" step="0.001" value="{{ old('document_amount') }}">
                         <p class="master-field-hint" data-detail-currency-hint>Leave blank when it is the same as the cash amount.</p>
                         @if (! empty($entry->vendor_id))
                             <p class="master-field-hint">The vendor ledger shows the payment at this amount, in the bill's currency.</p>
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var activeAmount = 0;
 
     function formatAllocationMoney(value) {
-        return currency + ' ' + (Number(value) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return currency + ' ' + (Number(value) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
     }
     function notify(select) { if (window.jQuery) window.jQuery(select).trigger('change'); }
     function setValue(control, value) { control.value = value || ''; notify(control); }
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (event) {
         var available = entryTotal - Math.max(allocatedTotal - activeAmount, 0);
         if (!project.value && !sales.value && !purchase.value) { event.preventDefault(); window.alert('Select a project or document.'); return; }
-        if ((Number(amount.value) || 0) > available + 0.009) { event.preventDefault(); window.alert('This allocation exceeds the available ' + formatAllocationMoney(available) + '.'); }
+        if ((Number(amount.value) || 0) > available + 0.0005) { event.preventDefault(); window.alert('This allocation exceeds the available ' + formatAllocationMoney(available) + '.'); }
     });
 
     @if(!old('allocation_form'))

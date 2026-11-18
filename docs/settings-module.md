@@ -64,6 +64,7 @@ area configures organisation defaults; it does not store project actions or deci
 | **Workflow** | organisation defaults for required dispatch evidence, approval and exception deadlines, and the standard QC checklist | `WorkflowSettingController` |
 | **Cashflow** | the accounts money moves through, the categories rows are filed under, and the option lists the entry forms are filled from | `CashflowSettingController` |
 | **Fixed assets** | the classes the register is grouped by, and the depreciation recipe each class hands to its assets — the useful life, the method and the residual value | `AssetSettingController` |
+| **Taxes & HSN** | the HSN/SAC rate master — the codes and GST rates the invoice and purchase forms offer, and the reference the e-invoice payload is checked against | `TaxSettingController` |
 
 The fixed-assets area is the sharpest
 test of the boundary rule the module has had, because a fixed asset register is
@@ -170,6 +171,7 @@ literals, and that is checked.
 | Leads | `/settings/leads` | `/leads/settings` |
 | Feedback | `/settings/feedback` | `/feedback/settings` |
 | Cashflow | `/settings/cashflow` | `/cashflows/settings` |
+| Taxes & HSN | `/settings/taxes` | — |
 
 Three rules, and all three are checked:
 

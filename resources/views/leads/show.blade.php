@@ -21,7 +21,7 @@
             <div class="master-actions"><a href="{{ route('leads.index') }}" class="master-btn master-btn-light">Back</a><a
                     href="{{ route('leads.edit', $lead) }}" class="master-btn master-btn-soft">Edit Lead</a>
                 @if ($lead->public_token)
-                    <a href="{{ route('leads.public.show', $lead->public_token) }}" target="_blank"
+                    <a href="{{ \App\Services\PublicShareLinks::url($lead) }}" target="_blank"
                         class="master-btn master-btn-soft">Public Product Link</a>
                 @endif
             </div>

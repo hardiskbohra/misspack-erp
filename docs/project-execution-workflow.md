@@ -36,7 +36,7 @@ The coordinator explicitly selects the project's baseline Proforma Invoice. Prin
 - whether complete balance is required before dispatch;
 - payment tolerance.
 
-A project-level advance percentage overrides the baseline Proforma percentage. Receipts will be read from booked/reconciled Cashflow allocations. Complete pre-dispatch balance applies before the first shipment and is not prorated for a partial shipment.
+A project-level advance percentage overrides the baseline Proforma percentage. Receipts are read from booked/reconciled Cashflow allocations. The complete pre-dispatch balance is evaluated against the whole required amount, not prorated for a partial shipment. An outstanding or unverifiable balance warns rather than blocking an otherwise authorized shipment status change.
 
 ## Gates and overrides
 
@@ -58,7 +58,7 @@ The first foundation slice contains workflow instances, product/project steps, g
 
 ## Financial gate slice delivered
 
-Commercial baseline, production advance and complete pre-dispatch balance are calculated from the selected Proforma and finalized receipts. An unchanged set of facts reuses its immutable SHA-256 evaluation; changed terms, totals or receipts create a new current evaluation and leave earlier decisions in history. Moving a product into production enforces the current advance gate. Moving a shipment to Picked up enforces the complete-balance gate.
+Commercial baseline, production advance and complete pre-dispatch balance are calculated from the selected Proforma and finalized receipts. An unchanged set of facts reuses its immutable SHA-256 evaluation; changed terms, totals or receipts create a new current evaluation and leave earlier decisions in history. Moving a product into production enforces the current advance gate. When a shipment moves from Planning to a dispatched status, an unpaid or unverifiable pre-dispatch balance produces a visible warning without blocking that status change. The financial gate remains unresolved, and no payment or override is invented.
 
 Administrators can record or revoke manager overrides from the command centre. Each override remains attached to one exact evaluation, preserves its risk snapshot, reason, approver, time and expected resolution date, and makes the related workflow step explicitly `skipped` rather than pretending the underlying gate passed. When financial facts change, the prior override is stale and cannot release the new evaluation.
 
@@ -89,15 +89,15 @@ Shipment lines linked to a project must retain a direct `project_product_id`; sh
 
 A product's dispatched quantity is the sum of its directly linked lines on picked-up, in-transit, held, delayed, out-for-delivery and delivered shipments. Its delivered quantity counts only delivered shipments. Planning and cancelled shipments contribute nothing. Each immutable evaluation records shipment line identity, shipment number, status, quantity, pickup date and delivery date. Partial quantities remain blocked with an explicit balance; excess quantities remain visible as warnings rather than being silently discarded.
 
-Shipment creation, edits, tracking-status changes and deletion immediately recalculate readiness. Existing workflows are upgraded in place to version 2 of the same standard template, preserving their history while adding the two product steps. The project delivery reconciliation passes only when every active product is fully delivered or has a current manager override. Complete pre-dispatch financial balance remains mandatory before a project shipment can move from planning into any dispatched state.
+Shipment creation, edits, tracking-status changes and deletion immediately recalculate readiness. Existing workflows are upgraded in place to version 2 of the same standard template, preserving their history while adding the two product steps. The project delivery reconciliation passes only when every active product is fully delivered or has a current manager override. For shipment status updates, an outstanding pre-dispatch balance and missing or incomplete packing, QC, artwork/PPS approvals and paperwork are warnings rather than blockers. The approval records remain open and the valid project-product/quantity checks remain independent controls, with existing source-specific manager overrides where applicable.
 
 ## Dispatch allocation and authorization delivered
 
-A project shipment must first be saved in Planning. Every shipment line is then allocated to one or more exact Packaging List item lines through normalized `shipment_packing_allocations`. Allocations may split one shipment line across several packs, and one verified pack may be consumed by several partial shipments. Planning allocations reserve quantity; cancelled shipments release it; once dispatch starts, shipment lines and allocations are frozen.
+A project shipment must first be saved in Planning. Packing allocations may link shipment lines to Packaging List item lines, and packing records remain independently auditable. When packing is missing, a status update can still proceed with a warning; it does not create a packing allocation. Existing protections continue to freeze dispatched shipment lines and packing already consumed by a dispatched shipment.
 
-Dispatch authorization verifies the exact current payload against direct project-product identity, current successful Packaging List fingerprints, unconsumed packed quantity, the latest passing QC sample inspection, artwork/PPS workflow state and mandatory shipment paperwork. The dedicated Packaging List allocation satisfies the packing-list paperwork requirement without requiring a duplicate shipment-owned packing document. Database row locks serialize the final availability check so concurrent shipments cannot consume the same packed quantity.
+Dispatch readiness inspects direct project-product identity and quantity, linked confirmed Packaging Lists and their automatic checks, the latest passing QC sample, artwork/PPS workflow state and mandatory shipment paperwork. A confirmed linked Packaging List can satisfy the packing-list paperwork requirement without a duplicate shipment-owned packing document. Missing or short packing, QC, artwork/PPS approvals and paperwork remain outstanding evidence, but status updates now save with a warning; they do not certify dispatch or grant approval. Product identity and valid-quantity checks remain separately enforced (or require the existing matching manager override).
 
-Every authorization is an immutable `dispatch_approved` gate evaluation. A changed allocation, packing verification, document state or quantity produces a new fingerprint and makes an older manager override stale. Failed checks remain visible in the Workflow Command Centre and can use the existing reasoned manager override and revocation history. Planning packing edits remove affected reservations and immediately reopen authorization; packing already consumed by a dispatched shipment is protected from edit or deletion.
+Dispatch evaluations remain immutable `dispatch_approved` snapshots. Changed evidence produces a new fingerprint and makes an older manager override stale. Unresolved checks remain visible in the Workflow Command Centre, and saving a status neither marks them passed nor creates an override. Packing, QC, Project-document and receipt changes refresh the current gate when relevant; **Run gate checks** refreshes it from current approval state as well. This is one project-level gate for one shipment, not a separate current gate for every partial shipment. A later tracking update inspects that shipment's readiness without replacing another shipment's current gate. The assessment is re-evaluated under the project lock; its warning is a snapshot, not a reservation of approvals, packing, QC or documents. Existing packing and delivery-receipt audit protections remain in place.
 
 ## Line-level delivery receipt and discrepancy reconciliation delivered
 
@@ -181,7 +181,7 @@ Production quantity and evidence are recorded in a focused modal inside the Cont
 
 ## Workflow-owned project progress
 
-Project progress is the weighted `calculated_progress` produced by the standard workflow. The calculator publishes that value to `projects.progress_percent` only as a list/dashboard cache. Project forms, status controls, activity updates, financial closure, and coordinator reporting cannot submit or write a separate percentage. A coordinator may still report the observed stage and reason, but that narrative does not alter calculated progress.
+The standard workflow owns weighted `calculated_progress`. By default it is published to `projects.progress_percent`; an administrator with `projects.override` can separately set or clear a persistent published status and percentage with a reason. The calculated stage/progress remains visible and unchanged by that decision. Project create/edit, activity updates and coordinator reporting cannot submit execution state.
 
 The former project timeline feature has been retired. Its office and client tabs, routes, controller, model, views, scripts, styles, relationships, and source migration are removed. Deployment migration `2026_10_20_140000_remove_milestones_and_manual_progress.php` drops the obsolete table and the two manual-progress columns, then aligns existing project progress caches to their workflow values.
 
@@ -201,3 +201,13 @@ operational dispatch documents still belong to the project's Workflow Control Ce
 No migration or new permissions are needed. `ShipmentAttachmentUploadTest` covers rendered
 controls, multiple uploads, visibility, validation, unchanged shipment fields, permission
 checks and CSRF protection.
+
+## Administrator project decisions
+
+The project overview exposes manual state, closure and reopen only to a user whose role is exactly `admin` and who has `projects.override`. Status and progress overrides are independent; a blank value clears that override. Project logs keep the actor, reason, time and before/after values. Starting a workflow on a legacy project does not discard a manual value, and clearing one without a workflow restores the prior recorded value.
+
+An administrator can manually close even with unfinished work or outstanding financials after providing a reason and accepting the displayed risk. The project is labelled **Manually closed**, not financially complete. The immutable decision contains the open-work and financial snapshot at the time of closure. Invoices, bills, allocations, balances and unfinished source records remain active; no approval, receipt or settlement is fabricated. Closing a project without a workflow first starts the standard workflow to record the outstanding controls. Reopening records another immutable decision and resumes any stored manual status; status and progress overrides remain until explicitly cleared.
+
+Each workflow rule has its own reasoned, revocable administrator bypass in **History & controls**. Existing gate bypasses reference a current source evaluation; client-approval bypasses reference the exact current request and file version. Forms carry the viewed source/version, so a new or revised request requires a fresh review. Where a request or other source is missing, a separate missing-source evaluation records that limited decision, which is superseded when real source evidence appears. The commercial-closure control uses the manual-closure decision above. Revoking old evidence cannot overwrite a newer source evaluation. Production and shipment actions continue to check their current individually authorized gates and all non-project validations remain in force.
+
+Migration `2026_11_01_100000_add_project_manual_state_overrides.php` adds nullable project override columns. Downgrade refuses while active manual state or manual closures exist, including on soft-deleted projects. As with other schema changes, deploy with a backup and a coordinated migration window.

@@ -87,7 +87,8 @@
             <div class="master-card master-card--flat master-section" id="password">
                 <h3 class="master-section-title">Password</h3>
                 <p class="master-sub account-note">
-                    At least eight characters. You stay signed in on this device.
+                    At least twelve characters with upper and lower case letters and a number.
+                    You stay signed in on this device.
                 </p>
 
                 @include('users.partials.own-password', [
@@ -95,6 +96,10 @@
                     'submit' => 'Change password',
                     'prefix' => 'account',
                 ])
+            </div>
+
+            <div class="master-card master-card--flat master-section" id="two-factor">
+                @include('account.partials.two-factor', ['me' => $me])
             </div>
 
             <div class="master-card master-card--flat master-section">

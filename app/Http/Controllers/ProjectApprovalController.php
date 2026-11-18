@@ -19,7 +19,7 @@ class ProjectApprovalController extends Controller
         $workflow = $project->workflow;
         abort_unless($workflow, 422, 'Start the project workflow before requesting approval.');
         $data = $request->validate($this->rules());
-        abort_unless($project->products()->whereKey($data['project_product_id'])->exists(), 422, 'Product does not belong to this project.');
+        abort_unless(app(\App\Services\ProjectWorkflowSalesScope::class)->contains($project->id, (int) $data['project_product_id']), 422, 'Approvals are available only for this project’s current sales-invoice items.');
         [$attachment, $hash] = $this->storeAttachment($request, $project, $data['project_product_id'], $data['approval_type']);
         $approval = $approvals->create($workflow, (int) $data['project_product_id'], $data['approval_type'], $data['title'], $data['instructions'] ?? null, $data['response_due_at'] ?? null, $attachment, $hash, Auth::id());
         $this->notifyClient($project, $approval);
@@ -30,6 +30,7 @@ class ProjectApprovalController extends Controller
     public function addVersion(Request $request, Project $project, ProjectApprovalRequest $approval, ProjectApprovals $approvals): RedirectResponse
     {
         $this->assertBelongs($project, $approval);
+        abort_unless(app(\App\Services\ProjectWorkflowSalesScope::class)->contains($project->id, (int) $approval->project_product_id), 422, 'This approval is no longer for a current sales-invoice item.');
         $data = $request->validate([
             'submission_notes' => ['nullable', 'string', 'max:2000'],
             'response_due_at' => ['nullable', 'date'],
@@ -44,21 +45,27 @@ class ProjectApprovalController extends Controller
 
     public function override(Request $request, Project $project, ProjectApprovalRequest $approval, ProjectApprovals $approvals): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
         $this->assertBelongs($project, $approval);
-        $data = $request->validate(['override_reason' => ['required', 'string', 'min:10', 'max:2000']]);
-        $approvals->override($approval, $data['override_reason'], Auth::id());
+        $data = $request->validate([
+            'override_reason' => ['required', 'string', 'min:10', 'max:2000'],
+            'approval_version' => ['required', 'integer', 'min:1'],
+        ]);
+        $approvals->override($approval, $data['override_reason'], Auth::id(), (int) $data['approval_version']);
 
         return back()->with('warning', 'Manager override recorded. The missing client approval remains visible.');
     }
 
     public function revokeOverride(Request $request, Project $project, ProjectApprovalRequest $approval, ProjectApprovals $approvals): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->canOverrideProjects(), 403);
         $this->assertBelongs($project, $approval);
         abort_unless($approval->hasActiveOverride(), 422, 'This approval has no active override.');
-        $data = $request->validate(['override_revocation_reason' => ['required', 'string', 'min:5', 'max:2000']]);
-        $approvals->revokeOverride($approval, $data['override_revocation_reason'], Auth::id());
+        $data = $request->validate([
+            'override_revocation_reason' => ['required', 'string', 'min:5', 'max:2000'],
+            'override_id' => ['required', 'integer', 'min:1'],
+        ]);
+        $approvals->revokeOverride($approval, $data['override_revocation_reason'], Auth::id(), (int) $data['override_id']);
 
         return back()->with('success', 'Approval override revoked. The product approval step is blocked again.');
     }

@@ -16,8 +16,8 @@ class CashflowAccount extends Model
     ];
 
     protected $casts = [
-        'opening_balance' => 'decimal:2',
-        'current_balance' => 'decimal:2',
+        'opening_balance' => \App\Casts\DecimalUpToThree::class,
+        'current_balance' => \App\Casts\DecimalUpToThree::class,
         'is_active' => 'boolean',
     ];
 

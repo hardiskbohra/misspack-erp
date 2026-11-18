@@ -88,6 +88,12 @@ class Shipment extends Model
         return $this->hasMany(ShipmentTrackingHistory::class)->latest('event_time')->latest('id');
     }
 
+    /** Private office discussion, never part of portal or public tracking. */
+    public function comments()
+    {
+        return $this->hasMany(ShipmentComment::class)->latest('id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

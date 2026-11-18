@@ -238,7 +238,7 @@
                             <h2 class="client-detail-title" id="client-kyc-link-heading">KYC form link</h2>
                             <p class="client-detail-help">Share this secure link so the client can submit or update their KYC details.</p>
                             <div class="public-box">
-                                <input class="master-input" id="clientKycLink" type="text" readonly aria-label="Public KYC link" value="{{ route('clients.publicKyc', $client->public_token) }}">
+                                <input class="master-input" id="clientKycLink" type="text" readonly aria-label="Public KYC link" value="{{ \App\Services\PublicShareLinks::url($client) }}">
                                 <button type="button" class="master-btn master-btn-soft" onclick="maCopy('clientKycLink', 'KYC link')"><i class="fa-regular fa-copy" aria-hidden="true"></i> Copy</button>
                             </div>
                             <div class="client-kyc-sent-row">
@@ -249,7 +249,7 @@
                                     <button class="master-btn master-btn-light master-btn-sm" type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Mark as sent</button>
                                 </form>
                             </div>
-                            <a href="{{ route('clients.publicKyc', $client->public_token) }}" target="_blank" rel="noopener" class="client-public-link">Preview public KYC form <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+                            <a href="{{ \App\Services\PublicShareLinks::url($client) }}" target="_blank" rel="noopener" class="client-public-link">Preview public KYC form <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
                         </section>
 
                         <section class="master-card master-card--flat client-detail-card client-detail-card--wide" aria-labelledby="client-review-heading">

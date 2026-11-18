@@ -40,6 +40,7 @@ class ClientAccountSummaryTest extends TestCase
             '2026_07_25_010100_create_vendor_payment_entries_table',
             '2026_07_25_010200_create_vendor_payment_attachments_table',
             '2026_08_26_010000_create_sales_invoices_table',
+            '2026_10_26_030000_create_sales_invoice_notes_table',
             '2026_08_26_010100_create_sales_invoice_items_table',
             '2026_08_26_010200_create_sales_invoice_attachments_table',
             '2026_08_29_000000_add_sales_invoice_id_to_cashflow_entries_table',

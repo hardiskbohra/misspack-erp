@@ -45,7 +45,7 @@
                     <x-filter-trigger drawer="leadFiltersDrawer" :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($priority !== 'all' ? 1 : 0) + ($source !== 'all' ? 1 : 0) + ($assignedTo !== 'all' ? 1 : 0)" />
                     <div class="master-actions-top"><button type="button" class="master-btn master-btn-primary"
                             id="openQuickLeadModal">+ Quick Lead</button><a href="{{ route('leads.create') }}"
-                            class="master-btn master-btn-soft">Detailed Form</a><a href="{{ route('leads.public.create') }}"
+                            class="master-btn master-btn-soft">Detailed Form</a><a href="{{ route('public-links.enquiry') }}"
                             target="_blank" class="master-btn master-btn-light">Public Link</a><a
                             href="{{ route('settings.leads') }}"
                             class="master-btn master-btn-light">Settings</a></div>

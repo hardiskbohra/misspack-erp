@@ -117,9 +117,22 @@ class CashflowPickers
 
     public function salesInvoices()
     {
-        return class_exists(\App\Models\SalesInvoice::class) && Schema::hasTable('sales_invoices')
-            ? \App\Models\SalesInvoice::query()->withReceived()->where('status', '<>', 'cancelled')->orderByDesc('invoice_date')->orderByDesc('id')->get()
-            : collect();
+        if (! class_exists(\App\Models\SalesInvoice::class) || ! Schema::hasTable('sales_invoices')) {
+            return collect();
+        }
+
+        $query = \App\Models\SalesInvoice::query()->withReceived();
+
+        /* Balances are net of corrections now; batch the note sums with the
+           ledger sums so rendering every picker option stays query-free. */
+        if (\App\Models\SalesInvoice::notesTableExists()) {
+            $query->with('adjustments');
+        }
+
+        return $query->where('status', '<>', 'cancelled')
+            ->orderByDesc('invoice_date')
+            ->orderByDesc('id')
+            ->get();
     }
 
     public function purchaseInvoices()

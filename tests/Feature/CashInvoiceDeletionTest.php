@@ -46,6 +46,7 @@ class CashInvoiceDeletionTest extends TestCase
             '2026_07_18_010100_create_project_products_table',
             '2026_07_18_010700_add_project_id_to_cashflow_entries_table',
             '2026_08_26_010000_create_sales_invoices_table',
+            '2026_10_27_140000_add_invoice_auto_round_total',
             '2026_08_26_010100_create_sales_invoice_items_table',
             '2026_08_26_010200_create_sales_invoice_attachments_table',
             '2026_08_29_000000_add_sales_invoice_id_to_cashflow_entries_table',

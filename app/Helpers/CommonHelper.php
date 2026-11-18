@@ -36,18 +36,26 @@ class CommonHelper
         $value = (float) $amount;               // null and '' are zero
         $negative = $value < 0;
 
-        $paise = (int) round(abs($value) * 100);
-        $rupees = intdiv($paise, 100);
-        $paise %= 100;
+        $thousandths = (int) round(abs($value) * 1000);
+        $rupees = intdiv($thousandths, 1000);
+        $fraction = $thousandths % 1000;
 
-        /* the sign goes in front of the symbol, and a rounded-to-nothing
-           negative is not a negative at all */
-        $sign = $negative && ($rupees > 0 || $paise > 0) ? '-' : '';
+        /* Keep the established whole/paise presentation, showing a third
+           digit only when it carries information. */
+        $sign = $negative && $thousandths > 0 ? '-' : '';
+        $decimals = $fraction % 10 === 0
+            ? str_pad((string) intdiv($fraction, 10), 2, '0', STR_PAD_LEFT)
+            : str_pad((string) $fraction, 3, '0', STR_PAD_LEFT);
 
-        /* paise are shown only when the amount really has them, so a whole
-           amount reads ₹1,50,000 rather than ₹1,50,000.00 */
         return $sign.$symbol.self::groupIndian((string) $rupees)
-            .($paise > 0 ? '.'.str_pad((string) $paise, 2, '0', STR_PAD_LEFT) : '');
+            .($fraction > 0 ? '.'.$decimals : '');
+    }
+
+    /** A machine-readable number with two or three decimal places. */
+    public static function decimal($amount): string
+    {
+        $three = number_format((float) $amount, 3, '.', '');
+        return str_ends_with($three, '0') ? substr($three, 0, -1) : $three;
     }
 
     /**
@@ -104,14 +112,18 @@ class CommonHelper
         $value = (float) $amount;
         $negative = $value < 0;
 
-        $paise = (int) round(abs($value) * 100);
-        $rupees = intdiv($paise, 100);
-        $paise %= 100;
+        $thousandths = (int) round(abs($value) * 1000);
+        $rupees = intdiv($thousandths, 1000);
+        $paise = intdiv($thousandths % 1000, 10);
+        $tenthOfPaise = $thousandths % 10;
 
         $words = self::numberInWords($rupees);
 
         if ($paise > 0) {
             $words .= ' And '.self::numberInWords($paise).' Paise';
+        }
+        if ($tenthOfPaise > 0) {
+            $words .= ' And '.self::numberInWords($tenthOfPaise).' '.($tenthOfPaise === 1 ? 'Tenth' : 'Tenths').' of a Paise';
         }
 
         $unit = strtoupper((string) ($currency ?: 'INR')) === 'INR' ? 'Rupees' : strtoupper((string) $currency);

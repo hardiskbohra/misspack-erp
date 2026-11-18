@@ -489,13 +489,18 @@
                                                 <button type="button" data-open-payment
                                                     data-invoice-id="{{ $invoice->id }}"
                                                     data-invoice-number="{{ $invoice->invoice_number }}"
-                                                    data-invoice-amount="{{ number_format($balance, 2, '.', '') }}"
+                                                    data-invoice-amount="{{ number_format($balance, 3, '.', '') }}"
                                                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}"
                                                     data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
                                                     data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                                     <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
                                                 </button>
                                             @endif
+                                            <button type="button" data-open-email
+                                                data-invoice-id="{{ $invoice->id }}"
+                                                data-invoice-number="{{ $invoice->invoice_number }}">
+                                                <i class="fas fa-paper-plane" aria-hidden="true"></i> Email to client
+                                            </button>
                                             <button type="button" data-open-reminder
                                                 data-invoice-id="{{ $invoice->id }}"
                                                 data-invoice-number="{{ $invoice->invoice_number }}"
@@ -508,7 +513,7 @@
                                             <a href="{{ route('sales-invoices.print', $invoice) }}" target="_blank">
                                                 <i class="fas fa-print" aria-hidden="true"></i> Print
                                             </a>
-                                            <button type="button" data-copy-link="{{ route('sales-invoices.public', $invoice->public_token) }}">
+                                            <button type="button" data-copy-link="{{ \App\Services\PublicShareLinks::url($invoice) }}">
                                                 <i class="fas fa-link" aria-hidden="true"></i> Copy client link
                                             </button>
                                             @if ($invoice->status === 'draft')
@@ -615,6 +620,10 @@
 
     @include('sales_invoices.partials.payment-modal')
     @include('sales_invoices.partials.reminder-modal')
+    @include('sales_invoices.partials.email-modal')
+    @foreach ($invoices as $invoice)
+        <script type="application/json" data-email-payload="{{ $invoice->id }}">@json($invoice->emailDefaults())</script>
+    @endforeach
 </div>
 @endsection
 

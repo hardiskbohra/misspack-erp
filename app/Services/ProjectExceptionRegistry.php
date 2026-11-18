@@ -134,6 +134,7 @@ class ProjectExceptionRegistry
             ->filter(function ($override) {
                 $evaluation = $override->evaluation;
                 if (! $evaluation?->workflow?->project || in_array($evaluation->workflow->project->status, ['closed', 'cancelled'], true)) return false;
+                if ($evaluation->project_product_id !== null && ! app(ProjectWorkflowSalesScope::class)->contains((int) $evaluation->workflow->project_id, (int) $evaluation->project_product_id)) return false;
                 if ($evaluation->gate_key === ProjectFinancialClosure::GATE) return false;
                 return (int) $evaluation->workflow->evaluations()
                     ->where('gate_key', $evaluation->gate_key)
@@ -169,6 +170,7 @@ class ProjectExceptionRegistry
             ->filter(fn ($override) => $override->request && $override->request->project
                 && $override->request->status === 'open'
                 && $override->version_number === $override->request->current_version_number
+                && app(ProjectWorkflowSalesScope::class)->contains((int) $override->request->project_id, (int) $override->request->project_product_id)
                 && ! in_array($override->request->project->status, ['closed', 'cancelled'], true))
             ->map(function ($override) {
                 $request = $override->request;

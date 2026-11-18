@@ -9,14 +9,15 @@ use Illuminate\Support\Str;
 /** Read-only evidence: show actual identities; never infer or replace a user's link. */
 class PackagingListProjectComparison
 {
-    public function inspect(PackagingList $list): array
+    public function inspect(PackagingList $list, bool $lockSources = false): array
     {
         if (! $list->project_id) return ['rows' => [], 'products' => [], 'unresolved' => 0, 'review' => 0];
         $list->loadMissing('cartons.items.product');
         $items = $list->cartons->flatMap->items;
         $products = ProjectProduct::where(function ($query) use ($list, $items) {
             $query->where('project_id', $list->project_id)->orWhereIn('id', $items->pluck('project_product_id')->filter());
-        })->orderBy('sort_order')->orderBy('id')->get(['id', 'project_id', 'product_id', 'product_name', 'sku', 'quantity', 'unit', 'status']);
+        })->when($lockSources, fn ($query) => $query->lockForUpdate())
+            ->orderBy('sort_order')->orderBy('id')->get(['id', 'project_id', 'product_id', 'product_name', 'sku', 'quantity', 'unit', 'status']);
         $byId = $products->keyBy('id');
         $rows = [];
         foreach ($list->cartons->values() as $cartonIndex => $carton) {

@@ -26,7 +26,14 @@ class ProjectWorkflow extends Model
     ];
 
     public function project() { return $this->belongsTo(Project::class); }
-    public function steps() { return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort_order')->orderBy('id'); }
+    /** Active project controls and the product controls backed by current sales items. */
+    public function steps()
+    {
+        return app(\App\Services\ProjectWorkflowSalesScope::class)->steps($this->allSteps());
+    }
+
+    /** Historical rows, including product controls no longer in the sales scope. */
+    public function allSteps() { return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort_order')->orderBy('id'); }
     public function evaluations() { return $this->hasMany(ProjectGateEvaluation::class)->latest('evaluated_at')->latest('id'); }
     public function approvals() { return $this->hasMany(ProjectApprovalRequest::class)->latest('requested_at')->latest('id'); }
     public function financialClosures() { return $this->hasMany(ProjectFinancialClosure::class)->latest('closed_at')->latest('id'); }

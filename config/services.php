@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | E-invoice (IRN/QR)
+    |--------------------------------------------------------------------------
+    | `manual` (default): the payload is generated here, the office registers
+    | on the GST portal/GSP itself and records the IRN/Ack/QR back. `http`:
+    | POST the NIC-schema payload to a configured JSON endpoint (a GSP or an
+    | in-house bridge) which answers the four artefacts. See
+    | docs/e-invoice.md.
+    */
+    'einvoice' => [
+        'provider' => env('EINVOICE_PROVIDER', 'manual'),
+        'endpoint' => env('EINVOICE_ENDPOINT'),
+        'token' => env('EINVOICE_TOKEN'),
+        'timeout' => (int) env('EINVOICE_TIMEOUT', 30),
+    ],
+
 ];

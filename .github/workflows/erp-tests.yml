@@ -28,7 +28,15 @@ jobs:
       - name: Full unit, feature and integration suite
         run: |
           mkdir -p .work
-          vendor/bin/phpunit --log-junit .work/phpunit.xml --coverage-clover .work/coverage.xml
+          if ! vendor/bin/phpunit --log-junit .work/phpunit.xml --coverage-clover .work/coverage.xml; then
+            # Surface the failures as annotations so the run summary says what
+            # broke without opening logs (which some environments cannot fetch).
+            node tools/testing/junit-failures.cjs .work/phpunit.xml
+            if [ ! -s .work/phpunit.xml ]; then
+              vendor/bin/phpunit 2>&1 | tail -30 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
+            fi
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:

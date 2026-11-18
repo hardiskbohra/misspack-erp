@@ -70,7 +70,7 @@
                                                 target="_blank" rel="noopener" aria-label="Print delivery receipt for {{ $shipment->shipment_number }}"
                                                 title="Print delivery receipt"><i class="fas fa-print" aria-hidden="true"></i></a>
                                         @endif
-                                        <a class="master-icon-btn green" href="{{ route('shipments.publicTrack', $shipment->public_token) }}"
+                                        <a class="master-icon-btn green" href="{{ \App\Services\PublicShareLinks::url($shipment) }}"
                                             target="_blank" rel="noopener" aria-label="Public tracking for {{ $shipment->shipment_number }}"
                                             title="Public tracking page"><i class="fa-solid fa-link" aria-hidden="true"></i></a>
                                     </div>

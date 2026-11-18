@@ -20,7 +20,9 @@
     </div>
 
     @if($financialClosureSnapshot)
-        @if($project->status === 'closed_with_outstanding_financials')
+        @if($project->status === 'manually_closed')
+            <div class="master-alert warning"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Manually closed</strong><span>Incomplete workflow controls and financial obligations remain active. This is not a financially complete decision.</span></div></div>
+        @elseif($project->status === 'closed_with_outstanding_financials')
             <div class="master-alert error"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Closed with outstanding financials</strong><span>Receivables, payables and cash allocations remain active. Resolve them in their source modules, then review and close as financially complete.</span></div></div>
         @elseif($project->status === 'closed')
             <div class="master-alert master-alert-success"><i class="fa-solid fa-circle-check"></i><div><strong>Financially complete</strong><span>The closure snapshot is preserved below. Later source changes do not rewrite that decision.</span></div></div>
@@ -39,11 +41,11 @@
         </div>
 
         <div class="project-financial-closure-actions">
-            @if(!$financialClosureSnapshot['operationally_ready'])
+            @if(!$financialClosureSnapshot['operationally_ready'] && !in_array($project->status, \App\Models\Project::closureStatuses(), true))
                 <div class="master-alert warning"><i class="fa-solid fa-lock"></i><div><strong>Operational closure is not ready</strong><span>{{ count($financialClosureSnapshot['open_operational_steps']) }} other workflow step(s) remain open. Complete or formally override those controls first.</span></div></div>
-            @elseif(!$financialClosureSnapshot['has_outstanding_financials'] && $project->status !== 'closed')
+            @elseif($financialClosureSnapshot['operationally_ready'] && !$financialClosureSnapshot['has_outstanding_financials'] && !in_array($project->status, ['closed', 'manually_closed'], true))
                 <form method="POST" action="{{ route('projects.workflow.financial-closure.close', $project) }}">@csrf<button class="master-btn master-btn-primary" type="submit">Close as financially complete</button></form>
-            @elseif($financialClosureSnapshot['has_outstanding_financials'] && auth()->user()?->isAdmin() && $project->status !== 'closed_with_outstanding_financials')
+            @elseif($financialClosureSnapshot['operationally_ready'] && $financialClosureSnapshot['has_outstanding_financials'] && auth()->user()?->canOverrideProjects() && !in_array($project->status, \App\Models\Project::closureStatuses(), true))
                 <details>
                     <summary class="master-btn master-btn-danger">Manager exception: close with outstanding financials</summary>
                     <form method="POST" action="{{ route('projects.workflow.financial-closure.close-outstanding', $project) }}" class="project-approval-create">@csrf
@@ -54,7 +56,10 @@
                     </form>
                 </details>
             @endif
-            @if(in_array($project->status, \App\Models\Project::closureStatuses(), true) && auth()->user()?->isAdmin())
+            @if(auth()->user()?->canOverrideProjects() && !in_array($project->status, \App\Models\Project::closureStatuses(), true))
+                <a class="master-btn master-btn-light master-btn-sm" href="{{ route('projects.show', ['project' => $project, 'tab' => 'overview']) }}#project-admin-controls">Manual closure options</a>
+            @endif
+            @if(in_array($project->status, \App\Models\Project::closureStatuses(), true) && auth()->user()?->canOverrideProjects())
                 <details>
                     <summary class="master-btn master-btn-light master-btn-sm">Reopen project</summary>
                     <form method="POST" action="{{ route('projects.workflow.financial-closure.reopen', $project) }}" class="project-inline-form">@csrf<textarea class="master-textarea" name="reason" minlength="10" maxlength="2000" required placeholder="Reason for reopening"></textarea><button class="master-btn master-btn-light master-btn-sm" type="submit">Reopen with audit record</button></form>

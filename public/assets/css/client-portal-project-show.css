@@ -81,6 +81,8 @@
 }
 
 .pd-status-on_hold,
+.pd-status-manually_closed,
+.pd-status-closed_with_outstanding_financials,
 .pd-status-waiting_client,
 .pd-status-waiting_vendor,
 .pd-status-po_pending,

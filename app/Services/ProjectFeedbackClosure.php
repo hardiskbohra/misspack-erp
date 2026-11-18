@@ -33,13 +33,24 @@ class ProjectFeedbackClosure
         if (! Schema::hasTable('feedback_requests')) return null;
 
         return DB::transaction(function () use ($workflow, $userId, $issueIfEligible) {
-            $workflow->loadMissing(['project', 'steps', 'evaluations.activeOverride']);
+            Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->firstOrFail();
+            $workflow->load(['project', 'steps', 'evaluations.activeOverride']);
             $step = $workflow->steps->first(fn ($row) => $row->step_key === self::GATE && $row->project_product_id === null);
             if (! $step) return null;
 
             $commercial = $workflow->steps->first(fn ($row) => $row->step_key === ProjectFinancialClosure::GATE && $row->project_product_id === null);
             $eligible = $commercial && in_array($commercial->status, ['completed', 'skipped'], true);
             if (! $eligible) {
+                // An explicit early-feedback bypass is scoped to this missing
+                // prerequisite. Once commercial closure becomes eligible a new
+                // source evaluation supersedes it in the usual way.
+                $current = ProjectWorkflowBypass::currentEvaluation($step);
+                if (data_get($current?->details, 'admin_bypass_context') === ProjectWorkflowBypass::EARLY_FEEDBACK && $current?->activeOverride) {
+                    $this->applyToStep($current);
+                    app(ProjectWorkflowExecution::class)->recalculate($workflow);
+                    return $current;
+                }
                 $step->update([
                     'status' => 'not_started',
                     'blocked_reason' => null,
@@ -127,7 +138,7 @@ class ProjectFeedbackClosure
             'notes' => $overridden ? 'Final closure continued under manager override #'.$evaluation->activeOverride->id.'. '.$evaluation->summary : $evaluation->summary,
             'actual_started_at' => $step->actual_started_at ?: now(),
             'completed_at' => $passed || $overridden ? ($step->completed_at ?: now()) : null,
-            'completed_by' => $passed || $overridden ? ($evaluation->evaluated_by ?: Auth::id()) : null,
+            'completed_by' => $overridden ? $evaluation->activeOverride->approved_by : ($passed ? ($evaluation->evaluated_by ?: Auth::id()) : null),
         ]);
     }
 

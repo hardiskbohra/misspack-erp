@@ -305,7 +305,7 @@ class RecurrenceIntake
             'title' => fn ($value) => trim((string) $value),
             'particular' => fn ($value) => trim((string) $value),
             'transaction_type' => fn ($value) => $value === 'credit' ? 'credit' : 'debit',
-            'amount' => fn ($value) => round((float) $value, 2),
+            'amount' => fn ($value) => round((float) $value, 3),
             'currency' => fn ($value) => strtoupper((string) $value) ?: 'INR',
             'account_id' => fn ($value) => $value ?: null,
             'category_id' => fn ($value) => $value ?: null,

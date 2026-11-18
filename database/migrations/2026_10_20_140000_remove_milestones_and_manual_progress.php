@@ -23,9 +23,19 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('project_workflows') && Schema::hasTable('projects')) {
-            DB::table('projects')
-                ->join('project_workflows', 'project_workflows.project_id', '=', 'projects.id')
-                ->update(['projects.progress_percent' => DB::raw('project_workflows.calculated_progress')]);
+            if (DB::getDriverName() === 'sqlite') {
+                // Laravel's SQLite joined-update grammar moves the join into a
+                // WHERE subquery, where it is no longer visible to SET. Use a
+                // correlated value and leave projects without a workflow alone.
+                DB::table('projects')
+                    ->whereExists(fn ($query) => $query->selectRaw('1')->from('project_workflows')
+                        ->whereColumn('project_workflows.project_id', 'projects.id'))
+                    ->update(['progress_percent' => DB::raw('(select calculated_progress from project_workflows where project_workflows.project_id = projects.id)')]);
+            } else {
+                DB::table('projects')
+                    ->join('project_workflows', 'project_workflows.project_id', '=', 'projects.id')
+                    ->update(['projects.progress_percent' => DB::raw('project_workflows.calculated_progress')]);
+            }
         }
     }
 

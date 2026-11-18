@@ -39,20 +39,20 @@ These are **designed release journeys**, not a claim that a complete browser sui
 1. Start standard workflow twice for A100/B200; verify no duplicate steps.
 2. Complete A procurement/artwork/PPS/production, recording optional sample-lot QC evidence.
 3. Keep B unfinished. Confirm A packing and automatic product comparison.
-4. Pay full required dispatch balance or record an authorised, evidenced override.
+4. Leave part of the required dispatch balance outstanding and note the actual shortfall.
 5. Dispatch/deliver A40 then A60 via two shipments. Record delivery receipt without attachment once.
 6. Recalculate workflow and reopen queue/UI.
 
-**Expected:** A reaches100 delivered exactly; B remains uncompleted; no over-allocation; project not fully delivered/closed while B open; no unnecessary navigation outside Action Centre. Packing/QC/financial blockers stay actionable. **Related:** PROJECT, WORKFLOW, QC, PACK, SHIP.
+**Expected:** A reaches100 delivered exactly; B remains uncompleted; no over-allocation; project not fully delivered/closed while B open; no unnecessary navigation outside Action Centre. The unpaid balance produces a shipment warning and remains due; missing packing, QC, artwork/PPS approvals and documents are actionable readiness warnings, while project-product identity and valid-quantity controls remain enforced. **Related:** PROJECT, WORKFLOW, QC, PACK, SHIP.
 
 ## SYS-05 — Upstream change invalidates stale readiness (P0)
 
-1. Approve current artwork, passing QC, packing and dispatch balance.
-2. Change a material upstream item/approved version or reverse relevant receipt.
+1. Approve current artwork, passing QC and packing; pay the required dispatch balance.
+2. Change a material upstream item/approved version or reverse a relevant receipt.
 3. Attempt dispatch using the previously opened browser/route model.
-4. Re-evaluate, resolve the changed prerequisite, and retry.
+4. Re-evaluate, resolve any independently blocking prerequisite, and retry.
 
-**Expected:** previous approval/evidence does not silently authorise changed content; rejection is atomic and explains next unblocking action; only authorised sensitive override can bypass the appropriate gate. **Related:** WORKFLOW/QC/PACK/SHIP. Full stale-evidence system journey remains planned.
+**Expected:** previous approval or packing evidence does not silently authorise changed content; rejection is atomic and explains the next action. A reversed receipt instead produces a financial warning and remains due; only an authorised sensitive override can bypass an otherwise blocking control. **Related:** WORKFLOW/QC/PACK/SHIP. Full stale-evidence system journey remains planned.
 
 ## SYS-06 — Client portal isolation and revocation (P0)
 

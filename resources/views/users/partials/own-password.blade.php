@@ -2,9 +2,10 @@
     Changing your own password.
 
     Shared by the same two pages as the details form, so the rules are asked once
-    — at least eight characters, and the current password even though the person
-    is already signed in, because a session left open on a shared machine is
-    exactly what a password change is meant to close (`AccountController`).
+    — the strength rule lives in `Password::defaults()`, and the current password
+    even though the person is already signed in, because a session left open on a
+    shared machine is exactly what a password change is meant to close
+    (`AccountController`).
 
     Variables: $action, $submit, $prefix.
 --}}
@@ -32,7 +33,7 @@
             <label class="master-label" for="{{ $prefix }}-new">New password</label>
             <div class="master-password-wrap">
                 <input class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}"
-                    id="{{ $prefix }}-new" type="password" name="password" placeholder="Min. 8 characters"
+                    id="{{ $prefix }}-new" type="password" name="password" placeholder="12+, upper & lower case, a number"
                     autocomplete="new-password">
                 <button type="button" class="master-password-toggle" data-toggle-password="{{ $prefix }}-new"
                     aria-label="Toggle password visibility"><i class="fas fa-eye" aria-hidden="true"></i></button>

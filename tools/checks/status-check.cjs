@@ -66,14 +66,18 @@ const appliesDefault = (controller.match(/Shipment::withDeliveryDefaults\(/g) ||
 check('every path that writes a status applies the default',
     appliesDefault >= 4, `${appliesDefault} call sites`);
 
+// Inspect the history method itself rather than a fixed character window:
+// validation may grow without moving the delivery rule to another method.
+const historyMethod = /public function storeHistory\(Request \$request, Shipment \$shipment\)[\s\S]*?(?=\n    (?:public|protected|private) function )/.exec(controller)?.[0] ?? '';
 check('the tracking history form applies it',
-    /storeHistory[\s\S]{0,1400}Shipment::withDeliveryDefaults\(/.test(controller));
+    /Shipment::withDeliveryDefaults\(\$attributes, \$shipment\)/.test(historyMethod));
 check('the edit form applies it',
     /public function update\(Request \$request, Shipment \$shipment\)[\s\S]{0,900}Shipment::withDeliveryDefaults\(\$data, \$shipment\)/.test(controller));
 check('creating a shipment that is already delivered applies it',
     /Shipment::withDeliveryDefaults\(\$data\)/.test(controller));
+const derivedHistoryMethod = /private function syncShipmentStatusFromLatestHistory\([^)]*\)[\s\S]*?(?=\n    (?:public|protected|private) function )/.exec(controller)?.[0] ?? '';
 check('a status derived from a history edit applies it',
-    /syncShipmentStatusFromLatestHistory[\s\S]{0,700}withDeliveryDefaults\(/.test(controller));
+    /Shipment::withDeliveryDefaults\(\['status' => \$latestHistory->status\], \$shipment\)/.test(derivedHistoryMethod));
 
 /* ------------------------------------------- 3. nothing refuses a delivery */
 

@@ -16,13 +16,17 @@ class ProjectFinancialClosure
     public const GATE = 'commercial_closure';
     public const CONTROLLED_STEPS = [self::GATE];
 
-    public function snapshot(Project $project): array
+    public function snapshot(Project $project, bool $current = false): array
     {
         $project->loadMissing([
             'taxInvoices.payments', 'taxInvoices.cashflowAllocations.cashflowEntry',
             'proformaInvoices.payments', 'proformaInvoices.cashflowAllocations.cashflowEntry', 'proformaInvoices.convertedInvoice',
             'bills.payments', 'bills.cashflowAllocations.cashflowEntry',
         ]);
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('purchase_payment_splits')) {
+            $project->loadMissing('bills.paymentSplits.payment');
+        }
 
         $sales = $project->taxInvoices->concat($project->proformaInvoices)
             ->filter(fn ($invoice) => $invoice->countsTowardsProject())
@@ -39,17 +43,17 @@ class ProjectFinancialClosure
             'status' => $invoice->status,
             'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
             'document_total' => $invoice->receivableTotal(),
-            'allocated_receipts' => round($invoice->receivedAmount(), 2),
-            'outstanding' => round($invoice->balanceDue(), 2),
-            'advance' => round($invoice->advanceAmount(), 2),
+            'allocated_receipts' => round($invoice->receivedAmount(), 3),
+            'outstanding' => round($invoice->balanceDue(), 3),
+            'advance' => round($invoice->advanceAmount(), 3),
             'settlement_sources' => $invoice->payments->map(fn ($entry) => [
                 'source' => 'direct_cashflow', 'id' => $entry->id, 'date' => $entry->entry_date?->format('Y-m-d'),
-                'credit' => round((float) $entry->credit_amount, 2), 'debit' => round((float) $entry->debit_amount, 2),
+                'credit' => round((float) $entry->credit_amount, 3), 'debit' => round((float) $entry->debit_amount, 3),
                 'currency' => strtoupper((string) ($entry->currency ?: $invoice->currency ?: 'INR')),
                 'accounting_status' => $entry->accounting_status, 'updated_at' => $entry->updated_at?->toISOString(),
             ])->concat($invoice->cashflowAllocations->map(fn ($allocation) => [
                 'source' => 'cashflow_allocation', 'id' => $allocation->id, 'cashflow_entry_id' => $allocation->cashflow_entry_id,
-                'amount' => round((float) $allocation->amount, 2), 'document_amount' => round($allocation->documentAmount(), 2),
+                'amount' => round((float) $allocation->amount, 3), 'document_amount' => round($allocation->documentAmount(), 3),
                 'currency' => strtoupper((string) ($allocation->currency ?: 'INR')), 'document_currency' => strtoupper((string) ($allocation->document_currency ?: $invoice->currency ?: 'INR')),
                 'accounting_status' => $allocation->cashflowEntry?->accounting_status, 'updated_at' => $allocation->updated_at?->toISOString(),
             ]))->values()->all(),
@@ -63,18 +67,30 @@ class ProjectFinancialClosure
             'document_type' => $bill->invoice_type,
             'status' => $bill->status,
             'currency' => strtoupper((string) ($bill->currency ?: 'INR')),
-            'document_total' => round((float) $bill->total_amount, 2),
-            'allocated_payments' => round($bill->paidAmount(), 2),
-            'outstanding' => round($bill->balanceDue(), 2),
-            'advance' => round($bill->advanceAmount(), 2),
+            'document_total' => round((float) $bill->total_amount, 3),
+            'allocated_payments' => round($bill->paidAmount(), 3),
+            'outstanding' => round($bill->balanceDue(), 3),
+            'advance' => round($bill->advanceAmount(), 3),
             'settlement_sources' => $bill->payments->map(fn ($entry) => [
                 'source' => 'vendor_ledger', 'id' => $entry->id, 'cashflow_entry_id' => $entry->cashflow_entry_id,
-                'date' => $entry->transaction_date?->format('Y-m-d'), 'amount' => round((float) $entry->foreign_amount, 2),
+                'date' => $entry->transaction_date?->format('Y-m-d'), 'amount' => round((float) $entry->foreign_amount, 3),
                 'currency' => strtoupper((string) ($entry->foreign_currency ?: $bill->currency ?: 'INR')),
                 'status' => $entry->status, 'updated_at' => $entry->updated_at?->toISOString(),
-            ])->concat($bill->cashflowAllocations->map(fn ($allocation) => [
+            ])->concat(($bill->relationLoaded('paymentSplits') ? $bill->paymentSplits : collect())
+                ->filter(fn ($split) => $split->payment && $split->payment->transaction_type === 'debit' && $split->payment->status !== 'cancelled')
+                ->map(fn ($split) => [
+                    'source' => 'vendor_payment_split', 'id' => $split->id,
+                    'vendor_payment_entry_id' => $split->vendor_payment_entry_id,
+                    'cashflow_entry_id' => $split->payment->cashflow_entry_id,
+                    'date' => $split->payment->transaction_date?->format('Y-m-d'),
+                    'amount' => round((float) $split->amount, 3),
+                    'currency' => strtoupper((string) ($split->payment->foreign_currency ?: $bill->currency ?: 'INR')),
+                    'status' => $split->payment->status,
+                    'updated_at' => $split->updated_at?->toISOString(),
+                    'payment_updated_at' => $split->payment->updated_at?->toISOString(),
+                ]))->concat($bill->cashflowAllocations->map(fn ($allocation) => [
                 'source' => 'cashflow_allocation', 'id' => $allocation->id, 'cashflow_entry_id' => $allocation->cashflow_entry_id,
-                'amount' => round((float) $allocation->amount, 2), 'document_amount' => round($allocation->documentAmount(), 2),
+                'amount' => round((float) $allocation->amount, 3), 'document_amount' => round($allocation->documentAmount(), 3),
                 'currency' => strtoupper((string) ($allocation->currency ?: 'INR')), 'document_currency' => strtoupper((string) ($allocation->document_currency ?: $bill->currency ?: 'INR')),
                 'accounting_status' => $allocation->cashflowEntry?->accounting_status, 'updated_at' => $allocation->updated_at?->toISOString(),
             ]))->values()->all(),
@@ -90,14 +106,14 @@ class ProjectFinancialClosure
                 'particular' => $entry->particular,
                 'reference' => $entry->bank_reference_number ?: $entry->invoice_bill_number,
                 'currency' => strtoupper((string) ($entry->currency ?: 'INR')),
-                'amount_moved' => round($entry->amountMoved(), 2),
-                'allocated' => round($entry->allocatedAmount(), 2),
-                'unallocated' => round($entry->unallocatedAmount(), 2),
+                'amount_moved' => round($entry->amountMoved(), 3),
+                'allocated' => round($entry->allocatedAmount(), 3),
+                'unallocated' => round($entry->unallocatedAmount(), 3),
                 'accounting_status' => $entry->accounting_status,
                 'allocation_sources' => $entry->allocations->sortBy('id')->map(fn ($allocation) => [
                     'id' => $allocation->id, 'project_id' => $allocation->project_id,
                     'sales_invoice_id' => $allocation->sales_invoice_id, 'purchase_invoice_id' => $allocation->purchase_invoice_id,
-                    'amount' => round((float) $allocation->amount, 2), 'document_amount' => round($allocation->documentAmount(), 2),
+                    'amount' => round((float) $allocation->amount, 3), 'document_amount' => round($allocation->documentAmount(), 3),
                     'updated_at' => $allocation->updated_at?->toISOString(),
                 ])->values()->all(),
                 'updated_at' => $entry->updated_at?->toISOString(),
@@ -111,11 +127,21 @@ class ProjectFinancialClosure
             'unallocated_client_cash' => $this->totals(array_values(array_filter($unallocated, fn ($row) => $row['transaction_type'] === 'credit')), 'unallocated'),
             'unallocated_vendor_cash' => $this->totals(array_values(array_filter($unallocated, fn ($row) => $row['transaction_type'] === 'debit')), 'unallocated'),
         ];
-        $openSteps = $project->workflow?->steps
+        $workflow = $project->workflow;
+        $steps = $workflow
+            ? app(ProjectWorkflowSalesScope::class)->steps($workflow->allSteps(), $current)
+                ->when($current, fn ($query) => $query->lockForUpdate())->get()
+            : collect();
+        $openSteps = $steps
             ->reject(fn ($step) => in_array($step->step_key, [self::GATE, ProjectFeedbackClosure::GATE], true))
             ->whereNotIn('status', ['completed', 'skipped', 'cancelled'])
             ->map(fn ($step) => ['step_key' => $step->step_key, 'title' => $step->title, 'status' => $step->status])
-            ->values()->all() ?? [];
+            ->values()->all();
+        // An unmatched sales line cannot silently disappear from closure simply
+        // because no safe product lane could be created for it.
+        if ($workflow && app(ProjectWorkflowSalesScope::class)->unmatched($project->id, $current)->isNotEmpty()) {
+            $openSteps[] = ['step_key' => 'unmatched_sales_items', 'title' => 'Review unmatched sales invoice items', 'status' => 'blocked'];
+        }
 
         $snapshot = [
             'schema_version' => 1,
@@ -127,7 +153,7 @@ class ProjectFinancialClosure
             'totals' => $totals,
             'open_operational_steps' => $openSteps,
         ];
-        $snapshot['has_outstanding_financials'] = collect($totals)->flatten()->contains(fn ($amount) => (float) $amount > 0.009);
+        $snapshot['has_outstanding_financials'] = collect($totals)->flatten()->contains(fn ($amount) => (float) $amount >= 0.001);
         $snapshot['operationally_ready'] = count($openSteps) === 0;
         $snapshot['content_hash'] = hash('sha256', json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
@@ -136,42 +162,50 @@ class ProjectFinancialClosure
 
     public function evaluate(ProjectWorkflow $workflow, ?int $userId = null): ProjectGateEvaluation
     {
-        $workflow->loadMissing('project', 'steps');
-        $snapshot = $this->snapshot($workflow->project);
-        $passed = $snapshot['operationally_ready'] && ! $snapshot['has_outstanding_financials'];
-        $summary = ! $snapshot['operationally_ready']
-            ? count($snapshot['open_operational_steps']).' operational workflow step(s) remain open.'
-            : ($snapshot['has_outstanding_financials']
-                ? 'Financial obligations or unapplied project cash remain. Manager exception is required to close.'
-                : 'Operational work and all financial categories are reconciled.');
+        return DB::transaction(function () use ($workflow, $userId) {
+            Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->lockForUpdate()->firstOrFail();
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            $workflow->load('project');
+            $workflow->project->setRelation('workflow', $workflow);
+            $snapshot = $this->snapshot($workflow->project, true);
+            $passed = $snapshot['operationally_ready'] && ! $snapshot['has_outstanding_financials'];
+            $summary = ! $snapshot['operationally_ready']
+                ? count($snapshot['open_operational_steps']).' operational workflow step(s) remain open.'
+                : ($snapshot['has_outstanding_financials']
+                    ? 'Financial obligations or unapplied project cash remain. Manager exception is required to close.'
+                    : 'Operational work and all financial categories are reconciled.');
 
-        $latest = $workflow->evaluations()->where('gate_key', self::GATE)->whereNull('project_product_id')->latest('evaluated_at')->latest('id')->first();
-        if ($latest && hash_equals((string) $latest->content_hash, $snapshot['content_hash'])) {
-            app(ProjectWorkflowGates::class)->applyToStep($latest);
-            return $latest;
-        }
+            $latest = $workflow->evaluations()->where('gate_key', self::GATE)->whereNull('project_product_id')->latest('evaluated_at')->latest('id')->first();
+            if ($latest && hash_equals((string) $latest->content_hash, $snapshot['content_hash'])) {
+                app(ProjectWorkflowGates::class)->applyToStep($latest);
+                app(ProjectWorkflowExecution::class)->recalculate($workflow);
+                return $latest;
+            }
 
-        $evaluation = $workflow->evaluations()->create([
-            'gate_key' => self::GATE,
-            'result' => $passed ? 'passed' : 'blocked',
-            'content_hash' => $snapshot['content_hash'],
-            'summary' => $summary,
-            'details' => $snapshot,
-            'evaluated_by' => $userId,
-            'evaluated_at' => now(),
-        ]);
-        app(ProjectWorkflowGates::class)->applyToStep($evaluation);
-        app(ProjectWorkflowExecution::class)->recalculate($workflow);
+            $evaluation = $workflow->evaluations()->create([
+                'gate_key' => self::GATE,
+                'result' => $passed ? 'passed' : 'blocked',
+                'content_hash' => $snapshot['content_hash'],
+                'summary' => $summary,
+                'details' => $snapshot,
+                'evaluated_by' => $userId,
+                'evaluated_at' => now(),
+            ]);
+            app(ProjectWorkflowGates::class)->applyToStep($evaluation);
+            app(ProjectWorkflowExecution::class)->recalculate($workflow);
 
-        return $evaluation;
+            return $evaluation;
+        });
     }
 
     public function close(Project $project, int $userId, bool $acceptOutstanding = false, ?string $reason = null, ?string $expectedDate = null): Closure
     {
         return DB::transaction(function () use ($project, $userId, $acceptOutstanding, $reason, $expectedDate) {
             $locked = Project::query()->lockForUpdate()->findOrFail($project->id);
-            if ($locked->status === 'closed' || ($acceptOutstanding && in_array($locked->status, Project::closureStatuses(), true))) {
-                throw ValidationException::withMessages(['closure' => 'This project already has the requested financial closure. Reopen it before recording another exception.']);
+            if ($locked->status === 'closed' || $locked->status === Closure::TYPE_MANUAL
+                || ($acceptOutstanding && in_array($locked->status, Project::closureStatuses(), true))) {
+                throw ValidationException::withMessages(['closure' => 'This project already has a closure decision. Reopen it before recording another exception.']);
             }
             $workflow = $locked->workflow()->with('steps')->firstOrFail();
             $evaluation = $this->evaluate($workflow, $userId)->fresh('activeOverride');
@@ -214,11 +248,12 @@ class ProjectFinancialClosure
                 'approved_by' => $userId,
                 'closed_at' => now(),
             ]);
-            $locked->forceFill([
+            $closedState = [
                 'status' => $acceptOutstanding ? Closure::TYPE_OUTSTANDING : 'closed',
                 'stage' => 'closed',
                 'completed_at' => now(),
-            ])->save();
+            ];
+            $locked->forceFill($closedState)->save();
             app(ProjectWorkflowExecution::class)->recalculate($workflow);
             $this->writeAudit($locked, $userId, 'financial_closure', $acceptOutstanding ? 'Project closed with outstanding financials' : 'Project financially closed', $reason, [
                 'closure_id' => $closure->id, 'closure_type' => $type, 'content_hash' => $snapshot['content_hash'],
@@ -230,15 +265,60 @@ class ProjectFinancialClosure
         });
     }
 
+    /** Close the project itself without claiming that its financial gate passed. */
+    public function manualClose(Project $project, User $actor, string $reason): Closure
+    {
+        abort_unless($actor->canOverrideProjects(), 403);
+        if (mb_strlen(trim($reason)) < 20) {
+            throw ValidationException::withMessages(['reason' => 'Explain the accepted risk and follow-up in at least 20 characters.']);
+        }
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('projects', 'manual_status')) {
+            throw ValidationException::withMessages(['closure' => 'Run the project administrator controls migration before manually closing.']);
+        }
+
+        return DB::transaction(function () use ($project, $actor, $reason) {
+            $locked = Project::query()->lockForUpdate()->findOrFail($project->id);
+            if (in_array($locked->status, Project::closureStatuses(), true)) {
+                throw ValidationException::withMessages(['closure' => 'This project is already closed. Reopen it before recording another decision.']);
+            }
+            // Older projects can lack a workflow. Start the standard path so the
+            // snapshot honestly includes the controls still open at closure.
+            $workflow = $locked->workflow()->with('steps')->first()
+                ?: app(ProjectWorkflowExecution::class)->start($locked, $actor->id);
+            $evaluation = $this->evaluate($workflow, $actor->id)->fresh();
+            $snapshot = $evaluation->details;
+            $closure = Closure::query()->create([
+                'project_id' => $locked->id, 'project_workflow_id' => $workflow->id,
+                'closure_type' => Closure::TYPE_MANUAL, 'content_hash' => $snapshot['content_hash'],
+                'financial_snapshot' => $snapshot, 'reason' => $reason,
+                'approved_by' => $actor->id, 'closed_at' => now(),
+            ]);
+            $locked->forceFill([
+                'status' => Closure::TYPE_MANUAL, 'stage' => 'closure', 'completed_at' => now(),
+            ])->save();
+            app(ProjectWorkflowExecution::class)->recalculate($workflow);
+            $this->writeAudit($locked, $actor->id, 'manual_closure', 'Project manually closed', $reason, [
+                'closure_id' => $closure->id, 'closure_type' => Closure::TYPE_MANUAL,
+                'content_hash' => $snapshot['content_hash'], 'totals' => $snapshot['totals'],
+                'open_operational_steps' => $snapshot['open_operational_steps'],
+            ]);
+            // Incomplete commercial controls remain blocked; do not issue a
+            // close-out feedback request or pretend the source gate passed.
+            return $closure;
+        });
+    }
+
     public function reopen(Project $project, int $userId, string $reason): Closure
     {
         return DB::transaction(function () use ($project, $userId, $reason) {
             $locked = Project::query()->lockForUpdate()->findOrFail($project->id);
-            if (! in_array($locked->status, ['closed', Closure::TYPE_OUTSTANDING], true)) {
-                throw ValidationException::withMessages(['closure' => 'Only a financially closed project can be reopened.']);
+            if (! in_array($locked->status, Project::closureStatuses(), true)) {
+                throw ValidationException::withMessages(['closure' => 'Only a closed project can be reopened.']);
             }
-            $workflow = $locked->workflow()->with('steps')->firstOrFail();
-            $snapshot = $this->snapshot($locked);
+            $workflow = $locked->workflow()->lockForUpdate()->firstOrFail();
+            app(ProjectWorkflowExecution::class)->sync($workflow);
+            $locked->setRelation('workflow', $workflow);
+            $snapshot = $this->snapshot($locked, true);
             $closure = Closure::query()->create([
                 'project_id' => $locked->id,
                 'project_workflow_id' => $workflow->id,
@@ -283,7 +363,7 @@ class ProjectFinancialClosure
 
     private function totals(array $rows, string $column): array
     {
-        return collect($rows)->filter(fn ($row) => (float) $row[$column] > 0.009)
-            ->groupBy('currency')->map(fn ($group) => round((float) $group->sum($column), 2))->sortKeys()->all();
+        return collect($rows)->filter(fn ($row) => (float) $row[$column] >= 0.001)
+            ->groupBy('currency')->map(fn ($group) => round((float) $group->sum($column), 3))->sortKeys()->all();
     }
 }

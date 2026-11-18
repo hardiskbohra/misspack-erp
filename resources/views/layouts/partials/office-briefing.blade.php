@@ -21,6 +21,7 @@
             <p class="master-modal-lead">
                 Critical items clear for the office when one person marks them read.
                 <a href="{{ route('settings.briefings') }}">Organisation settings</a>
+                · <a href="{{ route('office-alerts.centre') }}">Open the notification centre</a>
             </p>
         </div>
     </div>

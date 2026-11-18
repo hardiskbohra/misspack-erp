@@ -84,6 +84,7 @@
         request()->routeIs('settings.*') => 'settings',
         request()->routeIs('notes.*') => 'notes',
         request()->routeIs('shipments.*') => 'shipments',
+        request()->routeIs('stock.*') => 'stock',
         request()->routeIs('clients.*') => 'clients',
         request()->routeIs('cashflows.*') => 'cashflows',
         request()->routeIs('users.*') => 'users',
@@ -124,6 +125,7 @@
             ['label' => 'Exceptions', 'route' => 'projects.exceptions.index', 'active' => 'projects.exceptions.*', 'icon' => 'fa-solid fa-triangle-exclamation'],
             ['label' => 'Packaging lists', 'route' => 'packaging-lists.index', 'active' => 'packaging-lists.*', 'icon' => 'fa-solid fa-boxes-stacked'],
             ['label' => 'Shipments', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'fas fa-truck'],
+            ['label' => 'Stock reconciliation', 'route' => 'stock.index', 'active' => 'stock.*', 'icon' => 'fa-solid fa-warehouse'],
             ['label' => 'Feedback', 'route' => 'feedback.index', 'active' => 'feedback.*', 'except' => ['feedback.public.*'], 'icon' => 'fa-regular fa-comment-dots'],
 
             ['section' => 'Sales & catalogue'],
@@ -259,6 +261,34 @@
         </header>
 
         <main class="page-content">
+            @if(is_array($shipmentReadinessWarning = session('shipment_readiness_warning')) && auth()->user()?->hasPermission('operations.view'))
+                <div class="shipment-balance-warning" role="status" aria-live="polite">
+                    <span class="shipment-balance-warning-icon" aria-hidden="true">!</span>
+                    <div>
+                        <strong>Shipment readiness warning</strong>
+                        <p>{{ $shipmentReadinessWarning['message'] ?? '' }}</p>
+                        @if(!empty($shipmentReadinessWarning['issues']))
+                            <ul>
+                                @foreach($shipmentReadinessWarning['issues'] as $issue)
+                                    <li>{{ $issue }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                </div>
+            @endif
+            @if(session('shipment_balance_warning'))
+                <div class="shipment-balance-warning" role="status" aria-live="polite">
+                    <span class="shipment-balance-warning-icon" aria-hidden="true">!</span>
+                    <div>
+                        <strong>Proforma balance warning</strong>
+                        <p>{{ session('shipment_balance_warning') }}</p>
+                        @if(session('shipment_balance_warning_detail') && (auth()->user()?->hasPermission('sales.view') || auth()->user()?->hasPermission('projects.view')))
+                            <p>{{ session('shipment_balance_warning_detail') }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
             @yield('content')
         </main>
     </div>
@@ -298,7 +328,7 @@
                 MasterAlert.alert(@json(session('error')), { title: 'Error', type: 'error', danger: true });
             @endif
 
-            @if($errors->any())
+            @if($errors->any() && ! \Illuminate\Support\Facades\View::hasSection('inline-validation-errors'))
                 var validationErrors = @json($errors->all());
                 MasterAlert.alert('<ul>' + validationErrors.map(function (error) {
                     return '<li>' + escapeHtml(error) + '</li>';

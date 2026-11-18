@@ -27,7 +27,7 @@
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="purchasePaymentAmount">Vendor-currency value <span class="master-required">*</span></label>
-                            <input class="master-input" id="purchasePaymentAmount" type="number" step="0.0001" min="0.01" name="foreign_amount" required inputmode="decimal">
+                            <input class="master-input" id="purchasePaymentAmount" type="number" step="0.0001" min="0.001" name="foreign_amount" required inputmode="decimal">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="purchasePaymentCurrency">Currency <span class="master-required">*</span></label>
@@ -44,7 +44,7 @@
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="purchasePaymentInr">Amount in INR</label>
-                            <input class="master-input" id="purchasePaymentInr" type="number" step="0.01" min="0" name="amount_in_inr"
+                            <input class="master-input" id="purchasePaymentInr" type="number" step="0.001" min="0" name="amount_in_inr"
                                 placeholder="Calculated from the rate when left blank" inputmode="decimal">
                         </div>
                         <div class="master-field">

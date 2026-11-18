@@ -48,6 +48,7 @@ class ProjectWorkflowNotifications
                     $workflow = $evaluation?->workflow;
                     $project = $workflow?->project;
                     if (! $workflow || ! $project) continue;
+                    if ($evaluation->project_product_id !== null && ! app(ProjectWorkflowSalesScope::class)->contains((int) $project->id, (int) $evaluation->project_product_id)) continue;
 
                     $latest = ProjectGateEvaluation::query()
                         ->where('project_workflow_id', $workflow->id)

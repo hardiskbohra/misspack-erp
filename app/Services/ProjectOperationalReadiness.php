@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PackagingList;
+use App\Models\Project;
 use App\Models\ProjectGateEvaluation;
 use App\Models\ProjectProduct;
 use App\Models\ProjectWorkflow;
@@ -37,11 +38,14 @@ class ProjectOperationalReadiness
     public function evaluateAll(ProjectWorkflow $workflow, ?int $userId = null): array
     {
         return DB::transaction(function () use ($workflow, $userId) {
-            $workflow->loadMissing('project.products.qualityInspections');
-            app(ProjectWorkflowExecution::class)->sync($workflow, $workflow->project);
+            $project = Project::query()->whereKey($workflow->project_id)->lockForUpdate()->firstOrFail();
+            $workflow = ProjectWorkflow::query()->whereKey($workflow->id)->lockForUpdate()->firstOrFail();
+            $workflow->setRelation('project', $project);
+            app(ProjectWorkflowExecution::class)->sync($workflow, $project);
+            $salesProducts = app(ProjectWorkflowSalesScope::class)->products($workflow->project_id, true)->lockForUpdate()->with('qualityInspections')->get();
             $evaluations = [];
             $deliveryEvidence = [];
-            foreach ($workflow->project->products->where('status', '!=', 'cancelled') as $product) {
+            foreach ($salesProducts as $product) {
                 $productEvaluations = $this->evaluateProduct($workflow, $product, $userId);
                 foreach ($productEvaluations as $evaluation) {
                     $this->applyToStep($evaluation);
@@ -58,12 +62,18 @@ class ProjectOperationalReadiness
                     'remaining_quantity' => (float) data_get($delivery?->details, 'remaining_quantity', $product->quantity),
                 ];
             }
-            $allDelivered = $deliveryEvidence !== [] && collect($deliveryEvidence)->every(fn ($row) => in_array($row['result'], ['passed', 'overridden'], true));
+            $unmatched = app(ProjectWorkflowSalesScope::class)->unmatched($workflow->project_id, true);
+            $allDelivered = $unmatched->isEmpty() && collect($deliveryEvidence)->every(fn ($row) => in_array($row['result'], ['passed', 'overridden'], true));
+            $summary = $unmatched->isNotEmpty()
+                ? 'Unmatched sales invoice items need review before delivery reconciliation.'
+                : ($deliveryEvidence === [] ? 'No current sales-invoice products require delivery reconciliation.'
+                    : ($allDelivered ? 'Every current sales-invoice product is fully delivered or covered by a current manager override.' : 'One or more sales-invoice products still have undelivered quantities.'));
             $aggregate = $this->recordProject($workflow, self::GATE_DELIVERY_RECONCILED, [
                 'products' => $deliveryEvidence,
                 'product_count' => count($deliveryEvidence),
                 'delivered_product_count' => collect($deliveryEvidence)->whereIn('result', ['passed', 'overridden'])->count(),
-            ], $allDelivered, $allDelivered ? 'Every active project product is fully delivered or covered by a current manager override.' : 'One or more project products still have undelivered quantities.', $userId);
+                'unmatched_sales_line_ids' => $unmatched->pluck('id')->all(),
+            ], $allDelivered, $summary, $userId);
             $this->applyToStep($aggregate);
             $evaluations[] = $aggregate;
             app(ProjectWorkflowExecution::class)->recalculate($workflow);
@@ -216,7 +226,7 @@ class ProjectOperationalReadiness
     private function record(ProjectWorkflow $workflow, ProjectProduct $product, string $key, array $details, bool $passed, string $summary, ?int $userId): ProjectGateEvaluation
     {
         $hash = hash('sha256', json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        $latest = $workflow->evaluations()->where('project_product_id', $product->id)->where('gate_key', $key)->latest('evaluated_at')->latest('id')->first();
+        $latest = $workflow->evaluations()->where('project_product_id', $product->id)->where('gate_key', $key)->latest('evaluated_at')->latest('id')->lockForUpdate()->first();
         if ($latest && hash_equals((string) $latest->content_hash, $hash)) return $latest;
         return $workflow->evaluations()->create([
             'project_product_id'=>$product->id, 'gate_key'=>$key, 'result'=>$passed ? 'passed' : 'blocked',
@@ -228,7 +238,7 @@ class ProjectOperationalReadiness
     private function recordProject(ProjectWorkflow $workflow, string $key, array $details, bool $passed, string $summary, ?int $userId): ProjectGateEvaluation
     {
         $hash = hash('sha256', json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        $latest = $workflow->evaluations()->whereNull('project_product_id')->where('gate_key', $key)->latest('evaluated_at')->latest('id')->first();
+        $latest = $workflow->evaluations()->whereNull('project_product_id')->where('gate_key', $key)->latest('evaluated_at')->latest('id')->lockForUpdate()->first();
         if ($latest && hash_equals((string) $latest->content_hash, $hash)) return $latest;
         return $workflow->evaluations()->create([
             'project_product_id'=>null, 'gate_key'=>$key, 'result'=>$passed ? 'passed' : 'blocked',
@@ -239,9 +249,15 @@ class ProjectOperationalReadiness
 
     public function applyToStep(ProjectGateEvaluation $evaluation): void
     {
-        $evaluation->loadMissing('activeOverride');
+        $current = DB::transactionLevel() > 0;
+        if ($current) {
+            $evaluation->setRelation('activeOverride', $evaluation->overrides()->whereNull('revoked_at')->latest('id')->lockForUpdate()->first());
+        } else {
+            $evaluation->loadMissing('activeOverride');
+        }
         $step = ProjectWorkflowStep::query()->where('project_workflow_id', $evaluation->project_workflow_id)
-            ->where('project_product_id', $evaluation->project_product_id)->where('step_key', $evaluation->gate_key)->first();
+            ->where('project_product_id', $evaluation->project_product_id)->where('step_key', $evaluation->gate_key)
+            ->when($current, fn ($query) => $query->lockForUpdate())->first();
         if (! $step) return;
         $overridden = (bool) $evaluation->activeOverride; $passed = $evaluation->result === 'passed';
         $step->update([
@@ -250,7 +266,7 @@ class ProjectOperationalReadiness
             'notes'=>$overridden ? 'Gate continued under manager override #'.$evaluation->activeOverride->id.'.' : $evaluation->summary,
             'actual_started_at'=>($step->actual_started_at ?: now()),
             'completed_at'=>(($passed || $overridden) ? now() : null),
-            'completed_by'=>(($passed || $overridden) ? ($evaluation->evaluated_by ?: Auth::id()) : null),
+            'completed_by'=>$overridden ? $evaluation->activeOverride->approved_by : ($passed ? ($evaluation->evaluated_by ?: Auth::id()) : null),
         ]);
     }
 }

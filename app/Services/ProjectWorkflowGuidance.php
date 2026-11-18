@@ -27,6 +27,29 @@ class ProjectWorkflowGuidance
         $planningShipment = in_array($step->step_key, ['dispatch_approved', 'shipment_dispatched'], true)
             ? $project->shipments()->where('status', Shipment::STATUS_PLANNING)->latest('id')->first()
             : null;
+        $dispatchShipment = $planningShipment;
+        $staleDispatchSnapshot = false;
+        if ($step->step_key === ShipmentDispatchAuthorization::GATE_KEY) {
+            // A project has one current dispatch gate, whose evidence may
+            // belong to a shipment that has already left Planning.
+            $current = $step->workflow->evaluations()->whereNull('project_product_id')
+                ->where('gate_key', ShipmentDispatchAuthorization::GATE_KEY)->latest('evaluated_at')->latest('id')->first();
+            $shipmentId = (int) data_get($current?->details, 'shipment_id', 0);
+            if ($shipmentId > 0) {
+                $dispatchShipment = $project->shipments()->whereKey($shipmentId)
+                    ->whereIn('status', array_merge([Shipment::STATUS_PLANNING], Shipment::dispatchedStatuses()))->first();
+                $staleDispatchSnapshot = ! $dispatchShipment;
+            }
+        }
+        if ($staleDispatchSnapshot) {
+            return $this->recipe(
+                'Review the previous dispatch check',
+                'This check refers to a shipment that is no longer active in this project. It has not been reassigned to another shipment.',
+                'Open project shipments', route('projects.show', ['project' => $project, 'tab' => 'shipments']),
+                ['Review the shipment referenced by the check.', 'Save the appropriate Planning shipment to evaluate its own readiness.', 'Review the new check before recording any manager decision.'],
+                'Shipment', false, 'products'
+            );
+        }
 
         return match ($step->step_key) {
             'project_setup' => $this->recipe(
@@ -94,19 +117,19 @@ class ProjectWorkflowGuidance
             ),
             'dispatch_balance' => $this->recipe(
                 'Record the complete pre-dispatch balance',
-                'Allocate inward receipts until the full required balance is covered, unless a manager accepts the current risk.',
+                'Allocate inward receipts until the required balance is covered. Shipment tracking may proceed with a warning; the payment remains due.',
                 'Record receipt', $commercial,
                 ['Record the receipt against the workflow invoice.', 'The ledger entry is linked to this project automatically.', 'Workflow recalculates the dispatch shortfall after saving.'],
                 'Invoice receipt', false, 'commercial', 'receipt'
             ),
-            'dispatch_approved', 'shipment_dispatched' => $planningShipment
+            'dispatch_approved', 'shipment_dispatched' => $dispatchShipment
                 ? $this->recipe(
-                    'Complete and authorize '.$planningShipment->shipment_number,
-                    'The shipment is prepared. Workflow now checks confirmed Packaging Lists linked to it and requires every dispatch document on the Project before authorization.',
+                    'Review dispatch readiness for '.$dispatchShipment->shipment_number,
+                    'The workflow tracks confirmed Packaging Lists, QC, artwork/PPS approvals and Project dispatch documents. Missing evidence remains open and produces a warning, but does not prevent a shipment status update. The first dispatch still checks product identity and quantity.',
                     'Complete document checklist', $projectWorkflow,
-                    ['Link and confirm a Packaging List for this shipment.', 'Upload every named document directly to Project attachments.', 'Workflow refreshes authorization after each upload.'],
+                    ['Link and confirm a Packaging List for this shipment.', 'Upload every named document directly to Project attachments.', 'Review current readiness when recording the next status.'],
                     'Project dispatch documents', false, 'products', 'dispatch-documents'
-                )
+                ) + ['shipment_id' => $dispatchShipment->id]
                 : $this->recipe(
                     'Create the next partial shipment in Planning',
                     'Create a Planning shipment for the quantity being dispatched. Partial shipments may use one confirmed Packaging List at a time.',

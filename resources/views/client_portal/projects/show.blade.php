@@ -30,6 +30,7 @@
 <div class="pd-metrics cp-project-detail-metrics">
     <div class="pd-metric"><span>Status</span><strong>{{ $project->statusLabel() }}</strong></div>
     <div class="pd-metric"><span>Stage</span><strong>{{ $project->stageLabel() }}</strong></div>
+    <div class="pd-metric"><span>Progress{{ $project->manual_progress_percent !== null ? ' · Set by office' : '' }}</span><strong>{{ (int) ($project->progress_percent ?? 0) }}%</strong></div>
     <div class="pd-metric"><span>Target date</span><strong>{{ optional($project->target_date)->format('d M Y') ?: 'Not set' }}</strong></div>
     <div class="pd-metric"><span>Products</span><strong>{{ $project->products->count() }}</strong></div>
     <div class="pd-metric"><span>Receipts</span><strong>{{ $project->projectReceipts->count() }}</strong></div>
@@ -167,7 +168,9 @@
                                 </td>
                                 <td>
                                     <strong>{{ $projectProduct->product_name }}</strong>
-                                    <div class="master-sub cp-sub-spaced">{{ $projectProduct->product->product_number }}</div>
+                                    @if ($projectProduct->product?->product_number)
+                                        <div class="master-sub cp-sub-spaced">{{ $projectProduct->product->product_number }}</div>
+                                    @endif
                                 </td>
                                 <td><strong>{{ number_format($projectProduct->quantity) }} {{ $projectProduct->unit }}</strong></td>
                                 <td><span class="pd-chip pd-status-{{ $projectProduct->status }}">{{ $projectProduct->statusLabel() }}</span></td>

@@ -43,7 +43,7 @@ class MySqlVendorKycTest extends TestCase
             $vendor->refresh();
             $request = Request::create('/vendor-kyc/'.$vendor->kyc_public_token, 'POST', VendorKycFixture::payload([
                 'intent' => 'submit', 'kyc_version' => $vendor->kyc_version, 'vendor_name' => 'Native approved partner',
-                'country' => 'India', 'gstin' => '24ABCDE1234F1Z5',
+                'country' => 'India', 'gstin' => '24ABCDE1234F1Z6',
                 'bank_address' => str_repeat('Bank address line ', 30), 'beneficiary_address' => "Beneficiary Road\nAhmedabad",
             ]), [], [
                 'gst_certificate' => UploadedFile::fake()->create('gst.pdf', 12, 'application/pdf'),

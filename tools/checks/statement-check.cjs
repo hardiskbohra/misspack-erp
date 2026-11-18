@@ -100,8 +100,11 @@ check('a ten-digit number is an Indian mobile and gets its country code',
     /strlen\(\$digits\) === 10/.test(model) && /'91'\.\$digits/.test(model));
 check('an email link only exists for a valid address',
     /FILTER_VALIDATE_EMAIL/.test(model));
-check('the link is the public route, spelled once',
-    /route\('statements\.public', \$this->token\)/.test(model));
+const publicLinks = read('app/Services/PublicShareLinks.php');
+check('the share delegates to the single allowlisted statement public route',
+    /PublicShareLinks::url\(\$this\)/.test(model)
+    && /'a'\s*=>\s*\[PartyStatementShare::class,\s*'token',\s*'statements\.public'\]/.test(publicLinks)
+    && (publicLinks.match(/'statements\.public'/g) || []).length === 1);
 
 /* -------------------------------------------------------------- the engine */
 
@@ -137,7 +140,8 @@ check('a vendor with only cashflow rows still gets a statement, and it says so',
     /* the cashflow rows are appended to the vendor ledger always, not only when
        the ledger is empty: a vendor can have both, and a rupee row filed
        against a foreign-currency ledger is still the vendor's money */
-    && /foreach \(app\(CashflowVendorPaymentSync::class\)->unlinkedCashflow\(\$vendor\) as \$entry\)/.test(service));
+    && /\$cashflows = app\(CashflowVendorPaymentSync::class\)->unlinkedCashflow\(\$vendor\)/.test(service)
+    && /foreach \(\$cashflows as \$entry\)/.test(service));
 check('a mirrored payment is never printed twice on the statement',
     /->whereNotExists\(function \(\$sub\)/.test(read('app/Services/CashflowVendorPaymentSync.php'))
     && /'source'/.test(read('app/Services/CashflowVendorPaymentSync.php'))
@@ -203,7 +207,8 @@ check('no second copy of the statement markup exists',
 check('the office vocabulary stays on the office side',
     /\$ctx = \$context \?\? 'app';/.test(partial)
     && /internal status of a row/.test(prose(partial))
-    && (partial.match(/\@if \(\$ctx === 'app'\)/g) || []).length >= 2,
+    && /\$showStatus = \$ctx === 'app';/.test(partial)
+    && (partial.match(/\@if\(\$showStatus\)/g) || []).length >= 2,
     'row statuses are printed only in the app, and the condition comes from the caller');
 check('the expiry is explained, not blanked',
     /This statement link has expired/.test(expired) && /was withdrawn/.test(expired) && /no longer available/.test(expired));

@@ -58,7 +58,7 @@ class CashflowSettingController extends Controller
         $data['is_active'] = $request->boolean('is_active');
 
         $account->update($data);
-        $this->recalculateAccountLedger($account->id);
+        \App\Services\CashflowLedger::recalculateAccount($account->id);
 
         return redirect()->route('settings.cashflow', ['tab' => 'accounts'])->with('success', 'Cashflow account updated successfully.');
     }
@@ -162,7 +162,7 @@ class CashflowSettingController extends Controller
             'ifsc_code' => ['nullable', 'string', 'max:30'],
             'branch' => ['nullable', 'string', 'max:255'],
             'currency' => ['required', Rule::in($this->masterKeys('currency', array_keys(CashflowEntry::currencyOptions())))],
-            'opening_balance' => ['nullable', 'numeric'],
+            'opening_balance' => ['nullable', 'numeric', 'decimal:0,3'],
             'notes' => ['nullable', 'string'],
         ]);
     }
@@ -212,30 +212,4 @@ class CashflowSettingController extends Controller
         return array_keys($this->masterOptions($group, array_combine($fallback, $fallback), true));
     }
 
-    private function recalculateAccountLedger(int $accountId): void
-    {
-        $account = CashflowAccount::find($accountId);
-        if (! $account) {
-            return;
-        }
-
-        $runningBalance = (float) $account->opening_balance;
-
-        CashflowEntry::query()
-            ->where('account_id', $accountId)
-            ->orderBy('entry_date')
-            ->orderBy('id')
-            ->get(['id', 'credit_amount', 'debit_amount'])
-            ->each(function (CashflowEntry $entry) use (&$runningBalance) {
-                $runningBalance += (float) $entry->credit_amount - (float) $entry->debit_amount;
-
-                CashflowEntry::whereKey($entry->id)->update([
-                    'balance' => round($runningBalance, 2),
-                ]);
-            });
-
-        $account->update([
-            'current_balance' => round($runningBalance, 2),
-        ]);
-    }
 }

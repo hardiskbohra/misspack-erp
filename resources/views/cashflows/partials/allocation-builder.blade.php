@@ -170,12 +170,12 @@
                 </div>
                 <div class="master-field">
                     <label class="master-label" for="allocationCashAmount">Cash amount <span class="master-required">*</span></label>
-                    <input class="master-input" id="allocationCashAmount" type="number" min="0.01" step="0.01" data-modal-value="amount" placeholder="Amount from this bank entry">
+                    <input class="master-input" id="allocationCashAmount" type="number" min="0.001" step="0.001" data-modal-value="amount" placeholder="Amount from this bank entry">
                 </div>
                 @include('cashflows.partials.document-payment-summary')
                 <div class="master-field">
                     <label class="master-label" for="allocationDocumentAmount">Document amount</label>
-                    <input class="master-input" id="allocationDocumentAmount" type="number" min="0.01" step="0.01" data-modal-value="document_amount" placeholder="Required when currencies differ">
+                    <input class="master-input" id="allocationDocumentAmount" type="number" min="0.001" step="0.001" data-modal-value="document_amount" placeholder="Required when currencies differ">
                     <p class="master-field-hint" data-document-currency-hint>Leave blank when it is the same as the cash amount.</p>
                     @if (! empty($entry->vendor_id))
                         {{-- The vendor's ledger is kept in their currency, and this
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function notifySelect(select) { if (window.jQuery) window.jQuery(select).trigger('change'); }
     function optionText(select) { return select.value ? select.options[select.selectedIndex].text.trim() : ''; }
     function formatAllocationMoney(value, currency) {
-        return (currency || 'INR') + ' ' + (Number(value) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return (currency || 'INR') + ' ' + (Number(value) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
     }
     function rows() { return Array.from(list.querySelectorAll('[data-allocation-row]')); }
     function value(row, key) { var input = row.querySelector('[data-value="' + key + '"]'); return input ? input.value : ''; }
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
         builder.querySelector('[data-allocation-total]').textContent = formatAllocationMoney(allocated, currency);
         var remaining = entry - allocated;
         builder.querySelector('[data-allocation-remaining]').textContent = formatAllocationMoney(remaining, currency);
-        builder.classList.toggle('has-allocation-error', remaining < -0.009);
+        builder.classList.toggle('has-allocation-error', remaining < -0.0005);
         modalTotals();
     }
 
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var message = '';
         if (!values.project_id && !values.sales_invoice_id && !values.purchase_invoice_id) message = 'Choose a project or a document.';
         else if (!(parseFloat(values.amount) > 0)) message = 'Enter a cash allocation amount greater than zero.';
-        else if (parseFloat(values.amount) > modalTotals() + 0.009) message = 'This allocation exceeds the unallocated cash amount.';
+        else if (parseFloat(values.amount) > modalTotals() + 0.0005) message = 'This allocation exceeds the unallocated cash amount.';
         else if (values.sales_invoice_id && values.purchase_invoice_id) message = 'Choose either a sales document or a purchase document, not both.';
         else if (documentCurrency && documentCurrency !== entryCurrency && !(parseFloat(values.document_amount) > 0)) message = 'Enter the amount applied in ' + documentCurrency + '.';
         if (message) { error.textContent = message; error.hidden = false; return; }

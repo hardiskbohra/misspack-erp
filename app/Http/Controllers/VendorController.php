@@ -12,6 +12,7 @@ use App\Models\VendorPaymentAttachment;
 use App\Models\VendorPaymentEntry;
 use App\Services\SavedViews;
 use App\Services\VendorPaymentCashflowSync;
+use App\Rules\ValidGstin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -493,7 +494,7 @@ class VendorController extends Controller
             'paid_account_id' => ['nullable', 'integer'],
             'payment_mode' => ['nullable', 'string', 'max:40'],
             'bank_reference_number' => ['nullable', 'string', 'max:255'],
-            'amount_in_inr' => ['nullable', 'numeric', 'min:0'],
+            'amount_in_inr' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'remarks' => ['nullable', 'string'],
             'also_create_cashflow' => ['nullable', 'boolean'],
             'attachments' => ['nullable', 'array'],
@@ -560,7 +561,7 @@ class VendorController extends Controller
             'paid_account_id' => ['nullable','integer'],
             'payment_mode' => ['nullable','string','max:40'],
             'bank_reference_number' => ['nullable','string','max:255'],
-            'amount_in_inr' => ['nullable','numeric','min:0'],
+            'amount_in_inr' => ['nullable','numeric','decimal:0,3','min:0'],
             'remarks' => ['nullable','string'],
             'also_create_cashflow' => ['nullable','boolean'],
             'attachments' => ['nullable','array'],
@@ -581,7 +582,9 @@ class VendorController extends Controller
 
         $this->assertCashflowMirrorPossible($data, $syncCashflow);
 
-        DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
+        $updated = DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
+            $entry = VendorPaymentEntry::whereKey($entry->id)->lockForUpdate()->firstOrFail();
+            if ($entry->protectedByPurchaseConversion()) return false;
             $oldPurchaseId = $entry->purchase_invoice_id;
             $entry->update($data);
             $this->attachPurchaseDocument($entry);
@@ -589,8 +592,10 @@ class VendorController extends Controller
             $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
             app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$oldPurchaseId, $entry->purchase_invoice_id]);
+            return true;
         });
-    
+
+        if (! $updated) return $this->backToTab($vendor, 'money', 'This payment is linked to a partial purchase conversion. Reverse the conversions before changing it.', 'error');
         return $this->backToTab($vendor, 'money', $this->paymentSavedMessage($entry, 'updated'));
     }
 
@@ -610,7 +615,9 @@ class VendorController extends Controller
 
         $hadCashflow = (bool) $entry->cashflow_entry_id;
 
-        DB::transaction(function () use ($entry) {
+        $deleted = DB::transaction(function () use ($entry) {
+            $entry = VendorPaymentEntry::whereKey($entry->id)->lockForUpdate()->firstOrFail();
+            if ($entry->protectedByPurchaseConversion()) return false;
             // Remove the INR mirror too — one entry, both ledgers.
             $this->cashflowSync()->remove($entry);
 
@@ -622,8 +629,10 @@ class VendorController extends Controller
 
             $entry->delete();
             app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$entry->purchase_invoice_id]);
+            return true;
         });
 
+        if (! $deleted) return $this->backToTab($entry->vendor, 'money', 'This payment is linked to a partial purchase conversion. Reverse the conversions before deleting it.', 'error');
         $vendor = $entry->vendor;
 
         if (! $vendor) {
@@ -749,8 +758,10 @@ class VendorController extends Controller
             return;
         }
 
+        // Serialize a new/reassigned payment with conversion, reversal and
+        // deletion of the document it is about to settle.
         $document = $entry->purchase_invoice_id
-            ? PurchaseInvoice::query()->find($entry->purchase_invoice_id)
+            ? PurchaseInvoice::query()->whereKey($entry->purchase_invoice_id)->lockForUpdate()->first()
             : null;
 
         if ($document && $document->canReceiveMoney()) {
@@ -820,14 +831,14 @@ class VendorController extends Controller
         $exchangeRate = (float) ($data['exchange_rate'] ?? 0);
 
         if ($amountInInr <= 0 && ($data['foreign_currency'] ?? null) === 'INR' && $foreignAmount > 0) {
-            return round($foreignAmount, 2);
+            return round($foreignAmount, 3);
         }
 
         if ($amountInInr <= 0 && $foreignAmount > 0 && $exchangeRate > 0) {
-            return round($foreignAmount * $exchangeRate, 2);
+            return round($foreignAmount * $exchangeRate, 3);
         }
 
-        return round($amountInInr, 2);
+        return round($amountInInr, 3);
     }
 
     private function storeVendorPaymentAttachments(Request $request, VendorPaymentEntry $entry): void
@@ -1034,7 +1045,7 @@ class VendorController extends Controller
                 $share = $bill['foreign_total'] > 0 ? $appliedForeign / $bill['foreign_total'] : 0;
 
                 $open[$index]['foreign_left'] = round($bill['foreign_left'] - $appliedForeign, 4);
-                $open[$index]['rupee_left'] = round($bill['rupee_left'] * (1 - $share), 2);
+                $open[$index]['rupee_left'] = round($bill['rupee_left'] * (1 - $share), 3);
                 $remaining = round($remaining - $appliedForeign, 4);
             }
         }
@@ -1054,7 +1065,7 @@ class VendorController extends Controller
         $dueSoon = 0.0;
 
         foreach ($open as $bill) {
-            if ((float) $bill['foreign_left'] <= 0.0001 && (float) $bill['rupee_left'] <= 0.009) {
+            if ((float) $bill['foreign_left'] < 0.00005 && (float) $bill['rupee_left'] < 0.0005) {
                 continue;
             }
 
@@ -1116,9 +1127,9 @@ class VendorController extends Controller
         return [
             'rows' => $rows,
             'buckets' => $buckets,
-            'outstanding' => round($outstanding, 2),
-            'overdue' => round($overdue, 2),
-            'due_soon' => round($dueSoon, 2),
+            'outstanding' => round($outstanding, 3),
+            'overdue' => round($overdue, 3),
+            'due_soon' => round($dueSoon, 3),
             'overdue_count' => $overdueBills,
             'next_due' => $nextDue['due'] ?? null,
         ];
@@ -1158,7 +1169,7 @@ class VendorController extends Controller
                 ->sum('foreign_amount');
 
             $peak = max($peak, $amount);
-            $series[] = ['label' => $month->format('M'), 'amount' => round($amount, 2)];
+            $series[] = ['label' => $month->format('M'), 'amount' => round($amount, 3)];
         }
 
         $billAmounts = $bills->pluck('foreign_amount')->map(fn ($value) => (float) $value)->filter();
@@ -1167,13 +1178,13 @@ class VendorController extends Controller
         return [
             'series' => $series,
             'peak' => $peak > 0 ? $peak : 1,
-            'billed' => round($billed, 2),
-            'paid' => round($paid, 2),
+            'billed' => round($billed, 3),
+            'paid' => round($paid, 3),
             'settled_percent' => $billed > 0 ? (int) round(min($paid / $billed, 1) * 100) : ($paid > 0 ? 100 : 0),
             'bills' => $bills->count(),
             'payments' => $payments->count(),
-            'average_bill' => $billAmounts->count() > 0 ? round($billAmounts->sum() / $billAmounts->count(), 2) : 0.0,
-            'largest_bill' => round((float) ($billAmounts->max() ?: 0), 2),
+            'average_bill' => $billAmounts->count() > 0 ? round($billAmounts->sum() / $billAmounts->count(), 3) : 0.0,
+            'largest_bill' => round((float) ($billAmounts->max() ?: 0), 3),
             'open_bills' => count($payables['rows']),
             'first_entry' => $dates->min() ? Carbon::parse($dates->min()) : null,
             'last_entry' => $dates->max() ? Carbon::parse($dates->max()) : null,
@@ -1209,7 +1220,7 @@ class VendorController extends Controller
                 select coalesce(sum(case when transaction_type = \'credit\' then foreign_amount else -foreign_amount end), 0)
                 from vendor_payment_entries
                 where vendor_id = vendors.id
-            ) > 0.009')
+            ) >= 0.001')
             ->count();
     }
 
@@ -1228,7 +1239,7 @@ class VendorController extends Controller
             ->where('transaction_type', 'credit')
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', Carbon::today())
-            ->sum('amount_in_inr'), 2);
+            ->sum('amount_in_inr'), 3);
     }
 
     private function overdueVendorCount(): int
@@ -1499,6 +1510,12 @@ class VendorController extends Controller
         if (class_exists(\App\Models\CashflowEntry::class) && Schema::hasTable('cashflow_entries')) {
             $relations[] = 'cashflowEntry';
         }
+        if (Schema::hasTable('purchase_invoices')) {
+            $relations[] = 'purchaseInvoice';
+        }
+        if (Schema::hasTable('purchase_payment_splits')) {
+            $relations[] = 'purchaseSplits.purchaseInvoice';
+        }
 
         $entries = VendorPaymentEntry::query()
             ->with($relations)
@@ -1713,7 +1730,7 @@ class VendorController extends Controller
             'pincode' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string'],
 
-            'gstin' => ['nullable', 'string', 'max:30'],
+            'gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
             'pan' => ['nullable', 'string', 'max:20'],
             'tax_id' => ['nullable', 'string', 'max:255'],
             'import_export_code' => ['nullable', 'string', 'max:255'],

@@ -19,8 +19,15 @@ class ProjectWorkflowExecutionTest extends TestCase
         parent::setUp();
         $this->isolatedDatabase(['0001_01_01_000000_create_users_table', '2026_07_18_010000_create_projects_table',
             '2026_07_18_010100_create_project_products_table', '2026_10_19_120000_add_soft_deletes_to_projects']);
-        // Only the referenced identity is needed: these tests do not calculate invoice money.
-        Schema::create('sales_invoices', fn (Blueprint $table) => $table->id());
+        // Minimal sales scope schema; monetary calculations are not used here.
+        Schema::create('sales_invoices', function (Blueprint $table) {
+            $table->id(); $table->unsignedBigInteger('project_id'); $table->string('status');
+            $table->string('invoice_type'); $table->unsignedBigInteger('source_proforma_id')->nullable();
+        });
+        Schema::create('sales_invoice_items', function (Blueprint $table) {
+            $table->id(); $table->unsignedBigInteger('sales_invoice_id'); $table->unsignedBigInteger('project_product_id')->nullable();
+            $table->unsignedBigInteger('product_id')->nullable(); $table->string('product_name');
+        });
         (require database_path('migrations/2026_10_18_170000_create_project_execution_workflow_tables.php'))->up();
     }
 
@@ -32,7 +39,10 @@ class ProjectWorkflowExecutionTest extends TestCase
 
     private function product(Project $project, string $status = 'planned'): ProjectProduct
     {
-        return ProjectProduct::forceCreate(['project_id' => $project->id, 'product_name' => 'Carton', 'quantity' => 100, 'status' => $status]);
+        $product = ProjectProduct::forceCreate(['project_id' => $project->id, 'product_name' => 'Carton', 'quantity' => 100, 'status' => $status]);
+        $invoiceId = \Illuminate\Support\Facades\DB::table('sales_invoices')->insertGetId(['project_id' => $project->id, 'status' => 'draft', 'invoice_type' => 'proforma']);
+        \Illuminate\Support\Facades\DB::table('sales_invoice_items')->insert(['sales_invoice_id' => $invoiceId, 'project_product_id' => $product->id, 'product_name' => 'Carton']);
+        return $product;
     }
 
     public function test_start_is_idempotent_and_cancelled_products_do_not_get_new_lanes(): void
@@ -89,4 +99,17 @@ class ProjectWorkflowExecutionTest extends TestCase
         $this->assertSame('setup', $project->fresh()->stage);
         $this->assertSame(0, $project->fresh()->progress_percent);
     }
+    public function test_sync_reloads_products_instead_of_reusing_a_stale_loaded_relation(): void
+    {
+        $project = $this->project();
+        $service = app(ProjectWorkflowExecution::class);
+        $workflow = $service->start($project);
+        $project->load('products'); // Empty relationship, cached by an earlier operation.
+        $late = $this->product($project);
+        $service->sync($workflow, $project);
+        $this->assertSame(8, $workflow->steps()->where('project_product_id', $late->id)->count());
+        $service->sync($workflow, $project);
+        $this->assertSame(16, $workflow->steps()->count());
+    }
+
 }

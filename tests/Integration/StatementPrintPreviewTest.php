@@ -87,7 +87,7 @@ class StatementPrintPreviewTest extends TestCase
         }
         $x = $this->xpath($page->getContent());
         $this->assertSame(1, $x->query('//*[@id="statementPrintFilters"]//button[contains(@class,"core-drawer-close")]//*[local-name()="svg"]')->length);
-        $this->assertSame(2, $x->query('//*[@id="statementPrintFilters"]//section[contains(@class,"core-drawer-section")]')->length);
+        $this->assertSame(4, $x->query('//*[@id="statementPrintFilters"]//section[contains(@class,"core-drawer-section")]')->length);
         $this->assertSame(1, $x->query('//*[@id="statementPrintFilters"]//label[contains(@class,"master-switch")]/input[@name="ageing"]')->length);
         $this->assertSame(1, $x->query('//*[@id="statementPrintFilters"]//*[contains(@class,"core-drawer-footer")]//button[contains(@class,"master-btn-primary")]')->length);
     }

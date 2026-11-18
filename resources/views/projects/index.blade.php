@@ -262,9 +262,9 @@
                             $totals = $project->paymentTotals();
                             $statusClass = str_replace('_', '-', (string) $project->status);
                             $healthWord = \Illuminate\Support\Str::before($project->healthLabel(), ' /');
-                            $workflowProgress = max(0, min(100, (int) ($project->workflow?->calculated_progress ?? 0)));
+                            $workflowProgress = max(0, min(100, (int) ($project->progress_percent ?? 0)));
                             $isLate = $project->target_date
-                                && ! in_array($project->status, ['completed', 'cancelled'], true)
+                                && ! in_array($project->status, ['completed', 'cancelled', ...\App\Models\Project::closureStatuses()], true)
                                 && $project->target_date->lessThan($today);
                         @endphp
                         <tr class="project-row is-clickable" data-href="{{ route('projects.show', $project) }}">
@@ -290,6 +290,7 @@
                                 <span class="project-table-progress" aria-hidden="true">
                                     <span style="width: {{ $workflowProgress }}%"></span>
                                 </span>
+                                @if ($project->manual_progress_percent !== null)<span class="master-sub">Administrator-set</span>@endif
                             </td>
                             <td data-label="Owner" class="ui-mobile-secondary">
                                 {{ $project->assignedUser?->name ?: 'Unassigned' }}

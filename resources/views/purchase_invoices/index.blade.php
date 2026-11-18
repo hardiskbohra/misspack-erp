@@ -94,7 +94,7 @@
             </div>
 
             <x-drawer id="purchaseFiltersDrawer" title="Filter purchases" eyebrow="Purchase filters"
-                subtitle="Refine by type, vendor, payment or date." size="medium">
+                subtitle="Refine by type, conversion, vendor, payment or date." size="medium">
                 <section class="core-drawer-section">
                     <h3 class="core-drawer-section-title">Document</h3>
                     <div class="si-filter-grid">
@@ -105,6 +105,14 @@
                                 @foreach($typeOptions as $key => $label)
                                     <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="piFilterConverted">Converted orders</label>
+                            <select class="master-select" name="converted" id="piFilterConverted">
+                                <option value="hide" @selected($converted === 'hide')>Hide fully converted orders</option>
+                                <option value="include" @selected($converted === 'include')>Include fully converted orders</option>
+                                <option value="only" @selected($converted === 'only')>Only fully converted orders</option>
                             </select>
                         </div>
                         <div class="si-filter-field">
@@ -183,7 +191,8 @@
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">{{ $chip['label'] }}</span>
                             <span class="master-list-applied-value">{{ $chip['value'] }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['query'] ?? []) }}">&times;</a>
+                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['query'] ?? []) }}"
+                                aria-label="Remove {{ $chip['label'] }} filter">&times;</a>
                         </span>
                     @endforeach
                     <a class="master-list-applied-clear" href="{{ route('purchase-invoices.index') }}">Clear all filters</a>
@@ -308,9 +317,12 @@
                             </td>
                             <td data-label="State">
                                 <span class="si-status status-{{ $stateKey }}">{{ $invoice->stateLabel() }}</span>
-                                @if ($invoice->isSuperseded())
+                                @if ($invoice->isFullyConverted())
+                                    <span class="master-sub">Fully converted</span>
+                                @endif
+                                @if ($invoice->isSuperseded() && $invoice->convertedInvoice)
                                     <a class="master-sub si-converted-link" href="{{ route('purchase-invoices.show', $invoice->convertedInvoice) }}">
-                                        Became {{ $invoice->convertedInvoice?->invoice_number }}
+                                        Became {{ $invoice->convertedInvoice->invoice_number }}
                                     </a>
                                 @endif
                             </td>
@@ -322,8 +334,10 @@
                                         </button>
                                         <div class="master-dropdown-menu">
                                             <a href="{{ route('purchase-invoices.show', $invoice) }}"><i class="fas fa-eye"></i> View</a>
-                                            <a href="{{ route('purchase-invoices.edit', $invoice) }}"><i class="fas fa-pen"></i> Edit</a>
-                                            @if ($invoice->isBill() && $invoice->status === 'draft')
+                                            @unless ($invoice->hasPartialConversions() || $invoice->isPartialConversion())
+                                                <a href="{{ route('purchase-invoices.edit', $invoice) }}"><i class="fas fa-pen"></i> Edit</a>
+                                            @endunless
+                                            @if ($invoice->isBill() && $invoice->status === 'draft' && ! $invoice->isPartialConversion())
                                                 <form method="POST" action="{{ route('purchase-invoices.status', $invoice) }}"
                                                     data-confirm="Mark {{ $invoice->invoice_number }} as received?"
                                                     data-confirm-title="Mark bill received"
@@ -343,28 +357,23 @@
                                                     data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                                                     data-invoice-rate="{{ $invoice->exchange_rate }}"
                                                     data-project-id="{{ $invoice->project_id }}"
-                                                    data-invoice-amount="{{ number_format($openAmt, 2, '.', '') }}"
+                                                    data-invoice-amount="{{ number_format($openAmt, 3, '.', '') }}"
                                                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($openAmt, $invoice->currency) }}">
                                                     <i class="fas fa-indian-rupee-sign"></i> {{ $invoice->isOrder() ? 'Record advance' : 'Record payment' }}
                                                 </button>
                                             @endif
                                             <a href="{{ route('purchase-invoices.print', $invoice) }}" target="_blank"><i class="fas fa-print"></i> Print</a>
                                             @if ($invoice->canConvert())
-                                                <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
-                                                    data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?"
-                                                    data-confirm-title="Convert to bill"
-                                                    data-confirm-text="Convert to bill"
-                                                    data-confirm-danger="false">
-                                                    @csrf
-                                                    <button type="submit"><i class="fas fa-file-invoice"></i> Convert to bill</button>
-                                                </form>
+                                                <a href="{{ route('purchase-invoices.show', $invoice) }}#purchasePartialConversion"><i class="fas fa-file-invoice"></i> Create linked bill</a>
                                             @endif
-                                            <form method="POST" action="{{ route('purchase-invoices.destroy', $invoice) }}"
-                                                data-confirm="Delete {{ $invoice->invoice_number }}?">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="danger"><i class="fas fa-trash"></i> Delete</button>
-                                            </form>
+                                            @unless ($invoice->hasPartialConversions())
+                                                <form method="POST" action="{{ route('purchase-invoices.destroy', $invoice) }}"
+                                                    data-confirm="{{ $invoice->isPartialConversion() ? 'Reverse the latest conversion and return its payments to the PO?' : 'Delete '.$invoice->invoice_number.'?' }}">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="danger"><i class="fas fa-trash"></i> {{ $invoice->isPartialConversion() ? 'Reverse conversion' : 'Delete' }}</button>
+                                                </form>
+                                            @endunless
                                         </div>
                                     </div>
                                 </div>
@@ -398,7 +407,7 @@
         @if ($invoices->isNotEmpty())
             @php
                 $currencyRows = collect($pageTotals['byCurrency'] ?? [])->filter(fn ($row) =>
-                    ((float) $row['billed'] + (float) $row['open'] + (float) $row['paid'] + (float) $row['outstanding']) > 0.01
+                    ((float) $row['billed'] + (float) $row['open'] + (float) $row['paid'] + (float) $row['outstanding']) >= 0.001
                 );
             @endphp
             <div class="master-list-foot">

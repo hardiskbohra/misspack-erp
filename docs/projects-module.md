@@ -86,14 +86,13 @@ button. It is now the shared record page:
   empty blocks are `master-empty-state`, tables are `master-table` inside
   `master-table-wrap` with scoped headers, and dialogs are the shared
   `.master-modal`, closed through `[data-close-modal]`.
-- **Execution state belongs to the Workflow Control Centre.** Project status,
-  stage and progress are read-only caches published by `ProjectWorkflowExecution`.
-  The project stage stores the exact current workflow stage key, so a current
-  sampling control is displayed as **PPS approval** rather than a loosely mapped
-  legacy stage. Project create/edit screens cannot submit execution state, and
-  the record page has no separate status drawer. Financial closure and reopening
-  remain explicit, audited workflow actions; health, priority and planning dates
-  remain editable project metadata.
+- **Workflow calculation and administrator decisions are separate.** The stage and
+  calculated progress remain derived from workflow evidence. On the overview, an
+  administrator with `projects.override` may set or clear a persistent published
+  status and/or progress with a reason; create/edit forms cannot submit these fields.
+  The view distinguishes the published values from the calculated workflow. Manual
+  closure is a distinct audited decision, not proof of financial completion. Health,
+  priority and planning dates remain ordinary editable project metadata.
 - **Update URLs come from the server.** Each edit dialog carries
   `data-update-url="{{ route(...) }}"` with an `__ID__` placeholder and
   `projects.js` binds it through `bindUpdateUrl()`: a hand-built
@@ -221,7 +220,7 @@ are the documents'), the empty state offers the two doors that *do* fill it — 
 invoice* and *Record a purchase* — and `ProjectProduct::saving` remains the only writer of
 `total_amount`.
 
-The Workflow tab is the sole authority for calculated project progress. Completing, skipping, or manager-overriding required workflow controls recalculates the percentage; project forms, activity updates, and status controls cannot write it.
+The Workflow tab is the sole authority for **calculated** project progress. A separately labelled, persistent administrator override may publish a different percentage until cleared; it does not change the source controls. Project forms and activity updates cannot write execution state.
 
 ## How the sheet is scoped
 

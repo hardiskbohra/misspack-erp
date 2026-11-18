@@ -39,7 +39,7 @@
                     <div class="master-modal-grid">
                         <div class="master-field">
                             <label class="master-label" for="paymentAmount">Amount received <span class="master-required" aria-hidden="true">*</span></label>
-                            <input class="master-input" id="paymentAmount" type="number" step="0.01" min="0.01"
+                            <input class="master-input" id="paymentAmount" type="number" step="0.001" min="0.001"
                                 name="amount" value="{{ old('amount') }}" required>
                             @error('amount')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
@@ -55,7 +55,7 @@
                                 <option value="">Select account</option>
                                 @foreach($accounts as $account)
                                     <option value="{{ $account->id }}"
-                                        data-balance="{{ number_format((float) $account->current_balance, 2, '.', '') }}"
+                                        data-balance="{{ number_format((float) $account->current_balance, 3, '.', '') }}"
                                         data-currency="{{ $account->currency ?: 'INR' }}"
                                         @selected((string) old('account_id') === (string) $account->id)>
                                         {{ $account->account_name }} · {{ $account->typeLabel() }}

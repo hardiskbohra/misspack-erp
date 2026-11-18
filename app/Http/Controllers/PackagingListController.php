@@ -438,6 +438,8 @@ class PackagingListController extends Controller
             'salesInvoices' => SalesInvoice::latest('invoice_date')->limit(500)->get(),
             'purchaseInvoices' => PurchaseInvoice::where('invoice_type', PurchaseInvoice::TYPE_BILL)->latest('invoice_date')->limit(500)->get(),
             'prefillCartons' => $prefillCartons,
+            'purchaseReferenceOnly' => $list->source_type === 'purchase_invoice' && $list->purchase_invoice_id
+                && $list->purchaseInvoice?->isPartialConversion(),
             'products' => Product::where('status', 'active')->orderBy('name')->get(),
             'projectProducts' => ProjectProduct::where('status', '!=', 'cancelled')->orderBy('sort_order')->orderBy('id')
                 ->get(['id', 'project_id', 'product_id', 'product_name', 'sku', 'unit']),
@@ -457,11 +459,10 @@ class PackagingListController extends Controller
     {
         if ($workflow = $list->project?->workflow) {
             app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
-            $authorization = app(\App\Services\ShipmentDispatchAuthorization::class);
-            Shipment::query()->where('project_id', $list->project_id)->where('status', Shipment::STATUS_PLANNING)
-                ->with('items.packingAllocations')->get()->each(function ($shipment) use ($authorization, $workflow) {
-                    $authorization->evaluate($shipment, $workflow, $authorization->rowsFromShipment($shipment), Auth::id());
-                });
+            // Keep a represented partial shipment's gate; only initialize one
+            // from the linked Planning shipment when no shipment is represented.
+            app(\App\Services\ShipmentDispatchAuthorization::class)
+                ->refreshCurrentOrInitialize($workflow, Auth::id(), $list->shipment_id ? (int) $list->shipment_id : null);
         }
     }
 

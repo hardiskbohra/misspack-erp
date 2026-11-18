@@ -418,3 +418,24 @@
         align-items: flex-start;
     }
 }
+
+/* ---------------- Taxes & HSN: inline rate editing ---------------- */
+
+.set-hsn-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.set-hsn-inline .master-input {
+    width: 92px;
+}
+
+.set-hsn-code {
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--ui-card);
+    border: 1px solid var(--ui-border);
+    font-weight: 700;
+}

@@ -35,7 +35,10 @@
         <input type="hidden" name="source_id" value="{{ old('source_id',$list->source_id) }}">
         <input type="hidden" name="purchase_invoice_id" value="{{ old('purchase_invoice_id',$list->purchase_invoice_id) }}">
         @if($list->source_type)
-            <div class="pl-source-strip"><span><i class="fa-solid fa-wand-magic-sparkles"></i> Generated from {{ $list->sourceLabel() }}</span><strong>{{ $list->invoice_number }}</strong><small>Quantities below show the original, previously packed and remaining balance.</small></div>
+            <div class="pl-source-strip"><span><i class="fa-solid fa-wand-magic-sparkles"></i> Generated from {{ $list->sourceLabel() }}</span><strong>{{ $list->invoice_number }}</strong><small>{{ ($purchaseReferenceOnly ?? false) ? 'No physical source balance is calculated from this financial bill.' : 'Quantities below show the original, previously packed and remaining balance.' }}</small></div>
+        @endif
+        @if($purchaseReferenceOnly ?? false)
+            <div class="master-alert" role="note"><strong>Enter actual physical quantities.</strong> Linked purchase bill quantities are financial references and may repeat across bills. Compare against receiving and packing records; the bill does not establish a physical source balance.</div>
         @endif
         <div class="master-section">
             <h2 class="master-section-title">Document details</h2>

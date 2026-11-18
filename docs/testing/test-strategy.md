@@ -40,7 +40,7 @@ The current `tests/Unit` directory includes framework-bootstrapped component tes
 - One standard execution workflow; project status, stage and progress are authoritative workflow caches, not ordinary form-editable fields.
 - Product lanes progress independently and support partial shipments. Starting/syncing workflow is idempotent and preserves completed work.
 - Packing verification is automatic. Identity discrepancies show both actual project product and linked packing product; invalid linkage is never silently approved.
-- Dispatch needs the full pre-dispatch financial balance plus relevant QC, approvals, packing and documents. Manager overrides require the sensitive grant and recorded reason/evidence.
+- Outstanding pre-dispatch balance and missing QC, approvals, packing or documents stay visible as readiness issues but warn rather than block shipment-status changes. Valid product identity and quantity checks remain independent. Manager overrides still require the sensitive grant and recorded reason/evidence; warnings do not create an override or complete an underlying obligation.
 - Dispatch documents belong to the Project; shipment show supports direct upload. Receipt/POD evidence may be optional while receipt quantities remain valid.
 - Financial/cancellation terminal decisions survive workflow recalculation.
 - Closure, exception and feedback gates use current evidence; changing upstream facts must not leave stale approvals silently effective.

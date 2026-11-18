@@ -63,7 +63,7 @@
     </div>
     <div class="master-field">
         <label class="master-label" for="{{ $fieldId('amount_in_inr') }}">Amount in INR</label>
-        <input class="master-input" id="{{ $fieldId('amount_in_inr') }}" type="number" step="0.01" min="0" name="amount_in_inr"
+        <input class="master-input" id="{{ $fieldId('amount_in_inr') }}" type="number" step="0.001" min="0" name="amount_in_inr"
             placeholder="Calculated from the rate when left blank" inputmode="decimal">
     </div>
     <div class="master-field">

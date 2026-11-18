@@ -279,3 +279,58 @@ exclusion and existing desktop/mobile wizard behaviour. Contracts pass. See
   60 PHP test files. No live PHP/browser E2E or measured coverage claim. Serial
   PHP suites avoid fake-disk collisions. Native CI checked after push.
 - Acceptance and evidence: [detail-photo.md](detail-photo.md).
+
+## ERP error resilience follow-up (27 October 2026)
+
+- Shipment gate regression: on the disposable strict MySQL 8.0.14 schema,
+  temporarily reverting `summary` to `VARCHAR(255)` made **both** the dispatch
+  and ordinary planning-save HTTP tests fail with SQLSTATE 22001 / MySQL 1406;
+  restoring `TEXT` yielded **2 tests / 31 assertions PASS**. This is a local
+  reproduction, not a production migration or an exhaustive ERP audit.
+- Complete portable Unit + Integration + Feature, PHP 8.4.26, command
+  `APP_ENV=testing APP_RUNNING_IN_CONSOLE=true php vendor/bin/phpunit -c phpunit.xml --no-progress --display-phpunit-notices`:
+  **624 tests / 16,532 assertions PASS**, with one pre-existing PHPUnit notice:
+  the `SalesInvoiceEmailTest::test_a_refused_send_is_logged_and_briefs_the_desk`
+  transport mock has no configured expectations.
+- Full native suite on disposable **MySQL 8.0.14 strict mode**, after the whole
+  migration chain: `APP_ENV=testing APP_RUNNING_IN_CONSOLE=true DB_CONNECTION=mysql
+  DB_SOCKET=<disposable-socket> DB_DATABASE=misspack_erp_test DB_USERNAME=root
+  DB_PASSWORD='' CACHE_STORE=array SESSION_DRIVER=array php vendor/bin/phpunit
+  -c phpunit.mysql.xml --no-progress --display-phpunit-notices`: **22 tests /
+  215 assertions PASS**. The upgrade tests create and drop unique schemas and
+  require CREATE/DROP DATABASE privileges. CI uses its separately configured
+  MySQL 8.0 service; its result must be checked after pushing this commit.
+- `npm run test:contracts` PASS (287 designs, 130 method-linked cases, 74 test
+  files; 260 templates, 62 stylesheets); `APP_ENV=testing php
+  tools/testing/export-routes.php --check` PASS (483 routes). Catalogue links
+  and inventories describe source evidence, not measured coverage.
+- Headless Chromium, using captured actual HTTP Blade/error responses and local
+  assets with external network blocked: the safe error page and unconfirmed
+  invoice history passed visible text/layout checks at 360/768/1440px in light
+  and dark modes (12 states); the error link was keyboard focusable. The editable
+  shipment form passed add/remove and submitted-form-data checks at the same
+  widths, including the INR template under a USD header. These are browser DOM
+  checks on captured fixtures, not live-browser PHP E2E or real mail delivery.
+- Details, deployment/rollback precautions, known gaps and post-commit/external
+  side-effect warnings: [erp-error-resilience.md](erp-error-resilience.md).
+
+## Automatic rounding for new INR invoices (27 October 2026)
+
+- Full portable Unit + Integration + Feature, PHP 8.4.26: **642 tests / 16,828
+  assertions passed** in 46.9 seconds; the pre-existing PHPUnit notice on the
+  invoice mail transport mock remains. Complete strict MySQL 8.0.14 suite on a
+  disposable migrated database: **25 tests / 258 assertions passed** in 5.0 seconds.
+  The two PHP suites ran serially; the native tests cover the HTTP writer, paise
+  conversion and non-destructive migration plus guarded rollback.
+- `npm run test:contracts`, the invoice module's **82** source checks,
+  483-route inventory and `git diff --check` passed. The invoice source check's
+  pre-existing false positive for the explicitly loaded client-account component
+  was corrected without exempting undefined classes. The catalogue has **291**
+  designs, **134** method-linked cases and **77** executable PHP test files;
+  these are source/evidence counts, not measured coverage.
+- Headless Chromium 153 exercised real login, live PHP/SQLite-backed invoice
+  forms, create/edit persistence and responsive controls at **1440/768/390px**.
+  Auto/manual, paise and Select2 boundaries and currency/type switches passed.
+  No production database or real external delivery was used.
+- Acceptance criteria, test-first evidence, exact commands and deployment/
+  guarded rollback precautions: [invoice-auto-rounding.md](invoice-auto-rounding.md).

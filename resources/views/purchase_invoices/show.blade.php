@@ -11,9 +11,20 @@
     $isImport = $invoice->gst_type === 'export';
     $taxAmount = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
     $chargesAmount = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
+    // Original PO lines remain untouched for audit. Allocate their monetary
+    // components cumulatively, the same way subsequent bills are apportioned.
+    $remainingComponents = [];
+    if ($invoice->hasPartialConversions() && (float) $invoice->original_total_amount > 0) {
+        foreach (['taxable_amount', 'cgst_amount', 'sgst_amount', 'igst_amount', 'freight_amount', 'packing_amount', 'other_charges'] as $component) {
+            $original = (float) $invoice->{$component};
+            $remainingComponents[$component] = round($original - round($original * (float) $invoice->converted_amount / (float) $invoice->original_total_amount, 3), 3);
+        }
+        $remainingComponents['round_off'] = round((float) $invoice->total_amount - array_sum($remainingComponents), 3);
+    }
     $stateKey = $invoice->stateKey();
     $daysLate = $invoice->daysOverdue();
-    $nextStatuses = \App\Models\PurchaseInvoice::STATUS_FLOW[$invoice->invoice_type][$invoice->status] ?? [];
+    $lockedConversion = $invoice->hasPartialConversions() || $invoice->isPartialConversion();
+    $nextStatuses = $lockedConversion ? [] : (\App\Models\PurchaseInvoice::STATUS_FLOW[$invoice->invoice_type][$invoice->status] ?? []);
     $figure = fn ($value) => rtrim(rtrim(number_format((float) $value, 3, '.', ''), '0'), '.') ?: '0';
     $addressLine = fn (...$parts) => implode(', ', array_values(array_filter(
         array_map(fn ($part) => trim((string) $part), $parts),
@@ -56,7 +67,7 @@
         </div>
         <div class="record-head-actions">
             <a href="{{ route($routePrefix.'.index') }}" class="master-btn master-btn-light">Back</a>
-            <a href="{{ route($routePrefix.'.edit', $invoice) }}" class="master-btn master-btn-light">Edit</a>
+            @unless ($lockedConversion)<a href="{{ route($routePrefix.'.edit', $invoice) }}" class="master-btn master-btn-light">Edit</a>@endunless
             @if($invoice->isBill())<a href="{{ route('packaging-lists.create',['purchase_invoice'=>$invoice->id]) }}" class="master-btn master-btn-soft"><i class="fa-solid fa-boxes-stacked"></i> Pack items</a>@endif
             @php
                 $advanceOpen = $invoice->isOrder() && $invoice->canReceiveMoney()
@@ -71,7 +82,7 @@
                     data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                     data-invoice-rate="{{ $invoice->exchange_rate }}"
                     data-project-id="{{ $invoice->project_id }}"
-                    data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                    data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">
                     Record payment
                 </button>
@@ -83,7 +94,7 @@
                     data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                     data-invoice-rate="{{ $invoice->exchange_rate }}"
                     data-project-id="{{ $invoice->project_id }}"
-                    data-invoice-amount="{{ number_format($advanceOpen, 2, '.', '') }}"
+                    data-invoice-amount="{{ number_format($advanceOpen, 3, '.', '') }}"
                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($advanceOpen, $invoice->currency) }}">
                     Record advance
                 </button>
@@ -103,18 +114,11 @@
                     <i class="fas fa-ellipsis-v"></i>
                 </button>
                 <div class="master-dropdown-menu">
-                    <button type="button" data-copy-link="{{ route('purchase-invoices.public', $invoice->public_token) }}">
+                    <button type="button" data-copy-link="{{ \App\Services\PublicShareLinks::url($invoice) }}">
                         <i class="fa-solid fa-link" aria-hidden="true"></i> Copy public link
                     </button>
                     @if ($invoice->canConvert())
-                        <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
-                            data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?"
-                            data-confirm-title="Convert to bill"
-                            data-confirm-text="Convert to bill"
-                            data-confirm-danger="false">
-                            @csrf
-                            <button type="submit"><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> Convert to bill</button>
-                        </form>
+                        <a href="#purchasePartialConversion"><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> Create linked bill</a>
                     @endif
                     @foreach ($nextStatuses as $next)
                         <form method="POST" action="{{ route($routePrefix.'.status', $invoice) }}">
@@ -124,22 +128,36 @@
                             <button type="submit"><i class="fa-solid fa-check" aria-hidden="true"></i> Mark {{ \App\Models\PurchaseInvoice::statusOptions()[$next] ?? $next }}</button>
                         </form>
                     @endforeach
-                    <form method="POST" action="{{ route($routePrefix.'.destroy', $invoice) }}"
-                        data-confirm="Delete {{ $invoice->invoice_number }}?">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="danger"><i class="fa-solid fa-trash" aria-hidden="true"></i> Delete</button>
-                    </form>
+                    @unless ($invoice->hasPartialConversions())
+                        <form method="POST" action="{{ route($routePrefix.'.destroy', $invoice) }}"
+                            data-confirm="{{ $invoice->isPartialConversion() ? 'Reverse this conversion and return its payments to the PO? Only the latest conversion can be reversed.' : 'Delete '.$invoice->invoice_number.'?' }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="danger"><i class="fa-solid fa-trash" aria-hidden="true"></i> {{ $invoice->isPartialConversion() ? 'Reverse conversion' : 'Delete' }}</button>
+                        </form>
+                    @endunless
                 </div>
             </div>
         </div>
     </header>
 
+    @if ($invoice->isPartialConversion())
+        <div class="master-alert"><strong>Linked purchase conversion.</strong> Financial figures are locked to protect the PO split. Check this bill against the supplier's paperwork. To change the split, reverse the latest conversion first; linked payments return to the PO without changing cashflow.</div>
+        <form class="master-card master-section" method="POST" action="{{ route('purchase-invoices.conversion-reference', $invoice) }}">
+            @csrf @method('PATCH')
+            <h2 class="master-section-title">Supplier reference</h2>
+            <div class="master-form-grid is-three">
+                <div class="master-field"><label class="master-label" for="supplierRef">Supplier bill number</label><input class="master-input" id="supplierRef" name="vendor_bill_number" value="{{ old('vendor_bill_number', $invoice->vendor_bill_number) }}" maxlength="255"></div>
+                <div class="master-field"><label class="master-label" for="supplierDate">Supplier bill date</label><input class="master-input" type="date" id="supplierDate" name="vendor_bill_date" value="{{ old('vendor_bill_date', $invoice->vendor_bill_date?->format('Y-m-d')) }}"></div>
+            </div>
+            <button class="master-btn master-btn-soft" type="submit">Save supplier reference</button>
+        </form>
+    @endif
     <div class="master-stats">
         <div class="master-stat master-stat--flat blue">
             <span class="icon"><i class="fas fa-file-invoice"></i></span>
             <div>
-                <p class="master-stat-title">Total</p>
+                <p class="master-stat-title">{{ $invoice->hasPartialConversions() ? 'Remaining PO total' : 'Total' }}</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</p>
                 <p class="master-sub">{{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('line', $invoice->items->count()) }}</p>
             </div>
@@ -149,14 +167,14 @@
             <div>
                 <p class="master-stat-title">{{ $invoice->isBill() ? 'Paid' : 'Advance paid' }}</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($paidAmount, $invoice->currency) }}</p>
-                <p class="master-sub">{{ $invoice->isOrder() ? ($paidAmount > 0 ? 'Moves to the bill on conversion' : 'Optional before the bill') : ($payments->count().' payments') }}</p>
+                <p class="master-sub">{{ $invoice->isOrder() ? ($paidAmount > 0 ? 'Choose payments when creating a linked bill' : 'Optional before a bill') : ($payments->count().' payments') }}</p>
             </div>
         </div>
         @unless ($isImport)
         <div class="master-stat master-stat--flat purple">
             <span class="icon"><i class="fas fa-percent"></i></span>
             <div>
-                <p class="master-stat-title">GST</p>
+                <p class="master-stat-title">{{ $invoice->hasPartialConversions() ? 'Original PO GST' : 'GST' }}</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($taxAmount, $invoice->currency) }}</p>
                 <p class="master-sub">{{ $invoice->gstTypeLabel() }}</p>
             </div>
@@ -172,7 +190,9 @@
         </div>
     </div>
 
-    @if ($invoice->isOrder() && ! $invoice->canReceiveMoney() && ! $invoice->isSuperseded() && $invoice->status !== 'cancelled')
+    @include('purchase_invoices.partials.partial-conversions')
+
+    @if ($invoice->isOrder() && ! $invoice->canReceiveMoney() && ! $invoice->isSuperseded() && $invoice->status !== 'cancelled' && ! $invoice->hasPartialConversions())
         <x-step-banner
             tone="warning"
             eyebrow="Pending checker"
@@ -203,7 +223,12 @@
     <div class="master-card master-section">
         <div class="master-section-head">
             <div>
-                <h2 class="master-section-title">Products</h2>
+                <h2 class="master-section-title">{{ $invoice->hasPartialConversions() ? 'Original PO products' : 'Products' }}</h2>
+                @if ($invoice->hasPartialConversions())<p class="master-sub">Original quantities and prices are retained for audit; linked bills represent the converted portions.</p>@endif
+                @if ($invoice->isPartialConversion())
+                    <p class="master-sub">Bill quantities are financial references, not separate goods received. Check quantities, rates and round off against the supplier's documents.</p>
+                    @if ($invoice->items->contains(fn ($item) => (float) $item->unit_price === 0.0))<p class="master-help">A zero rate may be a free item or the result of three-decimal price rounding; check the PO and round off.</p>@endif
+                @endif
             </div>
         </div>
         @if ($invoice->items->isEmpty())
@@ -278,7 +303,7 @@
             </div>
         </div>
         <div class="master-card master-section">
-            <div class="master-section-head"><div><h2 class="master-section-title">Summary</h2></div></div>
+            <div class="master-section-head"><div><h2 class="master-section-title">{{ $invoice->hasPartialConversions() ? 'Original PO summary' : 'Summary' }}</h2>@if ($invoice->hasPartialConversions())<p class="master-sub">Original components, less the gross value of linked bills.</p>@endif</div></div>
             <div class="si-total-row"><span>Subtotal</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->subtotal, $invoice->currency) }}</strong></div>
             <div class="si-total-row"><span>Discount</span>
                 @if ((float) $invoice->discount_amount > 0)
@@ -297,19 +322,40 @@
                 @if ((float) $invoice->packing_amount > 0)<div class="si-total-row"><span>Packing</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->packing_amount, $invoice->currency) }}</strong></div>@endif
                 @if ((float) $invoice->other_charges > 0)<div class="si-total-row"><span>Other</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->other_charges, $invoice->currency) }}</strong></div>@endif
             @endif
-            <div class="si-total-row is-grand"><span>Grand total</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong></div>
+            @if (abs((float) $invoice->round_off) >= 0.001)
+                <div class="si-total-row"><span>Round off</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->round_off, $invoice->currency) }}</strong></div>
+            @endif
+            @if ($invoice->hasPartialConversions())
+                <div class="si-total-row"><span>Original PO total</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->original_total_amount, $invoice->currency) }}</strong></div>
+                <div class="si-total-row"><span>Less linked bills</span><strong>− {{ \App\Helpers\CommonHelper::amount($invoice->converted_amount, $invoice->currency) }}</strong></div>
+            @endif
+            <div class="si-total-row is-grand"><span>{{ $invoice->hasPartialConversions() ? 'Remaining PO total' : 'Grand total' }}</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong></div>
             @if (filled($invoice->amount_in_words))
                 <p class="si-words">{{ $invoice->amount_in_words }}</p>
             @endif
         </div>
     </div>
 
+    @if ($remainingComponents)
+        <div class="master-card master-section">
+            <div class="master-section-head"><div>
+                <h2 class="master-section-title">Apportioned remaining PO</h2>
+                <p class="master-sub">The remaining gross is apportioned from the original components; cash bills remove their share of GST. Minor rounding is included below.</p>
+            </div></div>
+            <div class="si-total-row"><span>Net taxable / base</span><strong>{{ \App\Helpers\CommonHelper::amount($remainingComponents['taxable_amount'], $invoice->currency) }}</strong></div>
+            @foreach (['cgst_amount' => 'CGST', 'sgst_amount' => 'SGST', 'igst_amount' => 'IGST', 'freight_amount' => 'Freight', 'packing_amount' => 'Packing', 'other_charges' => 'Other charges', 'round_off' => 'Rounding'] as $key => $label)
+                @if (abs($remainingComponents[$key]) >= 0.001)<div class="si-total-row"><span>{{ $label }}</span><strong>{{ \App\Helpers\CommonHelper::amount($remainingComponents[$key], $invoice->currency) }}</strong></div>@endif
+            @endforeach
+            <div class="si-total-row is-grand"><span>Remaining PO total</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong></div>
+        </div>
+    @endif
+
     @if ($invoice->isBill() || ($invoice->isOrder() && ! $invoice->isSuperseded()))
         <div class="master-card master-section">
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title">{{ $invoice->isOrder() ? 'Advances' : 'Payments' }}</h2>
-                    <p class="master-sub">{{ $invoice->isOrder() ? ($invoice->canReceiveMoney() ? 'Debits against this order — they move to the bill when you convert' : $invoice->moneyGateMessage()) : 'Debits in the vendor ledger against this bill' }}</p>
+                    <p class="master-sub">{{ $invoice->isOrder() ? ($invoice->canReceiveMoney() ? 'Debits against this order — choose individual amounts when creating a bill' : $invoice->moneyGateMessage()) : 'Debits in the vendor ledger against this bill' }}</p>
                 </div>
                 @if ($invoice->isBill() && $invoice->canReceiveMoney() && $balanceAmount > 0)
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
@@ -319,7 +365,7 @@
                         data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                         data-invoice-rate="{{ $invoice->exchange_rate }}"
                         data-project-id="{{ $invoice->project_id }}"
-                        data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                        data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">Record</button>
                 @elseif ($invoice->isOrder() && $invoice->canReceiveMoney() && max((float) $invoice->total_amount - $paidAmount, 0) > 0)
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
@@ -329,16 +375,23 @@
                         data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                         data-invoice-rate="{{ $invoice->exchange_rate }}"
                         data-project-id="{{ $invoice->project_id }}"
-                        data-invoice-amount="{{ number_format(max((float) $invoice->total_amount - $paidAmount, 0), 2, '.', '') }}"
+                        data-invoice-amount="{{ number_format(max((float) $invoice->total_amount - $paidAmount, 0), 3, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount(max((float) $invoice->total_amount - $paidAmount, 0), $invoice->currency) }}">Record advance</button>
                 @endif
             </div>
-            @if ($payments->isEmpty())
+            @if ($payments->isEmpty() && (float) $invoice->amount_paid <= 0)
                 <div class="master-empty-state">
                     <p>{{ $invoice->isOrder() ? 'No advance against this order yet.' : 'Nothing paid against this bill yet.' }}</p>
                 </div>
             @else
                 <div class="si-payment-list">
+                    @if ((float) $invoice->amount_paid > 0)
+                        <div class="si-payment">
+                            <span class="si-payment-icon"><i class="fas fa-indian-rupee-sign"></i></span>
+                            <div class="si-payment-main"><strong>Opening advance</strong><span class="master-sub">Amount recorded on the document</span></div>
+                            <strong class="si-payment-amount si-clear">{{ \App\Helpers\CommonHelper::amount($invoice->amount_paid, $invoice->currency) }}</strong>
+                        </div>
+                    @endif
                     @foreach ($payments as $payment)
                         <div class="si-payment">
                             <span class="si-payment-icon"><i class="fas fa-indian-rupee-sign"></i></span>
@@ -347,6 +400,9 @@
                                 <span class="master-sub">{{ $payment->payment_mode ?: 'Mode not recorded' }}
                                     @if (filled($payment->particular)) · {{ $payment->particular }} @endif
                                 </span>
+                                @if ($payment->ledger_payment_id)
+                                    <span class="master-sub">Vendor payment #{{ $payment->ledger_payment_id }}@if ($payment->source_key === 'splits') · allocated portion @endif @if ($payment->account_name) · {{ $payment->account_name }} @endif</span>
+                                @endif
                                 @if (! empty($payment->cashflow_entry_id))
                                     <a class="si-payment-ref" href="{{ route('cashflows.show', $payment->cashflow_entry_id) }}">Cashflow entry #{{ $payment->cashflow_entry_id }}</a>
                                 @endif
@@ -359,7 +415,7 @@
             <div class="si-pay-foot">
                 <div><span>Paid</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($paidAmount, $invoice->currency) }}</strong></div>
                 <div><span>Still open</span><strong class="{{ $openAmount > 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($openAmount, $invoice->currency) }}</strong></div>
-                @if($advanceAmount > 0.009)<div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>@endif
+                @if($advanceAmount >= 0.001)<div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>@endif
             </div>
         </div>
     @endif

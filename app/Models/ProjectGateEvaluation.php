@@ -34,6 +34,28 @@ class ProjectGateEvaluation extends Model
         return ['passed' => 'Passed', 'blocked' => 'Blocked', 'overridden' => 'Manager override'][$this->effectiveResult()] ?? str($this->effectiveResult())->headline()->toString();
     }
 
+    /** Present current policy without rewriting immutable historical snapshots. */
+    public function displaySummary(): string
+    {
+        $details = $this->details ?: [];
+        if ($this->gate_key === 'dispatch_approved' && $this->result === 'blocked' && isset($details['issues'])) {
+            return (string) $this->summary.' Missing packing, QC, artwork/PPS approvals or documents do not prevent shipment status updates; the first dispatch still checks product identity and quantity.';
+        }
+        if ($this->gate_key !== 'dispatch_balance' || $this->result !== 'blocked') {
+            return (string) $this->summary;
+        }
+
+        if (! array_key_exists('invoice_usable', $details)) {
+            return 'The pre-dispatch balance needs review. Shipment tracking may continue; please follow up with Accounts.';
+        }
+        if (! $details['invoice_usable']) {
+            return 'Pre-dispatch balance cannot be verified without a valid project Proforma. Shipment tracking may continue; please review it with Accounts.';
+        }
+
+        return 'Pre-dispatch balance is outstanding by '.\App\Helpers\CommonHelper::decimal($details['shortfall'] ?? 0)
+            .'. Shipment tracking may continue; the balance remains due.';
+    }
+
     public function gateLabel(): string
     {
         return [

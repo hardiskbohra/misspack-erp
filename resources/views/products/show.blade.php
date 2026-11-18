@@ -20,7 +20,7 @@
                 </div>
             </div>
             <div class="master-actions"><a href="{{ route('products.index') }}" class="master-btn master-btn-light">Back</a><a
-                    href="{{ route('products.public', $product->public_token) }}" target="_blank"
+                    href="{{ \App\Services\PublicShareLinks::url($product) }}" target="_blank"
                     class="master-btn master-btn-light">Public Link</a><a href="{{ route('products.edit', $product) }}"
                     class="master-btn master-btn-primary">Edit Product</a></div>
         </div>

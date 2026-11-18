@@ -24,7 +24,7 @@ class VendorPortalController extends VendorPortalBaseController
         $packagingLists = PackagingList::query()->where('vendor_id', $vendor->id)->latest('id')->limit(8)->get();
         $updates = VendorCollaborationUpdate::query()->with(['portalUser','creator','purchaseInvoice'])
             ->where('vendor_id', $vendor->id)->latest('id')->limit(12)->get();
-        $openByCurrency = $bills->filter(fn ($bill) => $bill->balanceDue() > 0.009)->groupBy(fn ($bill) => $bill->currency ?: 'INR')
+        $openByCurrency = $bills->filter(fn ($bill) => $bill->balanceDue() >= 0.001)->groupBy(fn ($bill) => $bill->currency ?: 'INR')
             ->map(fn ($group, $currency) => ['currency' => $currency, 'amount' => $group->sum(fn ($bill) => $bill->balanceDue()), 'count' => $group->count()])->values();
         return view('vendor_portal.dashboard', compact('vendor','orders','bills','shipments','packagingLists','updates','openByCurrency'));
     }

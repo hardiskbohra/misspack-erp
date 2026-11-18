@@ -26,12 +26,20 @@ const confirmations = walk(path.join(root, 'resources/views')).filter(f => f.end
         .filter(match => /\bdata-confirm=/.test(match[0])).map(match => ({ file, tag: match[0] })));
 check('ERP confirmation declarations are audited', confirmations.length > 40);
 check('shared form/button confirmations no longer assume Delete', !source.includes("getAttribute('data-confirm-text') || 'Delete'"));
-const nonDestructive = confirmations.filter(({ tag }) => /data-confirm="(?:Create|Raise|Mark)\b/.test(tag));
-check('conversion and completion confirmations exist in the audit', nonDestructive.length >= 7);
+const nonDestructive = confirmations.filter(({ tag }) => /data-confirm="(?:Create|Raise|Mark|Restore)\b/.test(tag));
+check('conversion, completion and restoration confirmations exist in the audit', nonDestructive.length >= 7);
+for (const suffix of ['/client_portal/support/show.blade.php', '/packaging_lists/partials/confirmation-notice.blade.php',
+    '/purchase_invoices/index.blade.php', '/sales_invoices/index.blade.php', '/sales_invoices/show.blade.php', '/tasks/index.blade.php']) {
+    check(suffix + ': existing conversion or completion confirmation is retained', nonDestructive.some(({ file, tag }) =>
+        file.endsWith(suffix) && /data-confirm="(?:Create|Raise|Mark)\b/.test(tag)));
+}
+check('stock restoration is included in the neutral confirmations', nonDestructive.some(({ file, tag }) =>
+    file.endsWith('/stock/show.blade.php') && /data-confirm="Restore\b/.test(tag)));
 for (const { file, tag } of nonDestructive) {
     check(path.relative(root, file) + ': non-destructive confirmation has neutral styling', /data-confirm-danger="false"/.test(tag));
-    check(path.relative(root, file) + ': non-destructive confirmation has an appropriate answer',
-        /data-confirm-text="(?:Yes|Convert to bill|Mark received)"/.test(tag));
+    const allowedAnswer = /data-confirm="Restore\b/.test(tag)
+        ? /data-confirm-text="(?:Yes|Restore item)"/ : /data-confirm-text="(?:Yes|Convert to bill|Mark received)"/;
+    check(path.relative(root, file) + ': non-destructive confirmation has an appropriate answer', allowedAnswer.test(tag));
 }
 
 async function run() {
@@ -100,6 +108,13 @@ async function run() {
         await page.getByRole('button', { name: 'Remove address', exact: true }).click();
         await answer('Yes');
         check('confirmed button replays once without a second dialog', await page.evaluate(() => window.submits) === 1);
+
+        await fixture('<form data-confirm="Restore this item?" data-confirm-text="Restore item" data-confirm-danger="false"><button>Restore item</button></form>');
+        await page.getByRole('button', { name: 'Restore item', exact: true }).click();
+        check('restoration uses its explicit action label', await page.getByRole('dialog').getByRole('button', { name: 'Restore item', exact: true }).count() === 1);
+        check('restoration has neutral rather than danger styling', await page.locator('.ma-dialog-actions .ma-btn-primary').count() === 1);
+        await answer('Restore item');
+        check('confirmed restoration submits once', await page.evaluate(() => window.submits) === 1);
 
         await fixture('<form data-confirm="Raise a purchase bill?" data-confirm-text="Convert to bill" data-confirm-danger="false"><button>Convert</button></form>');
         await page.getByRole('button', { name: 'Convert', exact: true }).click();
